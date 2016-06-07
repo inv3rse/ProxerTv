@@ -1,0 +1,39 @@
+<HTML>
+<HEAD>
+    <script language="JavaScript" type="text/javascript" CHARSET="UTF-8" src="http://stream.proxer.me/js/jquery-1.9.1.min.js"></script>
+    <Script>
+function $$(elem){return document.getElementById(elem);}
+function player_start()
+{
+    $$('player_ads').style.display = 'none';
+    $$('player_img').style.display = 'none';
+    $$('player_code').style.visibility = 'visible';
+    if($$('np_vid')) $$('np_vid').Play();
+    return false;
+}
+</Script>
+</HEAD>
+<BODY topmargin=0 leftmargin=0 style="background-color: #000;">
+
+<div id="player_code" style="margin:0 auto;">   <style type="text/css">
+    .flowplayer {  width: 728px; height: 504px; }
+    #player_code { width: 728px; height: 504px; }
+    .flowplayer > video {
+    width: 100%;
+    height: 504px;
+    background-color: #000;
+    }
+</style>
+    <div class="flowplayer">
+        <video controls>
+            <source type="video/mp4" src="http://s36.stream.proxer.me/files/7/wqj6extx5r6ztv/video.mp4">
+        </video>
+    </div>
+    <script type="text/javascript">var proxerstream_player = "";</script>
+    <script type="text/javascript" src="http://stream.proxer.me/js/player.js"></script>
+    <script>
+  window.oncontextmenu = function() {
+    return false;
+  } </script>
+</div>
+</BODY></HTML>

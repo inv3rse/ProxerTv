@@ -1,0 +1,22 @@
+# CELLULAR .gitignore for Android projects
+#
+# Ignore all IDE specific files.
+# Old Eclipse files (.project, bin/, ...) should be deleted.
+
+.DS_Store
+
+# Android
+local.properties
+
+# Android Studio
+*.iml
+.idea/
+captures/
+
+# vim
+.*.swp
+
+# Gradle
+.gradle/
+build/
+
