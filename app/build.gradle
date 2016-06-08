@@ -61,6 +61,9 @@ dependencies {
     // BeautifulSoup
     compile 'org.jsoup:jsoup:1.9.2'
 
+    // ExoPlayer
+    compile 'com.google.android.exoplayer:exoplayer:r1.5.7'
+
     // Dagger 2
     def dagger_version = '2.4'
     compile "com.google.dagger:dagger:$dagger_version";

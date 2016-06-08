@@ -6,7 +6,6 @@ import com.example.dennis.proxertv.model.SeriesCover
 import com.example.dennis.proxertv.model.ServerConfig
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
-import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -18,8 +17,6 @@ class ProxerClient(
         val gson: Gson,
         val streamResolvers: List<StreamResolver>,
         val serverConfig: ServerConfig) {
-
-    val FORM_URLENCODED = MediaType.parse("application/x-www-form-urlencoded")
 
     fun loadTopAccessSeries(forceDownload: Boolean = false): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.topAccessListUrl, forceDownload)
@@ -93,7 +90,7 @@ class ProxerClient(
                                 val url = it["replace"]
                                 val code = it["code"]
                                 if (url != null && code != null) {
-                                    embedUrls.add(url.replace("#", code))
+                                    embedUrls.add(if (url.isEmpty()) code else url.replace("#", code))
                                 }
                             }
                         }

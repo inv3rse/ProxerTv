@@ -91,7 +91,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener {
     }
 
     companion object {
-        const val ARG_SERIES_ID = "ARG_SERIES_ID"
+        private const val ARG_SERIES_ID = "ARG_SERIES_ID"
 
         fun createInstance(seriesId: Int): DetailsFragment {
             val fragment = DetailsFragment()

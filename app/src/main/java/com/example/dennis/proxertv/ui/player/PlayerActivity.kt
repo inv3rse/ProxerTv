@@ -5,25 +5,31 @@ import android.media.session.MediaSession
 import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
-import android.widget.VideoView
+import android.view.SurfaceView
 import com.example.dennis.proxertv.R
 import com.example.dennis.proxertv.base.App
+import com.google.android.exoplayer.AspectRatioFrameLayout
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 
 class PlayerActivity : Activity() {
 
-    private lateinit var videoView: VideoView
+    private val videoPlayer = VideoPlayer()
+
+    private lateinit var surfaceView: SurfaceView
+    private lateinit var aspectFrame: AspectRatioFrameLayout
     private lateinit var mediaSession: MediaSession
 
-    private var playbackState = PlaybackState.LOADING
     private var streamUrls = arrayListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
 
-        videoView = findViewById(R.id.videoView) as VideoView
+        surfaceView = findViewById(R.id.player_surface_view) as SurfaceView
+        aspectFrame = findViewById(R.id.player_ratio_frame) as AspectRatioFrameLayout
+
+        videoPlayer.connectToUi(aspectFrame, surfaceView)
 
         mediaSession = MediaSession(this, "ProxerTv")
         mediaSession.setCallback(object : MediaSession.Callback() {})
@@ -32,34 +38,45 @@ class PlayerActivity : Activity() {
         mediaSession.isActive = true
 
         loadStreamUrl()
+
+        val fragment = fragmentManager.findFragmentById(R.id.playback_controls_fragment) as PlayerOverlayFragment
+        fragment.connectToPlayer(videoPlayer)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        videoPlayer.play()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        videoPlayer.pause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        videoView.suspend()
+        videoPlayer.destroy()
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-//        val playbackOverlayFragment = fragmentManager.findFragmentById(R.id.playback_controls_fragment) as PlayerOverlayFragment
         when (keyCode) {
             KeyEvent.KEYCODE_MEDIA_PLAY -> {
-                setPlaying(false)
-                return true
+                videoPlayer.play()
             }
             KeyEvent.KEYCODE_MEDIA_PAUSE -> {
-                setPlaying(false)
-                return true
+                videoPlayer.pause()
             }
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                if (playbackState == PlaybackState.PLAYING) {
-                    setPlaying(false)
+                if (videoPlayer.isPlaying) {
+                    videoPlayer.pause()
                 } else {
-                    setPlaying(true)
+                    videoPlayer.play()
                 }
-                return true
             }
             else -> return super.onKeyUp(keyCode, event)
         }
+
+        return true
     }
 
     private fun loadStreamUrl() {
@@ -74,34 +91,14 @@ class PlayerActivity : Activity() {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({
                     streamUrls.add(it)
-                    if (playbackState == PlaybackState.LOADING) {
+                    if (!videoPlayer.isInitialized) {
                         setStream(it)
                     }
                 }, { it.printStackTrace() }, {})
     }
 
-    private fun setStream(url: String) {
-        videoView.setVideoURI(Uri.parse(url))
-        videoView.start()
-
-        playbackState = PlaybackState.PLAYING
-    }
-
-    private fun setPlaying(playing: Boolean) {
-        if (playbackState != PlaybackState.LOADING) {
-
-            if (playing && playbackState != PlaybackState.PLAYING) {
-                videoView.resume()
-                playbackState = PlaybackState.PLAYING
-            } else if (playbackState != PlaybackState.PAUSED) {
-                videoView.pause()
-                playbackState = PlaybackState.PAUSED
-            }
-        }
-    }
-
-    enum class PlaybackState {
-        PLAYING, PAUSED, BUFFERING, IDLE, LOADING
+    fun setStream(url: String) {
+        videoPlayer.initPlayer(Uri.parse(url), this)
     }
 
     companion object {
