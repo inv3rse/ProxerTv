@@ -3,4 +3,5 @@
     <string name="row_top_access">Top Access</string>
     <string name="row_top_rating">Top Rating</string>
     <string name="row_airing">Airing</string>
+    <string name="row_streams">Streams</string>
 </resources>

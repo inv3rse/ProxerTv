@@ -48,8 +48,6 @@ class CoverCardPresenter : Presenter() {
     }
 
     companion object {
-        private val TAG = "CardPresenter"
-
         private val CARD_WIDTH = 280
         private val CARD_HEIGHT = 392
     }

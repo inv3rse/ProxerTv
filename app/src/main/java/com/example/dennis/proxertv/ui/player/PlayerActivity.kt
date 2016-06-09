@@ -2,15 +2,14 @@ package com.example.dennis.proxertv.ui.player
 
 import android.app.Activity
 import android.media.session.MediaSession
-import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.SurfaceView
 import com.example.dennis.proxertv.R
 import com.example.dennis.proxertv.base.App
+import com.example.dennis.proxertv.model.Stream
 import com.google.android.exoplayer.AspectRatioFrameLayout
-import rx.android.schedulers.AndroidSchedulers
-import rx.schedulers.Schedulers
+import rx.Observable
 
 class PlayerActivity : Activity() {
 
@@ -19,8 +18,6 @@ class PlayerActivity : Activity() {
     private lateinit var surfaceView: SurfaceView
     private lateinit var aspectFrame: AspectRatioFrameLayout
     private lateinit var mediaSession: MediaSession
-
-    private var streamUrls = arrayListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,10 +34,8 @@ class PlayerActivity : Activity() {
 
         mediaSession.isActive = true
 
-        loadStreamUrl()
-
         val fragment = fragmentManager.findFragmentById(R.id.playback_controls_fragment) as PlayerOverlayFragment
-        fragment.connectToPlayer(videoPlayer)
+        fragment.connectToPlayer(videoPlayer, loadStreamUrls())
     }
 
     override fun onStart() {
@@ -79,26 +74,14 @@ class PlayerActivity : Activity() {
         return true
     }
 
-    private fun loadStreamUrl() {
+    private fun loadStreamUrls(): Observable<Stream> {
         val client = App.component.getProxerClient()
 
         val id = intent.extras.getInt(EXTRA_SERIES_ID)
         val episode = intent.extras.getInt(EXTRA_EPISODE_NUM)
         val lang = intent.extras.getString(EXTRA_LANG_TYPE)
 
-        client.loadEpisodeStreams(id, episode, lang)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
-                    streamUrls.add(it)
-                    if (!videoPlayer.isInitialized) {
-                        setStream(it)
-                    }
-                }, { it.printStackTrace() }, {})
-    }
-
-    fun setStream(url: String) {
-        videoPlayer.initPlayer(Uri.parse(url), this)
+        return client.loadEpisodeStreams(id, episode, lang)
     }
 
     companion object {

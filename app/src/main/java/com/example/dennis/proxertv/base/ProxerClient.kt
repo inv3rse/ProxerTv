@@ -1,9 +1,6 @@
 package com.example.dennis.proxertv.base
 
-import com.example.dennis.proxertv.model.ApiEpisodesInfo
-import com.example.dennis.proxertv.model.Series
-import com.example.dennis.proxertv.model.SeriesCover
-import com.example.dennis.proxertv.model.ServerConfig
+import com.example.dennis.proxertv.model.*
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
 import okhttp3.OkHttpClient
@@ -70,16 +67,16 @@ class ProxerClient(
                 .flatMap({ loadNumEpisodes(it) })
     }
 
-    fun loadEpisodeStreams(seriesId: Int, episode: Int, subType: String): Observable<String> {
+    fun loadEpisodeStreams(seriesId: Int, episode: Int, subType: String): Observable<Stream> {
         val request = Request.Builder().get().url(serverConfig.episodeStreamsUrl(seriesId, episode, subType)).build()
 
         return CallObservable(httpClient.newCall(request))
-                .flatMap(fun(response): Observable<String> {
+                .flatMap(fun(response): Observable<Stream> {
                     val body = response.body()
                     val content = body.string()
                     body.close()
 
-                    val embedUrls = arrayListOf<String>()
+                    val unresolvedStreams = arrayListOf<Stream>()
                     val regex = Regex("<script type=\"text/javascript\">\n\n.*var streams = (\\[.*\\])")
                     val findResult = regex.find(content)
                     if (findResult != null) {
@@ -89,23 +86,26 @@ class ProxerClient(
                             mapped.forEach {
                                 val url = it["replace"]
                                 val code = it["code"]
-                                if (url != null && code != null) {
-                                    embedUrls.add(if (url.isEmpty()) code else url.replace("#", code))
+                                val providerName = it["name"] ?: it["type"]
+                                if (url != null && code != null && providerName != null) {
+                                    val unresolvedUrl = if (url.isEmpty()) code else url.replace("#", code)
+                                    unresolvedStreams.add(Stream(unresolvedUrl, providerName))
                                 }
                             }
                         }
                     }
 
-                    return Observable.from(embedUrls)
+                    return Observable.from(unresolvedStreams)
                 })
                 // resolve the link to the stream provider to the actual video stream
-                .flatMap(fun(providerUrl): Observable<String> {
+                .flatMap(fun(unresolvedStream): Observable<Stream> {
 
                     val resolveObservables = streamResolvers
-                            .filter { it.appliesToUrl(providerUrl) }
-                            .map { it.resolveStream(providerUrl) }
+                            .filter { it.appliesToUrl(unresolvedStream.streamUrl) }
+                            .map { it.resolveStream(unresolvedStream.streamUrl) }
 
                     return Observable.mergeDelayError(resolveObservables)
+                            .map { Stream(it, unresolvedStream.providerName) }
                 })
     }
 
