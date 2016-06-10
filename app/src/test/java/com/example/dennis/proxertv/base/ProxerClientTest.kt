@@ -3,6 +3,7 @@ package com.example.dennis.proxertv.base
 import com.example.dennis.proxertv.model.Series
 import com.example.dennis.proxertv.model.SeriesCover
 import com.example.dennis.proxertv.model.ServerConfig
+import com.example.dennis.proxertv.model.Stream
 import com.google.gson.Gson
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -85,7 +86,7 @@ class ProxerClientTest {
         mockServer.enqueue(MockResponse().setBody(loadResponse("testWatchResponse.html")))
         // Todo redirect following resolve requests to offline data
 
-        val subscriber = TestSubscriber<String>()
+        val subscriber = TestSubscriber<Stream>()
         proxerClient.loadEpisodeStreams(15371, 1, "engsub").subscribe(subscriber)
 
         subscriber.awaitTerminalEvent()
