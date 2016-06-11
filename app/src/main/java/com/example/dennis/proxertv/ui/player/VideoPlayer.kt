@@ -94,7 +94,10 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         get() = mPlayer.duration
 
     fun destroy() {
-        mPlayer.stop()
+        if (isInitialized) {
+            mPlayer.stop()
+        }
+
         disconnectFromUi()
         stopProgressUpdate()
         mPlayer.release()
