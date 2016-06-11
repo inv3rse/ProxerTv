@@ -111,20 +111,23 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
             currentEpisodePage = page
             contentAdapter.removeItems(1, contentAdapter.size() - 1)
 
-            subscriptions.add(client.loadEpisodesPage(series.id, page).subscribe(fun(episodesMap: Map<String, List<Int>>) {
-                val cardPresenter = CoverCardPresenter()
-                episodesMap.keys.forEach { name ->
-                    val header = HeaderItem(name)
-                    val listRowAdapter = ArrayObjectAdapter(cardPresenter)
+            subscriptions.add(client.loadEpisodesPage(series.id, page)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(fun(episodesMap: Map<String, List<Int>>) {
+                        val cardPresenter = CoverCardPresenter()
+                        episodesMap.keys.forEach { name ->
+                            val header = HeaderItem(name)
+                            val listRowAdapter = ArrayObjectAdapter(cardPresenter)
 
-                    val episodes = episodesMap[name] ?: emptyList()
-                    for (i in episodes) {
-                        listRowAdapter.add(Episode(series.id, i, name, series.imageUrl))
-                    }
+                            val episodes = episodesMap[name] ?: emptyList()
+                            for (i in episodes) {
+                                listRowAdapter.add(Episode(series.id, i, name, series.imageUrl))
+                            }
 
-                    contentAdapter.add(ListRow(header, listRowAdapter))
-                }
-            }, { it.printStackTrace() }, {}))
+                            contentAdapter.add(ListRow(header, listRowAdapter))
+                        }
+                    }, { it.printStackTrace() }, {}))
         }
     }
 
