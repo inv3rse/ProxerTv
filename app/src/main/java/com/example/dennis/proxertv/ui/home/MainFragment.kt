@@ -18,18 +18,21 @@ import com.example.dennis.proxertv.ui.details.DetailsActivity
 import com.example.dennis.proxertv.ui.util.CoverCardPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import rx.subscriptions.CompositeSubscription
 
 class MainFragment : BrowseFragment(), OnItemViewClickedListener {
-    val coverPresenter = CoverCardPresenter()
-    val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-    val topAccessAdapter = ArrayObjectAdapter(coverPresenter)
-    val topRatingAdapter = ArrayObjectAdapter(coverPresenter)
-    val airingAdapter = ArrayObjectAdapter(coverPresenter)
+    private val coverPresenter = CoverCardPresenter()
+    private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+    private val topAccessAdapter = ArrayObjectAdapter(coverPresenter)
+    private val topRatingAdapter = ArrayObjectAdapter(coverPresenter)
+    private val airingAdapter = ArrayObjectAdapter(coverPresenter)
 
-    val handler = Handler()
+    private val handler = Handler()
 
-    lateinit var backgroundManager: BackgroundManager
-    lateinit var metrics: DisplayMetrics
+    private lateinit var backgroundManager: BackgroundManager
+    private lateinit var metrics: DisplayMetrics
+
+    private val subscriptions = CompositeSubscription()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +54,11 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener {
         loadContent()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.clear()
+    }
+
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
         if (item is SeriesCover) {
             val intent = Intent(activity, DetailsActivity::class.java)
@@ -70,29 +78,29 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener {
     private fun loadContent() {
         val client = App.component.getProxerClient()
 
-        client.loadTopAccessSeries()
+        subscriptions.add(client.loadTopAccessSeries()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         { topAccessAdapter.addAll(0, it) },
                         { it.printStackTrace() }, { }
-                )
+                ))
 
-        client.loadTopRatingSeries()
+        subscriptions.add(client.loadTopRatingSeries()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         { topRatingAdapter.addAll(0, it) },
                         { it.printStackTrace() }, { }
-                )
+                ))
 
-        client.loadAiringSeries()
+        subscriptions.add(client.loadAiringSeries()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         { airingAdapter.addAll(0, it) },
                         { it.printStackTrace() }, { }
-                )
+                ))
     }
 
     private fun setBackgroundImage(uri: String) {

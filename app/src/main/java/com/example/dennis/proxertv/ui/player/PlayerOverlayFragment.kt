@@ -11,17 +11,18 @@ import com.example.dennis.proxertv.ui.util.StreamPresenter
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import rx.subscriptions.CompositeSubscription
 
 class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListener, OnItemViewClickedListener {
     private var videoPlayer: VideoPlayer? = null
+    private var seekLength = 10000 // 10 seconds, overridden once the video length is known
+    private val subscriptions = CompositeSubscription()
 
     private lateinit var rowsAdapter: ArrayObjectAdapter
     private lateinit var actionsRow: PlaybackControlsRow
     private lateinit var actionsAdapter: ArrayObjectAdapter
-    private lateinit var playPauseAction: PlayPauseAction
     private lateinit var streamRowAdapter: ArrayObjectAdapter
-
-    private var seekLength = 10000 // 10 seconds, overridden once the video length is known
+    private lateinit var playPauseAction: PlayPauseAction
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,17 +31,22 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
         setupActions()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.clear()
+    }
+
     fun connectToPlayer(videoPlayer: VideoPlayer, streamObservable: Observable<Stream>) {
         this.videoPlayer = videoPlayer
         videoPlayer.setStatusListener(this)
 
-        streamObservable.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+        subscriptions.add(streamObservable.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ stream ->
                     if (streamRowAdapter.size() == 0) {
                         setStream(stream)
                     }
                     streamRowAdapter.add(stream)
-                }, {}, {})
+                }, { it.printStackTrace() }, {}))
     }
 
     private fun setupActions() {

@@ -17,10 +17,12 @@ import com.example.dennis.proxertv.ui.player.PlayerActivity
 import com.example.dennis.proxertv.ui.util.CoverCardPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import rx.subscriptions.CompositeSubscription
 
 class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener {
     val presenterSelector = ClassPresenterSelector()
     val contentAdapter = ArrayObjectAdapter(presenterSelector)
+    val subscriptions = CompositeSubscription()
 
     lateinit var client: ProxerClient
     var series: Series? = null
@@ -33,6 +35,11 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
         setupPresenter()
         loadContent()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.clear()
     }
 
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
@@ -66,7 +73,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
     private fun loadContent() {
         val seriesId = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
-        client.loadSeries(seriesId)
+        subscriptions.add(client.loadSeries(seriesId)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ series ->
@@ -96,7 +103,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                                 })
                     }
-                })
+                }, { it.printStackTrace() }, {}))
     }
 
     private fun loadEpisodes(series: Series, page: Int) {
@@ -104,7 +111,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
             currentEpisodePage = page
             contentAdapter.removeItems(1, contentAdapter.size() - 1)
 
-            client.loadEpisodesPage(series.id, page).subscribe(fun(episodesMap: Map<String, List<Int>>) {
+            subscriptions.add(client.loadEpisodesPage(series.id, page).subscribe(fun(episodesMap: Map<String, List<Int>>) {
                 val cardPresenter = CoverCardPresenter()
                 episodesMap.keys.forEach { name ->
                     val header = HeaderItem(name)
@@ -117,7 +124,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                     contentAdapter.add(ListRow(header, listRowAdapter))
                 }
-            }, { it.printStackTrace() }, {})
+            }, { it.printStackTrace() }, {}))
         }
     }
 
