@@ -18,6 +18,7 @@ import com.example.dennis.proxertv.ui.util.CoverCardPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
+import java.util.concurrent.TimeUnit
 
 class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener {
     val presenterSelector = ClassPresenterSelector()
@@ -32,8 +33,11 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         super.onCreate(savedInstanceState)
 
         client = App.component.getProxerClient()
-
         setupPresenter()
+    }
+
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
         loadContent()
     }
 
@@ -65,6 +69,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         presenterSelector.addClassPresenter(DetailsOverviewRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
+        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
         detailsOverviewPresenter.onActionClickedListener = this
         onItemViewClickedListener = this
 

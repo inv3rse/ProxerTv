@@ -6,6 +6,7 @@ import android.os.Handler
 import android.support.v17.leanback.app.BackgroundManager
 import android.support.v17.leanback.app.BrowseFragment
 import android.support.v17.leanback.widget.*
+import android.support.v4.app.ActivityOptionsCompat
 import android.util.DisplayMetrics
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.GlideDrawable
@@ -59,11 +60,15 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener {
         subscriptions.clear()
     }
 
-    override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
+    override fun onItemClicked(itemViewHolder: Presenter.ViewHolder, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
         if (item is SeriesCover) {
             val intent = Intent(activity, DetailsActivity::class.java)
+            val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(activity,
+                    (itemViewHolder.view as ImageCardView).mainImageView,
+                    DetailsActivity.SHARED_ELEMENT).toBundle()
+
             intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
-            activity.startActivity(intent)
+            activity.startActivity(intent, bundle)
         }
     }
 
