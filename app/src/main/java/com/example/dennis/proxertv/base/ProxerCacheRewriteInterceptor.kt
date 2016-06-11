@@ -1,6 +1,5 @@
 package com.example.dennis.proxertv.base
 
-import android.util.Log
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -14,16 +13,10 @@ class ProxerCacheRewriteInterceptor : Interceptor {
         val response = chain.proceed(request)
 
         if (request.url().host().contains("proxer.me")) {
-            val builder = response.newBuilder()
-                    .header("Cache-Control", "max-age=1800, max-stale=600")
+            return response.newBuilder()
+                    .header("Cache-Control", "max-age=600")
                     .removeHeader("Pragma")
-
-            val lastModified = response.header("Last-Modified")
-            if (lastModified != null) {
-                builder.header("Expires", lastModified)
-            }
-
-            return builder.build()
+                    .build()
         } else {
             return response
         }
