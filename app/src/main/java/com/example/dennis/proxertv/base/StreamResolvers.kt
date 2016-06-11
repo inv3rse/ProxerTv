@@ -1,5 +1,7 @@
 package com.example.dennis.proxertv.base
 
+import com.github.salomonbrys.kotson.fromJson
+import com.google.gson.Gson
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +21,8 @@ interface StreamResolver {
 }
 
 class ProxerStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
+    private val regex = Regex("src=\"(.*\\.mp4)\"")
+
     override fun appliesToUrl(url: String): Boolean {
         return url.contains("stream.proxer.me", true)
     }
@@ -32,7 +36,6 @@ class ProxerStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
                     val content = body.string()
                     body.close()
 
-                    val regex = Regex("src=\"(.*\\.mp4)\"")
                     val streamUrl = regex.find(content)?.groupValues?.get(1)
 
                     if (streamUrl != null) {
@@ -46,6 +49,7 @@ class ProxerStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
 }
 
 class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
+    private val regex = Regex("<input.*?name=\"(.*?)\".*?value=\"(.*?)\">")
 
     override fun appliesToUrl(url: String): Boolean {
         return url.contains("streamcloud", true)
@@ -61,7 +65,6 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
                     body.close()
 
                     val formValues = FormBody.Builder()
-                    val regex = Regex("<input.*?name=\"(.*?)\".*?value=\"(.*?)\">")
                     for (i in regex.findAll(content)) {
                         formValues.add(i.groupValues[1], i.groupValues[2].replace("download1", "download2"))
                     }
@@ -82,6 +85,46 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
                     } else {
                         return Observable.empty()
                     }
+                })
+    }
+}
+
+class DailyMotionStreamResolver(val httpClient: OkHttpClient, val gson: Gson) : StreamResolver {
+    private val regex = Regex("\"qualities\":(\\{.+\\}\\]\\}),")
+
+    override fun appliesToUrl(url: String): Boolean {
+        return url.contains("dailymotion.com")
+    }
+
+    override fun resolveStream(url: String): Observable<String> {
+        // fix missing http  (//www.dailymotion.com/embed/video/someId)
+        val fixedUrl = if (url.startsWith("//")) "http:" + url else url
+        val request = Request.Builder().get().url(fixedUrl).build()
+
+        return CallObservable(httpClient.newCall(request))
+                .flatMap(fun(response): Observable<String> {
+                    val body = response.body()
+                    val content = body.string()
+                    body.close()
+
+                    val qualitiesJson = regex.find(content)?.groupValues?.get(1)
+                    if (qualitiesJson != null) {
+                        val qualityMap = gson.fromJson<Map<String, List<Map<String, String>>>>(qualitiesJson)
+                        val maxQuality = qualityMap.keys.maxBy {
+                            try {
+                                it.toInt()
+                            } catch (e: NumberFormatException) {
+                                0
+                            }
+                        }
+
+                        val streamUrl = qualityMap[maxQuality]?.get(0)?.get("url")
+                        if (streamUrl != null) {
+                            return Observable.just(streamUrl)
+                        }
+                    }
+
+                    return Observable.empty()
                 })
     }
 }

@@ -1,5 +1,6 @@
 package com.example.dennis.proxertv.base
 
+import com.google.gson.Gson
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -72,5 +73,25 @@ class StreamResolverTest {
 
         assertEquals(1, subscriber.onNextEvents.size)
         assertEquals("http://cdn8.streamcloud.eu:8080/zpv75jl4lwoax3ptx32ihr7fuses3udb2dpgvrl344izxpszn4p4ldp3nm/video.mp4", subscriber.onNextEvents[0])
+    }
+
+    @Test
+    fun testDailyMotionResolver() {
+        mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/dailyMotionResponse.html")))
+        val resolver = DailyMotionStreamResolver(httpClient, Gson())
+
+        assertTrue(resolver.appliesToUrl("//www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
+        assertTrue(resolver.appliesToUrl("www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
+        assertTrue(resolver.appliesToUrl("https//www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
+
+        val subscriber = TestSubscriber<String>()
+        resolver.resolveStream("//www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")
+                .subscribe(subscriber)
+
+        subscriber.awaitTerminalEvent()
+        subscriber.assertNoErrors()
+
+        assertEquals(1, subscriber.onNextEvents.size)
+        assertEquals("http://www.dailymotion.com/cdn/H264-1280x720/video/x431e80.mp4?auth=1465835647-2688-s9uh39e0-30c112e85600d8f9baaf5bcd11646584", subscriber.onNextEvents[0])
     }
 }

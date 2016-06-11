@@ -104,7 +104,6 @@ class ProxerClientTest {
         subscriber.assertNoErrors()
         subscriber.assertValueCount(1)
         assertEquals(16, subscriber.onNextEvents[0])
-
     }
 
 //    @Test

@@ -50,8 +50,12 @@ class BaseModule(val applicationContext: Context) {
         return ServerConfig()
     }
 
-    fun provideStreamResolver(httpClient: OkHttpClient): ArrayList<StreamResolver> {
-        return arrayListOf(ProxerStreamResolver(httpClient), StreamCloudResolver(httpClient))
+    // automatically providing the ArrayList does not work properly
+    fun provideStreamResolver(httpClient: OkHttpClient, gson: Gson): ArrayList<StreamResolver> {
+        return arrayListOf(
+                ProxerStreamResolver(httpClient),
+                StreamCloudResolver(httpClient),
+                DailyMotionStreamResolver(httpClient, gson))
     }
 
     @Provides
@@ -60,7 +64,7 @@ class BaseModule(val applicationContext: Context) {
                             gson: Gson,
                             serverConfig: ServerConfig): ProxerClient {
 
-        return ProxerClient(httpClient, gson, provideStreamResolver(httpClient), serverConfig)
+        return ProxerClient(httpClient, gson, provideStreamResolver(httpClient, gson), serverConfig)
     }
 }
 
