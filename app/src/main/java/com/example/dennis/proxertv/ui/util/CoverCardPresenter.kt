@@ -43,6 +43,7 @@ class CoverCardPresenter : Presenter() {
     override fun onUnbindViewHolder(viewHolder: ViewHolder) {
         val cardView = viewHolder.view as ImageCardView
         // Remove references to images so that the garbage collector can free up memory
+        Glide.clear(cardView.mainImageView)
         cardView.badgeImage = null
         cardView.mainImage = null
     }
