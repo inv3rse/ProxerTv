@@ -37,7 +37,7 @@ class StreamResolverTest {
 
     @Test
     fun testProxerStreamResolver() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("testProxerStreamResponse.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/proxerStreamResponse.html")))
         val resolver = ProxerStreamResolver(httpClient)
 
         assertTrue(resolver.appliesToUrl("http://stream.proxer.me/embed-zbtli7pqg8mg-728x504.html"))
@@ -56,8 +56,8 @@ class StreamResolverTest {
 
     @Test
     fun testStreamcloudResolver() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("testStreamcloudResponse1.html")))
-        mockServer.enqueue(MockResponse().setBody(loadResponse("testStreamcloudResponse2.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/streamcloudResponse1.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/streamcloudResponse2.html")))
         val resolver = StreamCloudResolver(httpClient)
 
         assertTrue(resolver.appliesToUrl("http://streamcloud.eu/rma6ijnb58n0"))

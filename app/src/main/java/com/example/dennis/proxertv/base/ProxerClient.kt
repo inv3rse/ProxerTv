@@ -27,44 +27,51 @@ class ProxerClient(
         return loadSeriesList(serverConfig.airingListUrl, forceDownload)
     }
 
-    fun loadSeries(id: Int): Observable<Series?> {
-        val request = Request.Builder().get().url(serverConfig.detailUrl(id)).build()
+    fun loadNumStreamPages(seriesId: Int): Observable<Int> {
+        val request = Request.Builder().get().url(serverConfig.episodesListUrl(seriesId)).build()
 
         return CallObservable(httpClient.newCall(request))
-                .map(fun(response): Series? {
+                .map(fun(response): Int {
                     val body = response.body()
                     val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
                     body.close()
 
-                    val tableElement = soup.select(".details>tbody")?.first()?.children()
-                    if (tableElement != null && tableElement.size >= 3) {
-                        var title: String? = null
-                        var engTitle: String? = null
-                        var description: String? = null
+                    val contentList = soup.getElementById("contentList")
+                    return if (contentList != null && contentList.children().size > 1) {
+                        Math.max(1, contentList.child(0).children().size)
+                    } else {
+                        1
+                    }
+                })
+    }
 
-                        tableElement.forEach {
-                            if (it.children().size >= 2) {
-                                when (it.child(0).text()) {
-                                    "Original Titel" -> title = it.child(1).text()
-                                    "Eng. Titel" -> engTitle = it.child(1).text()
-                                }
-                            } else if (it.children().size == 1) {
-                                description = it.child(0).text()
-                            }
-                        }
+    /**
+     * Returns the available episodes by sub/dub type
+     */
+    fun loadEpisodesPage(seriesId: Int, page: Int): Observable<Map<String, List<Int>>> {
+        val request = Request.Builder().get().url(serverConfig.episodesListJsonUrl(seriesId, page)).build()
 
-                        if (title != null && description != null) {
-                            if (engTitle == null) {
-                                engTitle = title
-                            }
+        return CallObservable(httpClient.newCall(request))
+                .map(fun(response): Map<String, List<Int>> {
+                    val body = response.body()
+                    val info: ApiEpisodesInfo? = gson.fromJson(body.string(), ApiEpisodesInfo::class.java)
+                    body.close()
 
-                            return Series(id, title!!, engTitle!!, description!!, serverConfig.coverUrl(id))
+                    val episodeMap = hashMapOf<String, ArrayList<Int>>()
+                    if (info != null) {
+                        for (episode in info.data) {
+                            episodeMap.getOrPut(episode.typ, { arrayListOf<Int>() }).add(episode.no)
                         }
                     }
 
-                    return null
+                    return episodeMap
                 })
-                .flatMap({ loadNumEpisodes(it) })
+    }
+
+    fun loadSeries(id: Int): Observable<Series?> {
+        return Observable.zip(loadSeriesDetails(id), loadNumStreamPages(id), fun(series: Series?, numPages: Int): Series? {
+            return series?.copy(pages = numPages) ?: null
+        })
     }
 
     fun loadEpisodeStreams(seriesId: Int, episode: Int, subType: String): Observable<Stream> {
@@ -109,6 +116,45 @@ class ProxerClient(
                 })
     }
 
+    private fun loadSeriesDetails(id: Int): Observable<Series?> {
+        val request = Request.Builder().get().url(serverConfig.detailUrl(id)).build()
+
+        return CallObservable(httpClient.newCall(request))
+                .map(fun(response): Series? {
+                    val body = response.body()
+                    val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
+                    body.close()
+
+                    val tableElement = soup.select(".details>tbody")?.first()?.children()
+                    if (tableElement != null && tableElement.size >= 3) {
+                        var title: String? = null
+                        var engTitle: String? = null
+                        var description: String? = null
+
+                        tableElement.forEach {
+                            if (it.children().size >= 2) {
+                                when (it.child(0).text()) {
+                                    "Original Titel" -> title = it.child(1).text()
+                                    "Eng. Titel" -> engTitle = it.child(1).text()
+                                }
+                            } else if (it.children().size == 1) {
+                                description = it.child(0).text()
+                            }
+                        }
+
+                        if (title != null && description != null) {
+                            if (engTitle == null) {
+                                engTitle = title
+                            }
+
+                            return Series(id, title!!, engTitle!!, description!!, serverConfig.coverUrl(id))
+                        }
+                    }
+
+                    return null
+                })
+    }
+
     private fun loadSeriesList(url: String, forceDownload: Boolean): Observable<List<SeriesCover>> {
         val request = Request.Builder().get().url(url).build()
 
@@ -132,30 +178,6 @@ class ProxerClient(
                     }
 
                     return seriesCovers;
-                })
-    }
-
-    private fun loadNumEpisodes(series: Series?): Observable<Series?> {
-        if (series == null) {
-            return Observable.just(null)
-        }
-
-        val request = Request.Builder().get().url(serverConfig.episodesListJsonUrl(series.id)).build()
-
-        return CallObservable(httpClient.newCall(request))
-                .map(fun(response): Series {
-                    val body = response.body()
-                    val info: ApiEpisodesInfo? = gson.fromJson(body.string(), ApiEpisodesInfo::class.java)
-                    body.close()
-
-                    val episodeMap = hashMapOf<String, ArrayList<Int>>()
-                    if (info != null) {
-                        for (episode in info.data) {
-                            episodeMap.getOrPut(episode.typ, { arrayListOf<Int>() }).add(episode.no)
-                        }
-                    }
-
-                    return series.copy(availAbleEpisodes = episodeMap)
                 })
     }
 }

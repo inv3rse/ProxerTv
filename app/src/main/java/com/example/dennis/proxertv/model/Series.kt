@@ -6,7 +6,5 @@ data class Series(
         val englishTitle: String = originalTitle,
         val description: String = "",
         val imageUrl: String = "",
-        // available episodes by sub/dub type
-        val availAbleEpisodes: Map<String, List<Int>> = emptyMap()
-) {
+        val pages: Int = 1) {
 }

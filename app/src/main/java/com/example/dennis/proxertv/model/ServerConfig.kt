@@ -6,7 +6,8 @@ class ServerConfig(
         val topRatingListUrl: String = baseUrl + "anime/animeseries/rating/all#top",
         val airingListUrl: String = baseUrl + "anime/airing#top",
         val detailUrl: (seriesId: Int) -> String = { id -> baseUrl + "info/$id" },
-        val episodesListJsonUrl: (seriesId: Int) -> String = { id -> baseUrl + "info/$id/list?format=json" },
+        val episodesListUrl: (seriesId: Int) -> String = { id -> baseUrl + "info/$id/list" },
+        val episodesListJsonUrl: (seriesId: Int, page: Int) -> String = { id, page -> baseUrl + "info/$id/list/$page?format=json" },
         val episodeStreamsUrl: (seriesId: Int, episodeNum: Int, subType: String) -> String = {
             seriesId, episodeNum, subType ->
             baseUrl + "watch/$seriesId/$episodeNum/$subType"

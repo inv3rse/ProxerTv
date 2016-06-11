@@ -45,7 +45,7 @@ class ProxerClientTest {
 
     @Test
     fun testLoadTopAccessList() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("testTopAccessListResponse.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/topAccessListResponse.html")))
 
         val subscriber = TestSubscriber<List<SeriesCover>>()
         proxerClient.loadTopAccessSeries().subscribe(subscriber)
@@ -61,8 +61,8 @@ class ProxerClientTest {
 
     @Test
     fun testLoadSeries() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("testDetailResponse.html")))
-        mockServer.enqueue(MockResponse().setBody(loadResponse("testDetailEpisodes.json")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailResponse.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesSingle.html")))
 
         val subscriber = TestSubscriber<Series?>()
         proxerClient.loadSeries(15371).subscribe(subscriber)
@@ -77,13 +77,39 @@ class ProxerClientTest {
         assertEquals(15371, series!!.id)
         assertEquals("Koutetsujou no Kabaneri", series.originalTitle)
         assertEquals("Kabaneri of the Iron Fortress", series.englishTitle)
-        assertEquals(8, series.availAbleEpisodes["gersub"]?.size)
-        assertEquals(8, series.availAbleEpisodes["engsub"]?.size)
+        assertEquals(1, series.pages)
     }
 
     @Test
+    fun testLoadNumStreamSinglePage() {
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesSingle.html")))
+        val subscriber = TestSubscriber<Int>()
+
+        // single page
+        proxerClient.loadNumStreamPages(15371).subscribe(subscriber)
+        subscriber.awaitTerminalEvent()
+        subscriber.assertNoErrors()
+        subscriber.assertValueCount(1)
+        assertEquals(1, subscriber.onNextEvents[0])
+    }
+
+    @Test
+    fun testLoadNumStreamMultiplePages() {
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesMultiple.html")))
+        val subscriber = TestSubscriber<Int>()
+
+        // multiple pages
+        proxerClient.loadNumStreamPages(53).subscribe(subscriber)
+        subscriber.awaitTerminalEvent()
+        subscriber.assertNoErrors()
+        subscriber.assertValueCount(1)
+        assertEquals(16, subscriber.onNextEvents[0])
+
+    }
+
+//    @Test
     fun testLoadEpisodeStreams() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("testWatchResponse.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/watchResponse.html")))
         // Todo redirect following resolve requests to offline data
 
         val subscriber = TestSubscriber<Stream>()

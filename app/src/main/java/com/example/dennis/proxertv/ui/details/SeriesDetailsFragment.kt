@@ -8,21 +8,23 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.GlideDrawable
 import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
+import com.example.dennis.proxertv.R
 import com.example.dennis.proxertv.base.App
 import com.example.dennis.proxertv.base.ProxerClient
 import com.example.dennis.proxertv.model.Episode
+import com.example.dennis.proxertv.model.Series
 import com.example.dennis.proxertv.ui.player.PlayerActivity
-import com.example.dennis.proxertv.ui.details.DetailsActivity
-import com.example.dennis.proxertv.ui.details.DetailsDescriptionPresenter
 import com.example.dennis.proxertv.ui.util.CoverCardPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 
-class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener {
+class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener {
     val presenterSelector = ClassPresenterSelector()
     val contentAdapter = ArrayObjectAdapter(presenterSelector)
 
     lateinit var client: ProxerClient
+    var series: Series? = null
+    var currentEpisodePage = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,24 +46,43 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener {
         }
     }
 
+    override fun onActionClicked(action: Action) {
+        if (series != null) {
+            loadEpisodes(series!!, action.id.toInt())
+        }
+    }
+
+    @Suppress("DEPRECATION")
     private fun setupPresenter() {
         val detailsOverviewPresenter = DetailsOverviewRowPresenter(DetailsDescriptionPresenter())
         presenterSelector.addClassPresenter(DetailsOverviewRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
+        detailsOverviewPresenter.onActionClickedListener = this
         onItemViewClickedListener = this
 
         adapter = contentAdapter
     }
 
     private fun loadContent() {
-        val id = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
-        client.loadSeries(id)
+        val seriesId = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
+        client.loadSeries(seriesId)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ series ->
                     if (series != null) {
+                        this.series = series
+                        loadEpisodes(series, 1)
+
                         val detailsRow = DetailsOverviewRow(series)
+                        if (series.pages > 1) {
+                            val actionsAdapter = ArrayObjectAdapter()
+                            for (i in 1..series.pages) {
+                                actionsAdapter.add(Action(i.toLong(), getString(R.string.page_title, i)))
+                            }
+                            detailsRow.actionsAdapter = actionsAdapter
+                        }
+
                         contentAdapter.add(detailsRow)
 
                         Glide.with(activity)
@@ -74,20 +95,30 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener {
                                     }
 
                                 })
-                        val cardPresenter = CoverCardPresenter()
-                        series.availAbleEpisodes.keys.forEach { name ->
-                            val header = HeaderItem(name)
-                            val listRowAdapter = ArrayObjectAdapter(cardPresenter)
-
-                            val episodes = series.availAbleEpisodes[name] ?: emptyList()
-                            for (i in episodes) {
-                                listRowAdapter.add(Episode(series.id, i, name, series.imageUrl))
-                            }
-
-                            contentAdapter.add(ListRow(header, listRowAdapter))
-                        }
                     }
                 })
+    }
+
+    private fun loadEpisodes(series: Series, page: Int) {
+        if (currentEpisodePage != page) {
+            currentEpisodePage = page
+            contentAdapter.removeItems(1, contentAdapter.size() - 1)
+
+            client.loadEpisodesPage(series.id, page).subscribe(fun(episodesMap: Map<String, List<Int>>) {
+                val cardPresenter = CoverCardPresenter()
+                episodesMap.keys.forEach { name ->
+                    val header = HeaderItem(name)
+                    val listRowAdapter = ArrayObjectAdapter(cardPresenter)
+
+                    val episodes = episodesMap[name] ?: emptyList()
+                    for (i in episodes) {
+                        listRowAdapter.add(Episode(series.id, i, name, series.imageUrl))
+                    }
+
+                    contentAdapter.add(ListRow(header, listRowAdapter))
+                }
+            }, { it.printStackTrace() }, {})
+        }
     }
 
     companion object {
