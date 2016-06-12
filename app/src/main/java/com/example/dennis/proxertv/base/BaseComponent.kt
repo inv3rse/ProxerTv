@@ -28,6 +28,7 @@ class BaseModule(val applicationContext: Context) {
         val builder = OkHttpClient.Builder()
                 .cache(Cache(File(applicationContext.cacheDir, "httpCache"), 10 * 1024 * 1024)) // 10 MiB
                 .addNetworkInterceptor(ProxerCacheRewriteInterceptor())
+                .addNetworkInterceptor(CloudFlareInterceptor())
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(40, TimeUnit.SECONDS)
 
