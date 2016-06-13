@@ -5,4 +5,5 @@
     <string name="row_airing">Airing</string>
     <string name="row_streams">Streams</string>
     <string name="page_title">Page %d</string>
+    <string name="row_search_results">Search Results</string>
 </resources>

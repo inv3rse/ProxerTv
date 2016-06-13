@@ -60,6 +60,21 @@ class ProxerClientTest {
     }
 
     @Test
+    fun testSearchSeries() {
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/searchResponse.html")))
+        val subscriber = TestSubscriber<List<SeriesCover>>()
+
+        proxerClient.searchSeries("Rakudai").subscribe(subscriber)
+        subscriber.awaitTerminalEvent()
+        subscriber.assertNoErrors()
+        subscriber.assertValueCount(1)
+
+        assertEquals(1, subscriber.onNextEvents[0].size)
+        val rakudai = SeriesCover(12806, "Rakudai Kishi no Cavalry", "https://cdn.proxer.me/cover/12806.jpg")
+        assertEquals(rakudai, subscriber.onNextEvents[0][0])
+    }
+
+    @Test
     fun testLoadSeries() {
         mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailResponse.html")))
         mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesSingle.html")))

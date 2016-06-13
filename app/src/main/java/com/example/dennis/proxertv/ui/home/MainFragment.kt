@@ -8,6 +8,7 @@ import android.support.v17.leanback.app.BrowseFragment
 import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
 import android.util.DisplayMetrics
+import android.view.View
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.GlideDrawable
 import com.bumptech.glide.request.animation.GlideAnimation
@@ -16,12 +17,13 @@ import com.example.dennis.proxertv.R
 import com.example.dennis.proxertv.base.App
 import com.example.dennis.proxertv.model.SeriesCover
 import com.example.dennis.proxertv.ui.details.DetailsActivity
+import com.example.dennis.proxertv.ui.search.SearchActivity
 import com.example.dennis.proxertv.ui.util.CoverCardPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
 
-class MainFragment : BrowseFragment(), OnItemViewClickedListener {
+class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
     private val coverPresenter = CoverCardPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private val topAccessAdapter = ArrayObjectAdapter(coverPresenter)
@@ -41,6 +43,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener {
 
         initEmptyRows()
         onItemViewClickedListener = this
+        setOnSearchClickedListener(this)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -68,8 +71,13 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener {
                     DetailsActivity.SHARED_ELEMENT).toBundle()
 
             intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
-            activity.startActivity(intent, bundle)
+            startActivity(intent, bundle)
         }
+    }
+
+    override fun onClick(view: View) {
+        val intent = Intent(activity, SearchActivity::class.java)
+        startActivity(intent)
     }
 
     private fun initEmptyRows() {

@@ -27,6 +27,10 @@ class ProxerClient(
         return loadSeriesList(serverConfig.airingListUrl, forceDownload)
     }
 
+    fun searchSeries(query: String): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.searchUrl(query))
+    }
+
     fun loadNumStreamPages(seriesId: Int): Observable<Int> {
         val request = Request.Builder().get().url(serverConfig.episodesListUrl(seriesId)).build()
 
@@ -155,7 +159,7 @@ class ProxerClient(
                 })
     }
 
-    private fun loadSeriesList(url: String, forceDownload: Boolean): Observable<List<SeriesCover>> {
+    private fun loadSeriesList(url: String, forceDownload: Boolean = false): Observable<List<SeriesCover>> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
