@@ -13,9 +13,11 @@ import com.example.dennis.proxertv.ui.details.DetailsActivity
 import com.example.dennis.proxertv.ui.util.CoverCardPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import rx.subscriptions.CompositeSubscription
 
 class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, OnItemViewClickedListener {
     private val client = App.component.getProxerClient()
+    private val subscriptions = CompositeSubscription()
     private lateinit var rowsAdapter: ArrayObjectAdapter
     private lateinit var resultsAdapter: ArrayObjectAdapter
 
@@ -40,18 +42,27 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.clear()
+    }
+
     override fun onQueryTextChange(newQuery: String): Boolean {
         return true
     }
 
     override fun onQueryTextSubmit(query: String): Boolean {
         resultsAdapter.clear()
-        client.searchSeries(query)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ resultList ->
-                    resultsAdapter.addAll(0, resultList)
-                }, { it.printStackTrace() }, {})
+        subscriptions.clear()
+
+        if (query.isNotBlank()) {
+            subscriptions.add(client.searchSeries(query)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe({ resultList ->
+                        resultsAdapter.addAll(0, resultList)
+                    }, { it.printStackTrace() }, {}))
+        }
         return true
     }
 
