@@ -5,6 +5,7 @@ import com.example.dennis.proxertv.model.SeriesCover
 import com.example.dennis.proxertv.model.ServerConfig
 import com.example.dennis.proxertv.model.Stream
 import com.google.gson.Gson
+import loadResponse
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer

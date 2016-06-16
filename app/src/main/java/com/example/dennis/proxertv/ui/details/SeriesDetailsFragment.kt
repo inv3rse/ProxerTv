@@ -10,29 +10,32 @@ import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
 import com.example.dennis.proxertv.R
 import com.example.dennis.proxertv.base.App
-import com.example.dennis.proxertv.base.ProxerClient
 import com.example.dennis.proxertv.model.Episode
 import com.example.dennis.proxertv.model.Series
+import com.example.dennis.proxertv.model.SeriesCover
 import com.example.dennis.proxertv.ui.player.PlayerActivity
 import com.example.dennis.proxertv.ui.util.CoverCardPresenter
+import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
-import java.util.concurrent.TimeUnit
 
 class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener {
-    val presenterSelector = ClassPresenterSelector()
-    val contentAdapter = ArrayObjectAdapter(presenterSelector)
-    val subscriptions = CompositeSubscription()
+    private val presenterSelector = ClassPresenterSelector()
+    private val contentAdapter = ArrayObjectAdapter(presenterSelector)
+    private val actionsAdapter = ArrayObjectAdapter()
+    private val subscriptions = CompositeSubscription()
 
-    lateinit var client: ProxerClient
-    var series: Series? = null
-    var currentEpisodePage = -1
+    private val client = App.component.getProxerClient()
+    private val myListRepository = App.component.getMySeriesRepository()
+
+    private var series: Series? = null
+    private var currentEpisodePage = -1
+    private var inList = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        client = App.component.getProxerClient()
         setupPresenter()
     }
 
@@ -59,7 +62,22 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
     override fun onActionClicked(action: Action) {
         if (series != null) {
-            loadEpisodes(series!!, action.id.toInt())
+            if (action.id == ACTION_ADD_REMOVE) {
+                // add or remove
+                val cover = SeriesCover(series!!.id, series!!.originalTitle, series!!.imageUrl)
+                if (inList) {
+                    myListRepository.removeSeries(cover.id)
+                } else {
+                    myListRepository.addSeries(cover)
+                }
+
+                inList = !inList
+                // update action name
+                action.label1 = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
+                actionsAdapter.notifyArrayItemRangeChanged(0, 1)
+            } else {
+                loadEpisodes(series!!, action.id.toInt())
+            }
         }
     }
 
@@ -78,37 +96,49 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
     private fun loadContent() {
         val seriesId = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
-        subscriptions.add(client.loadSeries(seriesId)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ series ->
-                    if (series != null) {
-                        this.series = series
-                        loadEpisodes(series, 1)
 
-                        val detailsRow = DetailsOverviewRow(series)
-                        if (series.pages > 1) {
-                            val actionsAdapter = ArrayObjectAdapter()
-                            for (i in 1..series.pages) {
-                                actionsAdapter.add(Action(i.toLong(), getString(R.string.page_title, i)))
-                            }
-                            detailsRow.actionsAdapter = actionsAdapter
-                        }
+        val observable = Observable.zip(
+                client.loadSeries(seriesId),
+                myListRepository.containsSeries(seriesId),
+                { series, inList -> Pair(series, inList) })
 
-                        contentAdapter.add(detailsRow)
+        subscriptions.add(
+                observable
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({ pair: Pair<Series?, Boolean> ->
+                            val series = pair.first
+                            inList = pair.second
 
-                        Glide.with(activity)
-                                .load(series.imageUrl)
-                                .centerCrop()
-                                .into(object : SimpleTarget<GlideDrawable>(280, 392) {
-                                    override fun onResourceReady(resource: GlideDrawable, glideAnimation: GlideAnimation<in GlideDrawable>?) {
-                                        detailsRow.imageDrawable = resource
-                                        contentAdapter.notifyArrayItemRangeChanged(0, contentAdapter.size())
+                            if (series != null) {
+                                this.series = series
+                                loadEpisodes(series, 1)
+
+                                val detailsRow = DetailsOverviewRow(series)
+                                val addRemove = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
+                                actionsAdapter.add(Action(ACTION_ADD_REMOVE, addRemove))
+
+                                if (series.pages > 1) {
+                                    for (i in 1..series.pages) {
+                                        actionsAdapter.add(Action(i.toLong(), getString(R.string.page_title, i)))
                                     }
+                                }
 
-                                })
-                    }
-                }, { it.printStackTrace() }, {}))
+                                detailsRow.actionsAdapter = actionsAdapter
+                                contentAdapter.add(detailsRow)
+
+                                Glide.with(activity)
+                                        .load(series.imageUrl)
+                                        .centerCrop()
+                                        .into(object : SimpleTarget<GlideDrawable>(280, 392) {
+                                            override fun onResourceReady(resource: GlideDrawable, glideAnimation: GlideAnimation<in GlideDrawable>?) {
+                                                detailsRow.imageDrawable = resource
+                                                contentAdapter.notifyArrayItemRangeChanged(0, contentAdapter.size())
+                                            }
+
+                                        })
+                            }
+                        }, { it.printStackTrace() }, {}))
     }
 
     private fun loadEpisodes(series: Series, page: Int) {
@@ -138,6 +168,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
     companion object {
         private const val ARG_SERIES_ID = "ARG_SERIES_ID"
+        private const val ACTION_ADD_REMOVE = -1L;
 
         fun createInstance(seriesId: Int): DetailsFragment {
             val fragment = DetailsFragment()

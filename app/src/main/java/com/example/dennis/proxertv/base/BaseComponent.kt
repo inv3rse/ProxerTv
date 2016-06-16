@@ -47,6 +47,17 @@ class BaseModule(val applicationContext: Context) {
     }
 
     @Provides
+    fun provideSeriesDbHelper(context: Context): SeriesDbHelper {
+        return SeriesDbHelper(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMySeriesRepository(dbHelper: SeriesDbHelper): MySeriesRepository {
+        return MySeriesRepository(dbHelper)
+    }
+
+    @Provides
     fun provideServerConfig(): ServerConfig {
         return ServerConfig()
     }
@@ -73,4 +84,5 @@ class BaseModule(val applicationContext: Context) {
 @Component(modules = arrayOf(BaseModule::class))
 interface BaseComponent {
     fun getProxerClient(): ProxerClient
+    fun getMySeriesRepository(): MySeriesRepository
 }

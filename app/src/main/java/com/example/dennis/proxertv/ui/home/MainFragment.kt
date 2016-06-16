@@ -26,6 +26,7 @@ import rx.subscriptions.CompositeSubscription
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
     private val coverPresenter = CoverCardPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+    private val myListAdapter = ArrayObjectAdapter(coverPresenter)
     private val topAccessAdapter = ArrayObjectAdapter(coverPresenter)
     private val topRatingAdapter = ArrayObjectAdapter(coverPresenter)
     private val airingAdapter = ArrayObjectAdapter(coverPresenter)
@@ -81,6 +82,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     }
 
     private fun initEmptyRows() {
+        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_my_list)), myListAdapter))
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_top_access)), topAccessAdapter))
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_top_rating)), topRatingAdapter))
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_airing)), airingAdapter))
@@ -90,6 +92,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
     private fun loadContent() {
         val client = App.component.getProxerClient()
+        val myListRepository = App.component.getMySeriesRepository()
 
         subscriptions.add(client.loadTopAccessSeries()
                 .subscribeOn(Schedulers.io())
@@ -114,6 +117,14 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                         { airingAdapter.addAll(0, it) },
                         { it.printStackTrace() }, { }
                 ))
+
+        subscriptions.add(myListRepository.observeSeriesList()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({
+                    myListAdapter.clear()
+                    myListAdapter.addAll(0, it)
+                }))
     }
 
     private fun setBackgroundImage(uri: String) {

@@ -1,9 +1,12 @@
 <resources>
     <string name="app_name">ProxerTv</string>
+    <string name="row_my_list">My List</string>
     <string name="row_top_access">Top Access</string>
     <string name="row_top_rating">Top Rating</string>
     <string name="row_airing">Airing</string>
     <string name="row_streams">Streams</string>
     <string name="page_title">Page %d</string>
     <string name="row_search_results">Search Results</string>
+    <string name="add_to_list">Add to list</string>
+    <string name="remove_from_list">Remove from list</string>
 </resources>
