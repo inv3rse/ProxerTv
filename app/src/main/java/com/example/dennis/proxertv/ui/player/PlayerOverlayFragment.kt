@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.support.v17.leanback.app.PlaybackOverlayFragment
 import android.support.v17.leanback.widget.*
 import android.support.v17.leanback.widget.PlaybackControlsRow.PlayPauseAction
+import android.widget.Toast
 import com.example.dennis.proxertv.R
 import com.example.dennis.proxertv.model.Stream
 import com.example.dennis.proxertv.ui.util.StreamPresenter
@@ -46,7 +47,14 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
                         setStream(stream)
                     }
                     streamRowAdapter.add(stream)
-                }, { it.printStackTrace() }, {}))
+                }, { it.printStackTrace(); checkValidStreamsFound() }, { checkValidStreamsFound() }))
+    }
+
+    private fun checkValidStreamsFound() {
+        if (streamRowAdapter.size() == 0) {
+            Toast.makeText(activity, "no supported streams found", Toast.LENGTH_LONG).show()
+            activity.finish()
+        }
     }
 
     private fun setupActions() {
