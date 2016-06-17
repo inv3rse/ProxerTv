@@ -14,7 +14,7 @@ class ProxerCacheRewriteInterceptor : Interceptor {
 
         if (request.url().host().contains("proxer.me")) {
             return response.newBuilder()
-                    .header("Cache-Control", "max-age=600")
+                    .header("Cache-Control", "max-age=1800")
                     .removeHeader("Pragma")
                     .build()
         } else {
