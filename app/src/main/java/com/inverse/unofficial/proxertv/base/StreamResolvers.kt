@@ -89,6 +89,33 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
     }
 }
 
+class Mp4UploadStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
+    val regex = Regex("\"file\": \"(.+)\"")
+
+    override fun appliesToUrl(url: String): Boolean {
+        return url.contains("mp4upload.com")
+    }
+
+    override fun resolveStream(url: String): Observable<String> {
+        val request = Request.Builder().get().url(url).build()
+
+        return CallObservable(httpClient.newCall(request))
+                .flatMap(fun(response): Observable<String> {
+                    val body = response.body()
+                    val content = body.string()
+                    body.close()
+
+                    val streamUrl = regex.find(content)?.groupValues?.get(1)
+                    if (streamUrl != null) {
+                        return Observable.just(streamUrl)
+                    } else {
+                        return Observable.empty()
+                    }
+                })
+    }
+
+}
+
 class DailyMotionStreamResolver(val httpClient: OkHttpClient, val gson: Gson) : StreamResolver {
     private val regex = Regex("\"qualities\":(\\{.+\\}\\]\\}),")
 

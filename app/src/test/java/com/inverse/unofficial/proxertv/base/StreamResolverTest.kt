@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import rx.observers.TestSubscriber
+import subscribeAssert
 
 class StreamResolverTest {
     companion object {
@@ -75,6 +76,21 @@ class StreamResolverTest {
 
         assertEquals(1, subscriber.onNextEvents.size)
         assertEquals("http://cdn8.streamcloud.eu:8080/zpv75jl4lwoax3ptx32ihr7fuses3udb2dpgvrl344izxpszn4p4ldp3nm/video.mp4", subscriber.onNextEvents[0])
+    }
+
+    @Test
+    fun testMp4UploadStreamResolver() {
+        mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/mp4uploadResponse.html")))
+        val resolver = Mp4UploadStreamResolver(httpClient)
+
+        assertTrue(resolver.appliesToUrl("http://www.mp4upload.com/embed-sg71lpccevaa.html"))
+        assertTrue(resolver.appliesToUrl("https://www.mp4upload.com/embed-sg71lpccevaa.html"))
+        assertTrue(resolver.appliesToUrl("mp4upload.com/embed-sg71lpccevaa.html"))
+
+        resolver.resolveStream("http://www.mp4upload.com/embed-sg71lpccevaa.html").subscribeAssert {
+            assertNoErrors()
+            assertValue("http://www3.mp4upload.com:182/d/r2x6slkxz3b4quuo7cuasnixcbsyy35dhfyqah3373sqmk7xv74zrw4k/video.mp4")
+        }
     }
 
     @Test

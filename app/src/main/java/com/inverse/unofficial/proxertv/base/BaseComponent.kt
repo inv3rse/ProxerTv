@@ -66,6 +66,7 @@ class BaseModule(val applicationContext: Context) {
     fun provideStreamResolver(httpClient: OkHttpClient, gson: Gson): ArrayList<StreamResolver> {
         return arrayListOf(
                 ProxerStreamResolver(httpClient),
+                Mp4UploadStreamResolver(httpClient),
                 StreamCloudResolver(httpClient),
                 DailyMotionStreamResolver(httpClient, gson))
     }
