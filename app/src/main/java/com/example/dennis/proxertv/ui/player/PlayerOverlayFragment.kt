@@ -121,6 +121,10 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
         seekLength = (length / SEEK_STEPS).toInt()
     }
 
+    override fun onVideoEnd() {
+        activity.finish()
+    }
+
     fun setStream(stream: Stream) {
         videoPlayer?.initPlayer(Uri.parse(stream.streamUrl), activity, true)
     }

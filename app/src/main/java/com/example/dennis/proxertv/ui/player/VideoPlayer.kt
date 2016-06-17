@@ -189,6 +189,8 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         fun progressChanged(currentProgress: Long, bufferedProgress: Long)
 
         fun videoDurationChanged(length: Long)
+
+        fun onVideoEnd()
     }
 
     private inner class ExoPlayerListener : ExoPlayer.Listener {
@@ -202,6 +204,10 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
 
             mStatusListener?.playStatusChanged(playWhenReady)
             mStatusListener?.videoDurationChanged(mPlayer.duration)
+
+            if (playbackState == ExoPlayer.STATE_ENDED) {
+                mStatusListener?.onVideoEnd()
+            }
         }
 
         override fun onPlayWhenReadyCommitted() {
