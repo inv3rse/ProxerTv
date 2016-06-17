@@ -35,7 +35,7 @@
 
     <fragment
         android:id="@+id/playback_controls_fragment"
-        android:name="com.example.dennis.proxertv.ui.player.PlayerOverlayFragment"
+        android:name="com.inverse.unofficial.proxertv.ui.player.PlayerOverlayFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 

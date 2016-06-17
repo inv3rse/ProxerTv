@@ -2,7 +2,7 @@
 <fragment xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools"
           android:id="@+id/main_browse_fragment"
-          android:name="com.example.dennis.proxertv.ui.home.MainFragment"
+          android:name="com.inverse.unofficial.proxertv.ui.home.MainFragment"
           android:layout_width="match_parent"
           android:layout_height="match_parent"
           tools:context=".ui.home.MainActivity"
