@@ -1,6 +1,7 @@
 package com.example.dennis.proxertv.ui.search
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.support.v17.leanback.app.SearchFragment
@@ -26,7 +27,14 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
         setupResultAdapter()
         setOnItemViewClickedListener(this)
         setSearchResultProvider(this)
-        setSpeechRecognitionCallback { startActivityForResult(recognizerIntent, RECOGNIZE_SPEECH) }
+        setSpeechRecognitionCallback {
+            try {
+                startActivityForResult(recognizerIntent, RECOGNIZE_SPEECH)
+            } catch (e: ActivityNotFoundException) {
+                // speech recognition is not supported by the device
+
+            }
+        }
     }
 
     private fun setupResultAdapter() {
