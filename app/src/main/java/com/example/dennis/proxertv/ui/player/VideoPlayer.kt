@@ -45,10 +45,12 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         }
     }
 
-    fun initPlayer(videoUri: Uri, context: Context) {
+    fun initPlayer(videoUri: Uri, context: Context, keepPosition: Boolean = false) {
         if (isInitialized) {
             mPlayer.stop()
-            mPlayer.seekTo(0L)
+            if (!keepPosition) {
+                mPlayer.seekTo(0L)
+            }
         }
 
         val sampleSource = ExtractorSampleSource(videoUri, DefaultHttpDataSource(USER_AGENT, null),
@@ -81,10 +83,7 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
 
     fun seekTo(position: Long) {
         mPlayer.seekTo(position)
-
-        if (mStatusListener != null) {
-            mStatusListener!!.progressChanged(position)
-        }
+        mStatusListener?.progressChanged(position, mPlayer.bufferedPosition)
     }
 
     val position: Long
@@ -152,7 +151,7 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         if (progressRunnable == null) {
             progressRunnable = object : Runnable {
                 override fun run() {
-                    mStatusListener?.progressChanged(mPlayer.currentPosition)
+                    mStatusListener?.progressChanged(mPlayer.currentPosition, mPlayer.bufferedPosition)
                     handler.postDelayed(this, progressUpdatePeriod)
                 }
             }
@@ -187,7 +186,7 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
     interface StatusListener {
         fun playStatusChanged(isPlaying: Boolean)
 
-        fun progressChanged(currentProgress: Long)
+        fun progressChanged(currentProgress: Long, bufferedProgress: Long)
 
         fun videoDurationChanged(length: Long)
     }

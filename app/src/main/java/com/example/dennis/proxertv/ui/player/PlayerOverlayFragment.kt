@@ -109,8 +109,9 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
         actionsAdapter.notifyArrayItemRangeChanged(actionsAdapter.indexOf(playPauseAction), 1)
     }
 
-    override fun progressChanged(currentProgress: Long) {
+    override fun progressChanged(currentProgress: Long, bufferedProgress: Long) {
         actionsRow.currentTime = currentProgress.toInt()
+        actionsRow.bufferedProgress = bufferedProgress.toInt()
     }
 
     override fun videoDurationChanged(length: Long) {
@@ -121,7 +122,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
     }
 
     fun setStream(stream: Stream) {
-        videoPlayer?.initPlayer(Uri.parse(stream.streamUrl), activity)
+        videoPlayer?.initPlayer(Uri.parse(stream.streamUrl), activity, true)
     }
 
     companion object {
