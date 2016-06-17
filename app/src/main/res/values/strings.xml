@@ -9,4 +9,5 @@
     <string name="row_search_results">Search Results</string>
     <string name="add_to_list">Add to list</string>
     <string name="remove_from_list">Remove from list</string>
+    <string name="no_streams_found">no supported streams found</string>
 </resources>

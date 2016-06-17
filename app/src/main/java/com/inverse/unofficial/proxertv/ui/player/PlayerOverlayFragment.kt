@@ -52,7 +52,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
 
     private fun checkValidStreamsFound() {
         if (streamRowAdapter.size() == 0) {
-            Toast.makeText(activity, "no supported streams found", Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, getString(R.string.no_streams_found), Toast.LENGTH_LONG).show()
             activity.finish()
         }
     }
