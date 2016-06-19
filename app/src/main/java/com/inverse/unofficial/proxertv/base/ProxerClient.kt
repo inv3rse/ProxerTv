@@ -15,16 +15,16 @@ class ProxerClient(
         val streamResolvers: List<StreamResolver>,
         val serverConfig: ServerConfig) {
 
-    fun loadTopAccessSeries(forceDownload: Boolean = false): Observable<List<SeriesCover>> {
-        return loadSeriesList(serverConfig.topAccessListUrl, forceDownload)
+    fun loadTopAccessSeries(): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.topAccessListUrl)
     }
 
-    fun loadTopRatingSeries(forceDownload: Boolean = false): Observable<List<SeriesCover>> {
-        return loadSeriesList(serverConfig.topRatingListUrl, forceDownload)
+    fun loadTopRatingSeries(): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.topRatingListUrl)
     }
 
-    fun loadAiringSeries(forceDownload: Boolean = false): Observable<List<SeriesCover>> {
-        return loadSeriesList(serverConfig.airingListUrl, forceDownload)
+    fun loadAiringSeries(): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.airingListUrl)
     }
 
     fun searchSeries(query: String): Observable<List<SeriesCover>> {
@@ -159,7 +159,7 @@ class ProxerClient(
                 })
     }
 
-    private fun loadSeriesList(url: String, forceDownload: Boolean = false): Observable<List<SeriesCover>> {
+    private fun loadSeriesList(url: String): Observable<List<SeriesCover>> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
