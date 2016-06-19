@@ -55,6 +55,7 @@ dependencies {
     def okhttp_version = '3.2.0'
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
     compile "com.squareup.okhttp3:logging-interceptor:$okhttp_version"
+    compile 'com.github.franmontiel:PersistentCookieJar:v0.9.3'
 
     // Kotlin Gson
     compile 'com.github.salomonbrys.kotson:kotson:2.2.1'

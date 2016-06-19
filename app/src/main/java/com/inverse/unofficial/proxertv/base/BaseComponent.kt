@@ -1,6 +1,9 @@
 package com.inverse.unofficial.proxertv.base
 
 import android.content.Context
+import com.franmontiel.persistentcookiejar.PersistentCookieJar
+import com.franmontiel.persistentcookiejar.cache.SetCookieCache
+import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor
 import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.BuildConfig
 import com.inverse.unofficial.proxertv.model.ServerConfig
@@ -25,10 +28,13 @@ class BaseModule(val applicationContext: Context) {
 
     @Provides
     fun provideOkHttpClient(applicationContext: Context): OkHttpClient {
+        val cookieJar = PersistentCookieJar(SetCookieCache(), SharedPrefsCookiePersistor(applicationContext))
+
         val builder = OkHttpClient.Builder()
                 .cache(Cache(File(applicationContext.cacheDir, "httpCache"), 10 * 1024 * 1024)) // 10 MiB
+                .cookieJar(cookieJar)
                 .addNetworkInterceptor(ProxerCacheRewriteInterceptor())
-                .addNetworkInterceptor(CloudFlareInterceptor())
+                .addInterceptor(CloudFlareInterceptor())
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(40, TimeUnit.SECONDS)
 
