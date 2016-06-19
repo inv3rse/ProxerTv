@@ -2,6 +2,7 @@ package com.inverse.unofficial.proxertv.base
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
+import com.inverse.unofficial.proxertv.model.Stream
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -17,21 +18,22 @@ interface StreamResolver {
     /**
      * try to find the stream url
      */
-    fun resolveStream(url: String): Observable<String>
+    fun resolveStream(url: String): Observable<Stream>
 }
 
 class ProxerStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
+    private val name = "Proxer-Stream"
     private val regex = Regex("src=\"(.*\\.mp4)\"")
 
     override fun appliesToUrl(url: String): Boolean {
         return url.contains("stream.proxer.me", true)
     }
 
-    override fun resolveStream(url: String): Observable<String> {
+    override fun resolveStream(url: String): Observable<Stream> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
-                .flatMap(fun(response): Observable<String> {
+                .flatMap(fun(response): Observable<Stream> {
                     val body = response.body()
                     val content = body.string()
                     body.close()
@@ -39,7 +41,7 @@ class ProxerStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
                     val streamUrl = regex.find(content)?.groupValues?.get(1)
 
                     if (streamUrl != null) {
-                        return Observable.just(streamUrl)
+                        return Observable.just(Stream(streamUrl, name))
                     } else {
                         return Observable.empty()
                     }
@@ -49,13 +51,14 @@ class ProxerStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
 }
 
 class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
+    private val name = "StreamCloud"
     private val regex = Regex("<input.*?name=\"(.*?)\".*?value=\"(.*?)\">")
 
     override fun appliesToUrl(url: String): Boolean {
         return url.contains("streamcloud", true)
     }
 
-    override fun resolveStream(url: String): Observable<String> {
+    override fun resolveStream(url: String): Observable<Stream> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
@@ -72,7 +75,7 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
                     val postRequest = Request.Builder().url(response.request().url()).post(formValues.build()).build()
                     return CallObservable(httpClient.newCall(postRequest))
                 })
-                .flatMap(fun(response): Observable<String> {
+                .flatMap(fun(response): Observable<Stream> {
                     val body = response.body()
                     val content = body.string()
                     body.close()
@@ -81,7 +84,7 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
                     val streamUrl = regex.find(content)?.groupValues?.get(1)
 
                     if (streamUrl != null) {
-                        return Observable.just(streamUrl)
+                        return Observable.just(Stream(streamUrl, name))
                     } else {
                         return Observable.empty()
                     }
@@ -90,24 +93,25 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
 }
 
 class Mp4UploadStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
-    val regex = Regex("\"file\": \"(.+)\"")
+    private val name = "Mp4Upload"
+    private val regex = Regex("\"file\": \"(.+)\"")
 
     override fun appliesToUrl(url: String): Boolean {
         return url.contains("mp4upload.com")
     }
 
-    override fun resolveStream(url: String): Observable<String> {
+    override fun resolveStream(url: String): Observable<Stream> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
-                .flatMap(fun(response): Observable<String> {
+                .flatMap(fun(response): Observable<Stream> {
                     val body = response.body()
                     val content = body.string()
                     body.close()
 
                     val streamUrl = regex.find(content)?.groupValues?.get(1)
                     if (streamUrl != null) {
-                        return Observable.just(streamUrl)
+                        return Observable.just(Stream(streamUrl, name))
                     } else {
                         return Observable.empty()
                     }
@@ -123,35 +127,38 @@ class DailyMotionStreamResolver(val httpClient: OkHttpClient, val gson: Gson) : 
         return url.contains("dailymotion.com")
     }
 
-    override fun resolveStream(url: String): Observable<String> {
+    override fun resolveStream(url: String): Observable<Stream> {
         // fix missing http  (//www.dailymotion.com/embed/video/someId)
         val fixedUrl = if (url.startsWith("//")) "http:" + url else url
         val request = Request.Builder().get().url(fixedUrl).build()
 
         return CallObservable(httpClient.newCall(request))
-                .flatMap(fun(response): Observable<String> {
+                .flatMap(fun(response): Observable<Stream> {
                     val body = response.body()
                     val content = body.string()
                     body.close()
 
+                    val streamList = arrayListOf<Stream>()
                     val qualitiesJson = regex.find(content)?.groupValues?.get(1)
                     if (qualitiesJson != null) {
                         val qualityMap = gson.fromJson<Map<String, List<Map<String, String>>>>(qualitiesJson)
-                        val maxQuality = qualityMap.keys.maxBy {
+                        val sortedQualities = qualityMap.keys.mapNotNull {
                             try {
                                 it.toInt()
                             } catch (e: NumberFormatException) {
-                                0
+                                null
                             }
-                        }
+                        }.sortedDescending()
 
-                        val streamUrl = qualityMap[maxQuality]?.get(0)?.get("url")
-                        if (streamUrl != null) {
-                            return Observable.just(streamUrl)
+                        for (quality in sortedQualities.take(2)) {
+                            val streamUrl = qualityMap[quality.toString()]?.get(0)?.get("url")
+                            if (streamUrl != null) {
+                                streamList.add(Stream(streamUrl, "DailyMotion\n${quality}p"))
+                            }
                         }
                     }
 
-                    return Observable.empty()
+                    return Observable.from(streamList)
                 })
     }
 }

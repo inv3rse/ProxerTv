@@ -116,7 +116,6 @@ class ProxerClient(
                             .map { it.resolveStream(unresolvedStream.streamUrl) }
 
                     return Observable.mergeDelayError(resolveObservables)
-                            .map { Stream(it, unresolvedStream.providerName) }
                 })
     }
 
