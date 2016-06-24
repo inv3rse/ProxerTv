@@ -6,15 +6,16 @@ import android.support.v17.leanback.app.PlaybackOverlayFragment
 import android.support.v17.leanback.widget.*
 import android.support.v17.leanback.widget.PlaybackControlsRow.PlayPauseAction
 import android.widget.Toast
+import com.google.android.exoplayer.ExoPlaybackException
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.Stream
-import com.inverse.unofficial.proxertv.ui.util.StreamPresenter
+import com.inverse.unofficial.proxertv.ui.util.StreamAdapter
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
 
-class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListener, OnItemViewClickedListener {
+class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListener {
     private var videoPlayer: VideoPlayer? = null
     private var seekLength = 10000 // 10 seconds, overridden once the video length is known
     private val subscriptions = CompositeSubscription()
@@ -22,7 +23,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
     private lateinit var rowsAdapter: ArrayObjectAdapter
     private lateinit var actionsRow: PlaybackControlsRow
     private lateinit var actionsAdapter: ArrayObjectAdapter
-    private lateinit var streamRowAdapter: ArrayObjectAdapter
+    private lateinit var streamAdapter: StreamAdapter
     private lateinit var playPauseAction: PlayPauseAction
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,19 +40,20 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
 
     fun connectToPlayer(videoPlayer: VideoPlayer, streamObservable: Observable<Stream>) {
         this.videoPlayer = videoPlayer
-        videoPlayer.setStatusListener(this)
+        videoPlayer.setStatusListener(PlayerListener())
 
         subscriptions.add(streamObservable.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ stream ->
-                    if (streamRowAdapter.size() == 0) {
+                    // add the stream to the adapter first
+                    streamAdapter.addStream(stream)
+                    if (streamAdapter.getCurrentStream() == null) {
                         setStream(stream)
                     }
-                    streamRowAdapter.add(stream)
                 }, { it.printStackTrace(); checkValidStreamsFound() }, { checkValidStreamsFound() }))
     }
 
     private fun checkValidStreamsFound() {
-        if (streamRowAdapter.size() == 0) {
+        if (streamAdapter.size() == 0) {
             Toast.makeText(activity, getString(R.string.no_streams_found), Toast.LENGTH_LONG).show()
             activity.finish()
         }
@@ -91,42 +93,56 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), VideoPlayer.StatusListe
         }
 
         // second row (stream selection)
-        streamRowAdapter = ArrayObjectAdapter(StreamPresenter())
-        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_streams)), streamRowAdapter))
+        streamAdapter = StreamAdapter()
+        ListRowPresenter()
+        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_streams)), streamAdapter))
 
         adapter = rowsAdapter
         onItemViewClickedListener = this
     }
 
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
-        if (item is Stream) {
-            setStream(item)
+        if (item is StreamAdapter.StreamHolder) {
+            setStream(item.stream)
         }
     }
 
-    override fun playStatusChanged(isPlaying: Boolean) {
-        playPauseAction.icon = playPauseAction.getDrawable(if (isPlaying) PlayPauseAction.PAUSE else PlayPauseAction.PLAY)
-        actionsAdapter.notifyArrayItemRangeChanged(actionsAdapter.indexOf(playPauseAction), 1)
-    }
-
-    override fun progressChanged(currentProgress: Long, bufferedProgress: Long) {
-        actionsRow.currentTime = currentProgress.toInt()
-        actionsRow.bufferedProgress = bufferedProgress.toInt()
-    }
-
-    override fun videoDurationChanged(length: Long) {
-        actionsRow.totalTime = length.toInt()
-        rowsAdapter.notifyArrayItemRangeChanged(rowsAdapter.indexOf(actionsRow), 1)
-
-        seekLength = (length / SEEK_STEPS).toInt()
-    }
-
-    override fun onVideoEnd() {
-        activity.finish()
-    }
-
     fun setStream(stream: Stream) {
+        streamAdapter.removeFailed(stream)
+        streamAdapter.setCurrentStream(stream)
         videoPlayer?.initPlayer(Uri.parse(stream.streamUrl), activity, true)
+    }
+
+    /**
+     * Handles all player callbacks
+     */
+    private inner class PlayerListener : VideoPlayer.StatusListener {
+        override fun playStatusChanged(isPlaying: Boolean) {
+            playPauseAction.icon = playPauseAction.getDrawable(if (isPlaying) PlayPauseAction.PAUSE else PlayPauseAction.PLAY)
+            actionsAdapter.notifyArrayItemRangeChanged(actionsAdapter.indexOf(playPauseAction), 1)
+        }
+
+        override fun progressChanged(currentProgress: Long, bufferedProgress: Long) {
+            actionsRow.currentTime = currentProgress.toInt()
+            actionsRow.bufferedProgress = bufferedProgress.toInt()
+        }
+
+        override fun videoDurationChanged(length: Long) {
+            actionsRow.totalTime = length.toInt()
+            rowsAdapter.notifyArrayItemRangeChanged(rowsAdapter.indexOf(actionsRow), 1)
+
+            seekLength = (length / SEEK_STEPS).toInt()
+        }
+
+        override fun onVideoEnd() {
+            activity.finish()
+        }
+
+        override fun onError(error: ExoPlaybackException) {
+            streamAdapter.getCurrentStream()?.let { currentStream ->
+                streamAdapter.addFailed(currentStream)
+            }
+        }
     }
 
     companion object {

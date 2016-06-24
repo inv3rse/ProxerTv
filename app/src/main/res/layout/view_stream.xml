@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             xmlns:tools="http://schemas.android.com/tools"
+             android:layout_width="120dp"
+             android:layout_height="120dp"
+             android:focusable="true"
+             android:focusableInTouchMode="true">
+
+    <ImageView
+        android:id="@+id/stream_active_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:contentDescription="@string/description_active_stream"
+        android:src="@drawable/ic_pause"/>
+
+    <TextView
+        android:id="@+id/stream_label"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textColor="#ffffff"
+        tools:text="StreamCloud"/>
+
+</FrameLayout>

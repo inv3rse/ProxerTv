@@ -191,6 +191,8 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         fun videoDurationChanged(length: Long)
 
         fun onVideoEnd()
+
+        fun onError(error: ExoPlaybackException)
     }
 
     private inner class ExoPlayerListener : ExoPlayer.Listener {
@@ -215,7 +217,7 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         }
 
         override fun onPlayerError(error: ExoPlaybackException) {
-
+            mStatusListener?.onError(error)
         }
     }
 

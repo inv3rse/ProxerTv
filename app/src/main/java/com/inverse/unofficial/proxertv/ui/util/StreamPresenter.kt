@@ -2,36 +2,36 @@ package com.inverse.unofficial.proxertv.ui.util
 
 import android.graphics.Color
 import android.support.v17.leanback.widget.Presenter
-import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import com.inverse.unofficial.proxertv.model.Stream
+import com.inverse.unofficial.proxertv.R
 
 /**
- * Presents a selectable stream url
+ * Presents a StreamHolder, which holds a stream with extra information.
  */
 class StreamPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val textView = TextView(parent.context)
-        textView.layoutParams = ViewGroup.LayoutParams(WIDTH, HEIGHT);
-        textView.isFocusable = true
-        textView.isFocusableInTouchMode = true
-        textView.setTextColor(Color.WHITE)
-        textView.setBackgroundColor(Color.GRAY)
-        textView.gravity = Gravity.CENTER
-
-        return ViewHolder(textView)
+        val inflater = LayoutInflater.from(parent.context)
+        return StreamViewHolder(inflater.inflate(R.layout.view_stream, parent, false))
     }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any) {
-        (viewHolder.view as TextView).text = (item as Stream).providerName
+        val streamHolder = item as StreamAdapter.StreamHolder
+        val streamView = viewHolder as StreamViewHolder
+
+        val color = if (streamHolder.failed) Color.RED else Color.GRAY
+        streamView.textView.text = streamHolder.stream.providerName
+        streamView.view.setBackgroundColor(color)
+        streamView.activeView.visibility = if (streamHolder.current) View.VISIBLE else View.INVISIBLE
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder) {
     }
 
-    companion object {
-        private const val WIDTH = 200
-        private const val HEIGHT = 200
+    internal class StreamViewHolder(view: View) : Presenter.ViewHolder(view) {
+        val textView = view.findViewById(R.id.stream_label) as TextView
+        val activeView = view.findViewById(R.id.stream_active_indicator)
     }
 }
