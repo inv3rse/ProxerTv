@@ -83,9 +83,10 @@ class ProxerClient(
 
         return CallObservable(httpClient.newCall(request))
                 .flatMap(fun(response): Observable<Stream> {
-                    val body = response.body()
-                    val content = body.string()
-                    body.close()
+                    val content = response.body().string()
+                    if (containsCaptcha(content)) {
+                        throw SeriesCaptchaException()
+                    }
 
                     val unresolvedStreams = arrayListOf<Stream>()
                     val regex = Regex("<script type=\"text/javascript\">\n\n.*var streams = (\\[.*\\])")
@@ -183,4 +184,6 @@ class ProxerClient(
                     return seriesCovers;
                 })
     }
+
+    class SeriesCaptchaException : Exception("Content not accessible due to captcha")
 }

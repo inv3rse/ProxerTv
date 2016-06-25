@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.ServerConfig
-import com.inverse.unofficial.proxertv.model.Stream
 import loadResponse
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -16,6 +15,7 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import rx.observers.TestSubscriber
+import subscribeAssert
 import java.util.concurrent.TimeUnit
 
 class ProxerClientTest {
@@ -122,17 +122,20 @@ class ProxerClientTest {
         assertEquals(16, subscriber.onNextEvents[0])
     }
 
-//    @Test
+    @Test
     fun testLoadEpisodeStreams() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/watchResponse.html")))
-        // Todo redirect following resolve requests to offline data
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/seriesCaptchaResponse.html")))
 
-        val subscriber = TestSubscriber<Stream>()
-        proxerClient.loadEpisodeStreams(15371, 1, "engsub").subscribe(subscriber)
+        proxerClient.loadEpisodeStreams(13975, 3, "engsub").subscribeAssert {
+            assertError(ProxerClient.SeriesCaptchaException::class.java)
+            assertNoValues()
+        }
 
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-
-        print(subscriber.onNextEvents)
+//        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/watchResponse.html")))
+//        // Todo redirect following resolve requests to offline data
+//        proxerClient.loadEpisodeStreams(15371, 1, "engsub").subscribeAssert {
+//            assertNoErrors()
+//            print(onNextEvents)
+//        }
     }
 }

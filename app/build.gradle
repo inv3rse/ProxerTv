@@ -76,8 +76,10 @@ dependencies {
     kapt "com.google.dagger:dagger-compiler:$dagger_version"
     compile "javax.annotation:javax.annotation-api:1.2" // pick up generated classes
 
-    // Anko SQLite
-    compile 'org.jetbrains.anko:anko-sqlite:0.8.3'
+    // Anko
+    def anko_version = '0.8.3'
+    compile "org.jetbrains.anko:anko-common:$anko_version"
+    compile "org.jetbrains.anko:anko-sqlite:$anko_version"
 
     // Testing
     testCompile 'junit:junit:4.12'

@@ -34,6 +34,7 @@ class BaseModule(val applicationContext: Context) {
                 .cache(Cache(File(applicationContext.cacheDir, "httpCache"), 10 * 1024 * 1024)) // 10 MiB
                 .cookieJar(cookieJar)
                 .addNetworkInterceptor(ProxerCacheRewriteInterceptor())
+                .addInterceptor(NoCacheCaptchaInterceptor())
                 .addInterceptor(CloudFlareInterceptor())
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(40, TimeUnit.SECONDS)

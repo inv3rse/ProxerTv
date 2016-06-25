@@ -5,10 +5,11 @@ import android.os.Bundle
 import android.support.v17.leanback.app.PlaybackOverlayFragment
 import android.support.v17.leanback.widget.*
 import android.support.v17.leanback.widget.PlaybackControlsRow.PlayPauseAction
-import android.widget.Toast
 import com.google.android.exoplayer.ExoPlaybackException
 import com.inverse.unofficial.proxertv.R
+import com.inverse.unofficial.proxertv.base.ProxerClient
 import com.inverse.unofficial.proxertv.model.Stream
+import com.inverse.unofficial.proxertv.ui.util.ErrorFragment
 import com.inverse.unofficial.proxertv.ui.util.StreamAdapter
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
@@ -49,14 +50,34 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                     if (streamAdapter.getCurrentStream() == null) {
                         setStream(stream)
                     }
-                }, { it.printStackTrace(); checkValidStreamsFound() }, { checkValidStreamsFound() }))
+                }, { throwable ->
+                    if (throwable is ProxerClient.SeriesCaptchaException) {
+                        showErrorFragment(getString(R.string.stream_captcha_error))
+                    } else {
+                        throwable.printStackTrace();
+                        checkValidStreamsFound()
+                    }
+                }, { checkValidStreamsFound() }))
     }
 
     private fun checkValidStreamsFound() {
         if (streamAdapter.size() == 0) {
-            Toast.makeText(activity, getString(R.string.no_streams_found), Toast.LENGTH_LONG).show()
-            activity.finish()
+            showErrorFragment(getString(R.string.no_streams_found))
         }
+    }
+
+    private fun showErrorFragment(message: String) {
+        val errorFragment = ErrorFragment.newInstance(getString(R.string.stream_error), message)
+        errorFragment.dismissListener = object : ErrorFragment.ErrorDismissListener {
+            override fun onDismiss() {
+                activity.finish()
+            }
+        }
+
+        fragmentManager.beginTransaction()
+                .detach(this) // the error fragment would sometimes not keep the focus
+                .add(R.id.player_root_frame, errorFragment)
+                .commit()
     }
 
     private fun setupActions() {
