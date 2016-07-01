@@ -3,6 +3,8 @@ package com.inverse.unofficial.proxertv.base
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.model.*
+import okhttp3.Cookie
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -14,6 +16,14 @@ class ProxerClient(
         val gson: Gson,
         val streamResolvers: List<StreamResolver>,
         val serverConfig: ServerConfig) {
+
+    init {
+        // set adult content cookie
+        val url = HttpUrl.parse(serverConfig.baseUrl)
+        val adultCookie = Cookie.Builder().hostOnlyDomain(url.host()).path("/").name("adult")
+                .value("1").build()
+        httpClient.cookieJar().saveFromResponse(url, listOf(adultCookie))
+    }
 
     fun loadTopAccessSeries(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.topAccessListUrl)
@@ -32,7 +42,8 @@ class ProxerClient(
     }
 
     fun loadNumStreamPages(seriesId: Int): Observable<Int> {
-        val request = Request.Builder().get().url(serverConfig.episodesListUrl(seriesId)).build()
+        val request = Request.Builder().get().url(serverConfig.episodesListUrl(seriesId))
+                .build()
 
         return CallObservable(httpClient.newCall(request))
                 .map(fun(response): Int {
@@ -53,7 +64,8 @@ class ProxerClient(
      * Returns the available episodes by sub/dub type
      */
     fun loadEpisodesPage(seriesId: Int, page: Int): Observable<Map<String, List<Int>>> {
-        val request = Request.Builder().get().url(serverConfig.episodesListJsonUrl(seriesId, page)).build()
+        val request = Request.Builder().get().url(serverConfig.episodesListJsonUrl(seriesId, page))
+                .build()
 
         return CallObservable(httpClient.newCall(request))
                 .map(fun(response): Map<String, List<Int>> {
