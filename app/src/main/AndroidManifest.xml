@@ -34,12 +34,12 @@
             </intent-filter>
         </activity>
         <activity android:name="com.inverse.unofficial.proxertv.ui.details.DetailsActivity"/>
-        <activity android:name="com.inverse.unofficial.proxertv.ui.player.PlayerActivity">
+        <activity
+            android:name="com.inverse.unofficial.proxertv.ui.player.PlayerActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
-            android:supportsPictureInPicture="true"
-        </activity>
+            android:supportsPictureInPicture="true"/>
         <activity android:name="com.inverse.unofficial.proxertv.ui.search.SearchActivity"/>
     </application>
 

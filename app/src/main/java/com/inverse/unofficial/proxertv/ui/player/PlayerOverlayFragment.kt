@@ -3,6 +3,7 @@ package com.inverse.unofficial.proxertv.ui.player
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -13,6 +14,9 @@ import android.os.Bundle
 import android.support.v17.leanback.app.PlaybackOverlayFragment
 import android.support.v17.leanback.widget.*
 import android.view.SurfaceView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.animation.GlideAnimation
+import com.bumptech.glide.request.target.SimpleTarget
 import com.google.android.exoplayer.AspectRatioFrameLayout
 import com.google.android.exoplayer.ExoPlaybackException
 import com.google.android.exoplayer.ExoPlayer
@@ -76,9 +80,9 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         // create a MediaSession
-        mediaSession = MediaSession(context, "ProxerTv")
+        mediaSession = MediaSession(activity, "ProxerTv")
         mediaSession.setCallback(MediaSessionCallback())
-        mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS and MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
+        mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
         mediaSession.isActive = true
     }
 
@@ -239,14 +243,15 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, "Episode ${episode.episodeNum}")
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, 0L)
 
-        mediaSession.setMetadata(metadataBuilder.build())
+        val width = resources.getDimensionPixelSize(R.dimen.now_playing_card_width)
+        val height = resources.getDimensionPixelSize(R.dimen.now_playing_card_height)
 
-//        Glide.with(this).load(episode.coverUrl).asBitmap().centerCrop().into(object : SimpleTarget<Bitmap>(300, 500) {
-//            override fun onResourceReady(bitmap: Bitmap?, glideAnimation: GlideAnimation<in Bitmap>?) {
-//                metadataBuilder.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap)
-//                mediaSession.setMetadata(metadataBuilder.build())
-//            }
-//        })
+        Glide.with(this).load(episode.coverUrl).asBitmap().centerCrop().into(object : SimpleTarget<Bitmap>(width, height) {
+            override fun onResourceReady(bitmap: Bitmap?, glideAnimation: GlideAnimation<in Bitmap>?) {
+                metadataBuilder.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap)
+                mediaSession.setMetadata(metadataBuilder.build())
+            }
+        })
     }
 
     private fun requestAudioFocus() {
