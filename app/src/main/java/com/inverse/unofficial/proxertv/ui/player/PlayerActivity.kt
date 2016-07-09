@@ -2,6 +2,7 @@ package com.inverse.unofficial.proxertv.ui.player
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.support.v4.os.BuildCompat
@@ -16,6 +17,11 @@ class PlayerActivity : Activity() {
     override fun onVisibleBehindCanceled() {
         mediaController.transportControls.pause()
         super.onVisibleBehindCanceled()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     companion object {

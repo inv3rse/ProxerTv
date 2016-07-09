@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -14,14 +13,15 @@ import com.google.android.exoplayer.*
 import com.google.android.exoplayer.extractor.ExtractorSampleSource
 import com.google.android.exoplayer.upstream.DefaultAllocator
 import com.google.android.exoplayer.upstream.DefaultHttpDataSource
+import timber.log.Timber
 
 class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
-
     private val mPlayer: ExoPlayer
     private var mVideoRenderer: TrackRenderer? = null
-    private val handler = Handler(Looper.getMainLooper())
-    private var progressRunnable: Runnable? = null
+    private val mHandler = Handler(Looper.getMainLooper())
+    private var mProgressRunnable: Runnable? = null
     private var mAspectRatio: Float = 0F
+    private var mSelectedVideoTrack = -1
 
     // ui, context holding
     private var mAspectRatioFrameLayout: AspectRatioFrameLayout? = null
@@ -29,7 +29,6 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
     // might be context holding, user might have to remove it
     private var mStatusListener: StatusListener? = null
 
-    var progressUpdatePeriod: Long = 1000
     var isInitialized: Boolean = false
         private set
 
@@ -100,13 +99,14 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
             mPlayer.stop()
         }
 
+        mStatusListener = null
         disconnectFromUi()
         stopProgressUpdate()
         mPlayer.release()
     }
 
     fun connectToUi(frameLayout: AspectRatioFrameLayout, surfaceView: SurfaceView) {
-        Log.d(TAG, "connect to ui")
+        Timber.d("connect to ui")
 
         mAspectRatioFrameLayout = frameLayout
 
@@ -119,15 +119,25 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
 
         if (isInitialized) {
             pushSurface(mSurface, true)
+            if (mSelectedVideoTrack >= 0) {
+                mPlayer.setSelectedTrack(VIDEO_RENDERER, mSelectedVideoTrack)
+            }
         }
     }
 
     fun disconnectFromUi() {
-        Log.d(TAG, "disconnect from ui")
+        Timber.d("disconnect from ui")
 
         if (mSurface != null) {
             pushSurface(null, true)
         }
+
+        val track = mPlayer.getSelectedTrack(VIDEO_RENDERER)
+        if (track >= 0) {
+            mSelectedVideoTrack = track
+        }
+
+        mPlayer.setSelectedTrack(VIDEO_RENDERER, -1)
 
         mSurface = null
         mAspectRatioFrameLayout = null
@@ -151,36 +161,39 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
     }
 
     private fun startProgressUpdate() {
-        if (progressRunnable == null) {
-            progressRunnable = object : Runnable {
+        if (mProgressRunnable == null) {
+            mProgressRunnable = object : Runnable {
                 override fun run() {
                     mStatusListener?.progressChanged(mPlayer.currentPosition, mPlayer.bufferedPosition)
-                    handler.postDelayed(this, progressUpdatePeriod)
+                    mHandler.postDelayed(this, PROGRESS_UPDATE_PERIOD)
                 }
             }
         }
 
-        handler.post(progressRunnable)
+        mHandler.post(mProgressRunnable)
     }
 
     private fun stopProgressUpdate() {
-        if (progressRunnable != null) {
-            handler.removeCallbacks(progressRunnable)
-            progressRunnable = null
+        if (mProgressRunnable != null) {
+            mHandler.removeCallbacks(mProgressRunnable)
+            mProgressRunnable = null
         }
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
+        Timber.d("surface created")
         if (mSurface !== holder.surface) {
             pushSurface(holder.surface, false)
+            mSurface = holder.surface
         }
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-
+        Timber.d("surface changed")
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
+        Timber.d("surface destroyed")
         if (holder.surface === mSurface) {
             disconnectFromUi()
         }
@@ -255,7 +268,8 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         private const val USER_AGENT = "ProxerTv"
         private const val BUFFER_SEGMENT_SIZE = 64 * 1024
         private const val BUFFER_VIDEO_SEGMENT_COUNT = 160
+        private const val PROGRESS_UPDATE_PERIOD = 1000L
 
-        private const val TAG = "VideoPlayer"
+        private const val VIDEO_RENDERER = 0
     }
 }

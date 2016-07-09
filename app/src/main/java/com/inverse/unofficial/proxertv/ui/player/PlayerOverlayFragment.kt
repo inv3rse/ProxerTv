@@ -30,6 +30,7 @@ import com.inverse.unofficial.proxertv.ui.util.StreamAdapter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
+import timber.log.Timber
 
 /**
  * We use this fragment as an implementation detail of the PlayerActivity.
@@ -73,6 +74,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Timber.d("onCreate")
 
         videoPlayer = VideoPlayer(savedInstanceState)
         videoPlayer.setStatusListener(PlayerListener())
@@ -88,15 +90,11 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+        Timber.d("onActivityCreated")
 
         val episodeExtra = activity.intent.extras.getParcelable<Episode>(PlayerActivity.EXTRA_EPISODE)
         if (episodeExtra != null) {
             episode = episodeExtra
-
-            val surfaceView = activity.findViewById(R.id.player_surface_view) as SurfaceView
-            val aspectFrame = activity.findViewById(R.id.player_ratio_frame) as AspectRatioFrameLayout
-
-            videoPlayer.connectToUi(aspectFrame, surfaceView)
 
             activity.mediaController = MediaController(activity, mediaSession.sessionToken)
             initMediaMetadata()
@@ -116,8 +114,19 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        Timber.d("onResume")
+
+        val surfaceView = activity.findViewById(R.id.player_surface_view) as SurfaceView
+        val aspectFrame = activity.findViewById(R.id.player_ratio_frame) as AspectRatioFrameLayout
+
+        videoPlayer.connectToUi(aspectFrame, surfaceView)
+    }
+
     override fun onPause() {
         super.onPause()
+        Timber.d("onPause")
         if (videoPlayer.isPlaying) {
             val isVisibleBehind = activity.requestVisibleBehind(true)
             if (!isVisibleBehind && !PlayerActivity.supportsPictureInPicture(activity)) {
@@ -130,11 +139,13 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
     override fun onStop() {
         super.onStop()
+        Timber.d("onStop")
         pause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        Timber.d("onDestroy")
         activity.mediaController.unregisterCallback(mediaControllerCallback)
         videoPlayer.destroy()
         abandonAudioFocus()
@@ -243,10 +254,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, "Episode ${episode.episodeNum}")
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, 0L)
 
-        val width = resources.getDimensionPixelSize(R.dimen.now_playing_card_width)
-        val height = resources.getDimensionPixelSize(R.dimen.now_playing_card_height)
-
-        Glide.with(this).load(episode.coverUrl).asBitmap().centerCrop().into(object : SimpleTarget<Bitmap>(width, height) {
+        Glide.with(this).load(episode.coverUrl).asBitmap().into(object : SimpleTarget<Bitmap>() {
             override fun onResourceReady(bitmap: Bitmap?, glideAnimation: GlideAnimation<in Bitmap>?) {
                 metadataBuilder.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap)
                 mediaSession.setMetadata(metadataBuilder.build())
@@ -334,7 +342,8 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
             state = when (playbackState) {
                 ExoPlayer.STATE_IDLE -> PlaybackState.STATE_NONE
                 ExoPlayer.STATE_PREPARING -> PlaybackState.STATE_CONNECTING
-                ExoPlayer.STATE_BUFFERING, ExoPlayer.STATE_READY ->
+                ExoPlayer.STATE_BUFFERING -> PlaybackState.STATE_BUFFERING
+                ExoPlayer.STATE_READY ->
                     if (isPlaying) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED
                 ExoPlayer.STATE_ENDED -> PlaybackState.STATE_STOPPED
                 else -> PlaybackState.STATE_NONE
@@ -354,6 +363,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         }
 
         override fun onError(error: ExoPlaybackException) {
+            error.printStackTrace()
             streamAdapter.getCurrentStream()?.let { currentStream ->
                 streamAdapter.addFailed(currentStream)
             }

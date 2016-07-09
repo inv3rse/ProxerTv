@@ -87,6 +87,9 @@ dependencies {
     compile "com.github.grandstaish.paperparcel:paperparcel-kotlin:$paperparcel_version"
     kapt "com.github.grandstaish.paperparcel:compiler:$paperparcel_version"
 
+    // Timber
+    compile 'com.jakewharton.timber:timber:4.1.2'
+
     // Testing
     testCompile 'junit:junit:4.12'
     testCompile "com.squareup.okhttp3:mockwebserver:$okhttp_version"
