@@ -24,6 +24,7 @@ import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
+import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.Stream
 import com.inverse.unofficial.proxertv.ui.util.ErrorFragment
 import com.inverse.unofficial.proxertv.ui.util.StreamAdapter
@@ -51,6 +52,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
     private lateinit var metadataBuilder: MediaMetadata.Builder
     private lateinit var episode: Episode
+    private lateinit var series: Series
 
     private var hasAudioFocus: Boolean = false
     private var pauseTransient: Boolean = false
@@ -92,9 +94,12 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         super.onActivityCreated(savedInstanceState)
         Timber.d("onActivityCreated")
 
-        val episodeExtra = activity.intent.extras.getParcelable<Episode>(PlayerActivity.EXTRA_EPISODE)
-        if (episodeExtra != null) {
+        val extras = activity.intent.extras
+        val episodeExtra = extras.getParcelable<Episode>(PlayerActivity.EXTRA_EPISODE)
+        val seriesExtra = extras.getParcelable<Series>(PlayerActivity.EXTRA_SERIES)
+        if ((episodeExtra != null) and (seriesExtra != null)) {
             episode = episodeExtra
+            series = seriesExtra
 
             activity.mediaController = MediaController(activity, mediaSession.sessionToken)
             initMediaMetadata()
@@ -247,11 +252,12 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     }
 
     private fun initMediaMetadata() {
+        val episodeText = getString(R.string.episode, episode.episodeNum)
         metadataBuilder = MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, "Title")
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, "Episode ${episode.episodeNum}")
-                .putString(MediaMetadata.METADATA_KEY_TITLE, "Title")
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Episode ${episode.episodeNum}")
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, series.englishTitle)
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, episodeText)
+                .putString(MediaMetadata.METADATA_KEY_TITLE, series.englishTitle)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, episodeText)
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, 0L)
 
         Glide.with(this).load(episode.coverUrl).asBitmap().into(object : SimpleTarget<Bitmap>() {

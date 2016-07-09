@@ -4,6 +4,7 @@ import android.support.v17.leanback.widget.ImageCardView
 import android.support.v17.leanback.widget.Presenter
 import android.view.ViewGroup
 import com.bumptech.glide.Glide
+import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.SeriesCover
 
@@ -26,15 +27,16 @@ class CoverCardPresenter : Presenter() {
     }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any) {
+        val context = viewHolder.view.context
         val series = if (item is Episode)
-            SeriesCover(item.seriesId, "Episode ${item.episodeNum}", item.coverUrl) else
+            SeriesCover(item.seriesId, context.getString(R.string.episode, item.episodeNum), item.coverUrl) else
             item as SeriesCover
 
         val cardView = viewHolder.view as ImageCardView
 
         cardView.titleText = series.title
         cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT)
-        Glide.with(viewHolder.view.context)
+        Glide.with(context)
                 .load(series.coverImage)
                 .centerCrop()
                 .into(cardView.mainImageView)

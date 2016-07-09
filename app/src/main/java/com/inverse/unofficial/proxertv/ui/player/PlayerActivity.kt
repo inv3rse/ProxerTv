@@ -26,6 +26,7 @@ class PlayerActivity : Activity() {
 
     companion object {
         const val EXTRA_EPISODE = "EXTRA_EPISODE"
+        const val EXTRA_SERIES = "EXTRA_SERIES"
 
         fun supportsPictureInPicture(context: Context): Boolean {
             return BuildCompat.isAtLeastN() && context.packageManager.hasSystemFeature(

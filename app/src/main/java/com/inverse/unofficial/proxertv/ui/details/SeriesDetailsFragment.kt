@@ -53,6 +53,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         if (item is Episode) {
             val intent = Intent(activity, PlayerActivity::class.java)
             intent.putExtra(PlayerActivity.EXTRA_EPISODE, item)
+            intent.putExtra(PlayerActivity.EXTRA_SERIES, series)
             activity.startActivity(intent)
         }
     }
