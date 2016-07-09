@@ -41,6 +41,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         title = getString(R.string.app_name)
+        headersState = HEADERS_HIDDEN
 
         initEmptyRows()
         onItemViewClickedListener = this

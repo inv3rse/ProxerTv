@@ -81,6 +81,12 @@ dependencies {
     compile "org.jetbrains.anko:anko-common:$anko_version"
     compile "org.jetbrains.anko:anko-sqlite:$anko_version"
 
+    // PaperParcel
+    def paperparcel_version = '1.0.0'
+    compile "com.github.grandstaish.paperparcel:paperparcel:$paperparcel_version"
+    compile "com.github.grandstaish.paperparcel:paperparcel-kotlin:$paperparcel_version"
+    kapt "com.github.grandstaish.paperparcel:compiler:$paperparcel_version"
+
     // Testing
     testCompile 'junit:junit:4.12'
     testCompile "com.squareup.okhttp3:mockwebserver:$okhttp_version"

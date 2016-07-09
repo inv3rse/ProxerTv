@@ -89,6 +89,9 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
     val position: Long
         get() = mPlayer.currentPosition
 
+    val bufferedPosition: Long
+        get() = mPlayer.bufferedPosition
+
     val duration: Long
         get() = mPlayer.duration
 
@@ -184,13 +187,11 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
     }
 
     interface StatusListener {
-        fun playStatusChanged(isPlaying: Boolean)
+        fun playStatusChanged(isPlaying: Boolean, playbackState: Int)
 
         fun progressChanged(currentProgress: Long, bufferedProgress: Long)
 
         fun videoDurationChanged(length: Long)
-
-        fun onVideoEnd()
 
         fun onError(error: ExoPlaybackException)
     }
@@ -204,12 +205,8 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
                 stopProgressUpdate()
             }
 
-            mStatusListener?.playStatusChanged(playWhenReady)
+            mStatusListener?.playStatusChanged(playWhenReady, playbackState)
             mStatusListener?.videoDurationChanged(mPlayer.duration)
-
-            if (playbackState == ExoPlayer.STATE_ENDED) {
-                mStatusListener?.onVideoEnd()
-            }
         }
 
         override fun onPlayWhenReadyCommitted() {

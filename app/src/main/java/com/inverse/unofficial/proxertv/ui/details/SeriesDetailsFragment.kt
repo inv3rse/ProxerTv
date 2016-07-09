@@ -52,10 +52,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
         if (item is Episode) {
             val intent = Intent(activity, PlayerActivity::class.java)
-            intent.putExtra(PlayerActivity.EXTRA_SERIES_ID, item.seriesId)
-            intent.putExtra(PlayerActivity.EXTRA_EPISODE_NUM, item.episodeNum)
-            intent.putExtra(PlayerActivity.EXTRA_LANG_TYPE, item.languageType)
-
+            intent.putExtra(PlayerActivity.EXTRA_EPISODE, item)
             activity.startActivity(intent)
         }
     }
@@ -168,7 +165,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
     companion object {
         private const val ARG_SERIES_ID = "ARG_SERIES_ID"
-        private const val ACTION_ADD_REMOVE = -1L;
+        private const val ACTION_ADD_REMOVE = -1L
 
         fun createInstance(seriesId: Int): DetailsFragment {
             val fragment = DetailsFragment()
