@@ -124,7 +124,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         Timber.d("onPause")
         if (videoPlayer.isPlaying) {
             val isVisibleBehind = activity.requestVisibleBehind(true)
-            val isInPictureInPictureMode = PlayerActivity.supportsPictureInPicture(activity) and
+            val isInPictureInPictureMode = PlayerActivity.supportsPictureInPicture(activity) &&
                     activity.isInPictureInPictureMode
             if (!isVisibleBehind && !isInPictureInPictureMode) {
                 pause()
