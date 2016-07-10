@@ -319,22 +319,27 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
         override fun onPlay() {
             play()
+            tickle()
         }
 
         override fun onPause() {
             pause()
+            tickle()
         }
 
         override fun onFastForward() {
             videoPlayer.seekTo(videoPlayer.position + seekLength)
+            tickle()
         }
 
         override fun onRewind() {
             videoPlayer.apply { seekTo(if (position > seekLength) position - seekLength else 0) }
+            tickle()
         }
 
         override fun onSeekTo(position: Long) {
             videoPlayer.seekTo(position)
+            tickle()
         }
     }
 
@@ -348,9 +353,12 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
             state = when (playbackState) {
                 ExoPlayer.STATE_IDLE -> PlaybackState.STATE_NONE
                 ExoPlayer.STATE_PREPARING -> PlaybackState.STATE_CONNECTING
-                ExoPlayer.STATE_BUFFERING -> PlaybackState.STATE_BUFFERING
-                ExoPlayer.STATE_READY ->
-                    if (isPlaying) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED
+                ExoPlayer.STATE_BUFFERING -> if (isPlaying)
+                    PlaybackState.STATE_BUFFERING else
+                    PlaybackState.STATE_PAUSED
+                ExoPlayer.STATE_READY -> if (isPlaying)
+                    PlaybackState.STATE_PLAYING else
+                    PlaybackState.STATE_PAUSED
                 ExoPlayer.STATE_ENDED -> PlaybackState.STATE_STOPPED
                 else -> PlaybackState.STATE_NONE
             }
