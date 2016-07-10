@@ -19,6 +19,7 @@ import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
 import com.inverse.unofficial.proxertv.ui.util.CoverCardPresenter
+import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
@@ -27,10 +28,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     private val coverPresenter = CoverCardPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private val myListAdapter = ArrayObjectAdapter(coverPresenter)
-    private val topAccessAdapter = ArrayObjectAdapter(coverPresenter)
-    private val topRatingAdapter = ArrayObjectAdapter(coverPresenter)
-    private val airingAdapter = ArrayObjectAdapter(coverPresenter)
-
+    private val rowTargetMap = mutableMapOf<ListRow, Int>()
     private val handler = Handler()
 
     private lateinit var backgroundManager: BackgroundManager
@@ -84,40 +82,12 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
     private fun initEmptyRows() {
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_my_list)), myListAdapter))
-        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_top_access)), topAccessAdapter))
-        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_top_rating)), topRatingAdapter))
-        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_airing)), airingAdapter))
-
         adapter = rowsAdapter
     }
 
     private fun loadContent() {
         val client = App.component.getProxerClient()
         val myListRepository = App.component.getMySeriesRepository()
-
-        subscriptions.add(client.loadTopAccessSeries()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        { topAccessAdapter.addAll(0, it) },
-                        { it.printStackTrace() }, { }
-                ))
-
-        subscriptions.add(client.loadTopRatingSeries()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        { topRatingAdapter.addAll(0, it) },
-                        { it.printStackTrace() }, { }
-                ))
-
-        subscriptions.add(client.loadAiringSeries()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        { airingAdapter.addAll(0, it) },
-                        { it.printStackTrace() }, { }
-                ))
 
         subscriptions.add(myListRepository.observeSeriesList()
                 .subscribeOn(Schedulers.io())
@@ -126,6 +96,36 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                     myListAdapter.clear()
                     myListAdapter.addAll(0, it)
                 }))
+
+        loadAndAddRow(client.loadTopAccessSeries(), getString(R.string.row_top_access), 1)
+        loadAndAddRow(client.loadTopRatingSeries(), getString(R.string.row_top_rating), 2)
+        loadAndAddRow(client.loadTopRatingMovies(), getString(R.string.row_top_rating_movies), 3)
+        loadAndAddRow(client.loadAiringSeries(), getString(R.string.row_airing), 4)
+    }
+
+    private fun loadAndAddRow(loadObservable: Observable<List<SeriesCover>>, rowName: String, position: Int) {
+        subscriptions.add(loadObservable
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        {
+                            if (it.size > 0) {
+                                val adapter = ArrayObjectAdapter(coverPresenter)
+                                adapter.addAll(0, it)
+                                val listRow = ListRow(HeaderItem(rowName), adapter)
+                                var targetIndex = rowsAdapter.size()
+                                for (i in 1..rowsAdapter.size()) {
+                                    val rowTarget = rowTargetMap[rowsAdapter.get(i - 1)] ?: 0
+                                    if (position < rowTarget) {
+                                        targetIndex = i - 1
+                                        break
+                                    }
+                                }
+                                rowsAdapter.add(targetIndex, listRow)
+                                rowTargetMap.put(listRow, position)
+                            }
+                        }, { it.printStackTrace() }
+                ))
     }
 
     private fun setBackgroundImage(uri: String) {

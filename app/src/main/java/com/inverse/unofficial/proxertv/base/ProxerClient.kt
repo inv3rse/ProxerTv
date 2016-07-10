@@ -33,6 +33,10 @@ class ProxerClient(
         return loadSeriesList(serverConfig.topRatingListUrl)
     }
 
+    fun loadTopRatingMovies(): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.topRatingMovieListUrl)
+    }
+
     fun loadAiringSeries(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.airingListUrl)
     }
@@ -193,7 +197,7 @@ class ProxerClient(
                         }
                     }
 
-                    return seriesCovers;
+                    return seriesCovers
                 })
     }
 

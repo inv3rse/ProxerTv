@@ -5,6 +5,7 @@ class ServerConfig(
         val topAccessListUrl: String = baseUrl + "anime/animeseries/clicks/all#top",
         val topRatingListUrl: String = baseUrl + "anime/animeseries/rating/all#top",
         val airingListUrl: String = baseUrl + "anime/airing#top",
+        val topRatingMovieListUrl: String = baseUrl + "anime/movie/rating/all#top",
         val searchUrl: (query: String) -> String = { query -> baseUrl + "search?s=search&name=$query&typ=all-anime" },
         val detailUrl: (seriesId: Int) -> String = { id -> baseUrl + "info/$id" },
         val episodesListUrl: (seriesId: Int) -> String = { id -> baseUrl + "info/$id/list" },
