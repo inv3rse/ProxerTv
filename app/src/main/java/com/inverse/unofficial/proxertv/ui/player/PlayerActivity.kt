@@ -9,9 +9,12 @@ import android.support.v4.os.BuildCompat
 import com.inverse.unofficial.proxertv.R
 
 class PlayerActivity : Activity() {
+    private lateinit var overlayFragment: PlayerOverlayFragment
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
+        overlayFragment = fragmentManager.findFragmentById(R.id.playback_controls_fragment) as PlayerOverlayFragment
     }
 
     override fun onVisibleBehindCanceled() {
@@ -22,6 +25,7 @@ class PlayerActivity : Activity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        overlayFragment.initEpisode()
     }
 
     companion object {

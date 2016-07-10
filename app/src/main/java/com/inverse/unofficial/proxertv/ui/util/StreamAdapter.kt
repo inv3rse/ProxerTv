@@ -62,6 +62,13 @@ class StreamAdapter : ObjectAdapter(StreamPresenter()) {
         return currentStream
     }
 
+    fun clear() {
+        streams.clear()
+        failedStreams.clear()
+        currentStream = null
+        notifyChanged()
+    }
+
     private fun ifExistent(stream: Stream, withIndex: (index: Int) -> Unit) {
         val index = streams.indexOf(stream)
         if (index != -1) {

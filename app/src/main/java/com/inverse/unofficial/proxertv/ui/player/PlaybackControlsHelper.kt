@@ -1,5 +1,6 @@
 package com.inverse.unofficial.proxertv.ui.player
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -11,6 +12,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
     private val playPauseAction = PlaybackControlsRow.PlayPauseAction(context)
     private val rewindAction = PlaybackControlsRow.RewindAction(context)
     private val fastForwardAction = PlaybackControlsRow.FastForwardAction(context)
+    private val pictureInPictureAction = PlaybackControlsRow.PictureInPictureAction(context)
 
     private lateinit var transportControls: MediaController.TransportControls
 
@@ -23,14 +25,14 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
 
     init {
         transportControls = overlayFragment.activity.mediaController.transportControls
-        buildRowAndPresenter()
+        buildRowAndPresenter(context)
     }
 
     fun createMediaControllerCallback(): MediaController.Callback {
         return MediaControllerCallback()
     }
 
-    private fun buildRowAndPresenter() {
+    private fun buildRowAndPresenter(context: Context) {
         controlsRow = PlaybackControlsRow(this)
         actionsAdapter = ArrayObjectAdapter(ControlButtonPresenterSelector())
         controlsRow.primaryActionsAdapter = actionsAdapter
@@ -38,6 +40,10 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
         actionsAdapter.add(rewindAction)
         actionsAdapter.add(playPauseAction)
         actionsAdapter.add(fastForwardAction)
+
+        if (PlayerActivity.supportsPictureInPicture(context)) {
+            actionsAdapter.add(pictureInPictureAction)
+        }
 
         val detailsPresenter = object : AbstractDetailsDescriptionPresenter() {
             override fun onBindDescription(viewHolder: AbstractDetailsDescriptionPresenter.ViewHolder, item: Any) {
@@ -50,6 +56,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
         controlsRowPresenter.onActionClickedListener = OnActionClickedListener { dispatchAction(it) }
     }
 
+    @SuppressLint("NewApi")
     private fun dispatchAction(action: Action): Boolean {
         Timber.d("dispatchAction %d", action.id)
         transportControls.apply {
@@ -57,6 +64,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
                 playPauseAction.id -> if (isMediaPlaying()) pause() else play()
                 rewindAction.id -> rewind()
                 fastForwardAction.id -> fastForward()
+                pictureInPictureAction.id -> overlayFragment.activity.enterPictureInPictureMode()
                 else -> return false
             }
         }

@@ -80,6 +80,13 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
         mPlayer.playWhenReady = false
     }
 
+    fun stop() {
+        mPlayer.stop()
+        mPlayer.seekTo(0)
+        mPlayer.playWhenReady = false
+        isInitialized = false
+    }
+
     fun seekTo(position: Long) {
         mPlayer.seekTo(position)
         mStatusListener?.progressChanged(position, mPlayer.bufferedPosition)

@@ -1,5 +1,6 @@
 package com.inverse.unofficial.proxertv.ui.player
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -51,8 +52,8 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     private lateinit var streamAdapter: StreamAdapter
 
     private lateinit var metadataBuilder: MediaMetadata.Builder
-    private lateinit var episode: Episode
-    private lateinit var series: Series
+    private var episode: Episode? = null
+    private var series: Series? = null
 
     private var hasAudioFocus: Boolean = false
     private var pauseTransient: Boolean = false
@@ -94,30 +95,17 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         super.onActivityCreated(savedInstanceState)
         Timber.d("onActivityCreated")
 
-        val extras = activity.intent.extras
-        val episodeExtra = extras.getParcelable<Episode>(PlayerActivity.EXTRA_EPISODE)
-        val seriesExtra = extras.getParcelable<Series>(PlayerActivity.EXTRA_SERIES)
-        if ((episodeExtra != null) and (seriesExtra != null)) {
-            episode = episodeExtra
-            series = seriesExtra
+        activity.mediaController = MediaController(activity, mediaSession.sessionToken)
 
-            activity.mediaController = MediaController(activity, mediaSession.sessionToken)
-            initMediaMetadata()
-            setPlaybackState(PlaybackState.STATE_NONE)
-            setPendingIntent()
+        // connect session to controls
+        playbackControlsHelper = PlaybackControlsHelper(activity, this)
+        mediaControllerCallback = playbackControlsHelper.createMediaControllerCallback()
+        activity.mediaController.registerCallback(mediaControllerCallback)
 
-            // connect session to controls
-            playbackControlsHelper = PlaybackControlsHelper(activity, this)
-            mediaControllerCallback = playbackControlsHelper.createMediaControllerCallback()
-            activity.mediaController.registerCallback(mediaControllerCallback)
+        backgroundType = PlaybackOverlayFragment.BG_LIGHT
+        setupAdapter()
 
-            backgroundType = PlaybackOverlayFragment.BG_LIGHT
-            setupAdapter()
-            loadData()
-        } else {
-            Timber.d("missing extras, finishing!")
-            activity.finish()
-        }
+        initEpisode()
     }
 
     override fun onResume() {
@@ -130,12 +118,15 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         videoPlayer.connectToUi(aspectFrame, surfaceView)
     }
 
+    @SuppressLint("NewApi")
     override fun onPause() {
         super.onPause()
         Timber.d("onPause")
         if (videoPlayer.isPlaying) {
             val isVisibleBehind = activity.requestVisibleBehind(true)
-            if (!isVisibleBehind && !PlayerActivity.supportsPictureInPicture(activity)) {
+            val isInPictureInPictureMode = PlayerActivity.supportsPictureInPicture(activity) and
+                    activity.isInPictureInPictureMode
+            if (!isVisibleBehind && !isInPictureInPictureMode) {
                 pause()
             }
         } else {
@@ -165,6 +156,32 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         }
     }
 
+    /**
+     * Initializes episode based on intent extras
+     */
+    fun initEpisode() {
+        val extras = activity.intent.extras
+        val episodeExtra = extras.getParcelable<Episode>(PlayerActivity.EXTRA_EPISODE)
+        val seriesExtra = extras.getParcelable<Series>(PlayerActivity.EXTRA_SERIES)
+        if ((episodeExtra != null) and (seriesExtra != null)) {
+            if ((episodeExtra != episode) or (seriesExtra != series)) {
+                episode = episodeExtra
+                series = seriesExtra
+
+                if (videoPlayer.isInitialized) {
+                    videoPlayer.stop()
+                }
+
+                initMediaMetadata()
+                setPendingIntent()
+                loadStreams()
+            }
+        } else {
+            Timber.d("missing extras, finishing!")
+            activity.finish()
+        }
+    }
+
     fun updatePlaybackRow() {
         rowsAdapter.notifyArrayItemRangeChanged(0, 1)
     }
@@ -191,10 +208,11 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         onItemViewClickedListener = this
     }
 
-    private fun loadData() {
+    private fun loadStreams() {
         val client = App.component.getProxerClient()
+        streamAdapter.clear()
 
-        subscriptions.add(client.loadEpisodeStreams(episode.seriesId, episode.episodeNum, episode.languageType)
+        subscriptions.add(client.loadEpisodeStreams(episode!!.seriesId, episode!!.episodeNum, episode!!.languageType)
                 .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ stream ->
                     // add the stream to the adapter first
@@ -252,15 +270,15 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     }
 
     private fun initMediaMetadata() {
-        val episodeText = getString(R.string.episode, episode.episodeNum)
+        val episodeText = getString(R.string.episode, episode!!.episodeNum)
         metadataBuilder = MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, series.englishTitle)
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, series!!.englishTitle)
                 .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, episodeText)
-                .putString(MediaMetadata.METADATA_KEY_TITLE, series.englishTitle)
+                .putString(MediaMetadata.METADATA_KEY_TITLE, series!!.englishTitle)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, episodeText)
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, 0L)
 
-        Glide.with(this).load(episode.coverUrl).asBitmap().into(object : SimpleTarget<Bitmap>() {
+        Glide.with(this).load(episode!!.coverUrl).asBitmap().into(object : SimpleTarget<Bitmap>() {
             override fun onResourceReady(bitmap: Bitmap?, glideAnimation: GlideAnimation<in Bitmap>?) {
                 metadataBuilder.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap)
                 mediaSession.setMetadata(metadataBuilder.build())
