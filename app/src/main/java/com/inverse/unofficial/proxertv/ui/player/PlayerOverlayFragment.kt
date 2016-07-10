@@ -40,7 +40,7 @@ import timber.log.Timber
 class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListener {
     private var seekLength = 10000 // 10 seconds, overridden once the video length is known
     private val subscriptions = CompositeSubscription()
-    private lateinit var playbackHelper: PlaybackControlHelper
+    private lateinit var playbackControlsHelper: PlaybackControlsHelper
 
     private lateinit var videoPlayer: VideoPlayer
     private lateinit var mediaControllerCallback: MediaController.Callback
@@ -107,8 +107,8 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
             setPendingIntent()
 
             // connect session to controls
-            playbackHelper = PlaybackControlHelper(this, activity)
-            mediaControllerCallback = playbackHelper.createMediaControllerCallback()
+            playbackControlsHelper = PlaybackControlsHelper(context, this)
+            mediaControllerCallback = playbackControlsHelper.createMediaControllerCallback()
             activity.mediaController.registerCallback(mediaControllerCallback)
 
             backgroundType = PlaybackOverlayFragment.BG_LIGHT
@@ -161,7 +161,6 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
         when (item) {
             is StreamAdapter.StreamHolder -> setStream(item.stream)
-            is Action -> playbackHelper.onActionClicked(item)
         }
     }
 
@@ -170,7 +169,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     }
 
     private fun setupAdapter() {
-        val controlsRowPresenter = playbackHelper.createControlsRowAndPresenter()
+        val controlsRowPresenter = playbackControlsHelper.controlsRowPresenter
         val presenterSelector = ClassPresenterSelector()
 
         presenterSelector.addClassPresenter(PlaybackControlsRow::class.java, controlsRowPresenter)
@@ -179,7 +178,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         rowsAdapter = ArrayObjectAdapter(presenterSelector)
 
         // first row (playback controls)
-        rowsAdapter.add(playbackHelper.controlsRow)
+        rowsAdapter.add(playbackControlsHelper.controlsRow)
 
         // second row (stream selection)
         streamAdapter = StreamAdapter()
@@ -355,7 +354,11 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 else -> PlaybackState.STATE_NONE
             }
 
-            setPlaybackState(state)
+            if (playbackState == ExoPlayer.STATE_ENDED) {
+                activity.finish()
+            } else {
+                setPlaybackState(state)
+            }
         }
 
         override fun progressChanged(currentProgress: Long, bufferedProgress: Long) {
