@@ -56,3 +56,10 @@
 
 #--------------JSoup-------------------------------------
 -keep public class org.jsoup.** { public *; }
+
+#--------------PaperParcel-------------------------------
+-dontwarn org.jetbrains.annotations.**
+-keepclassmembers class nz.bradcampbell.paperparcel.PaperParcelMapping {
+  static ** FROM_ORIGINAL;
+  static ** FROM_PARCELABLE;
+}
