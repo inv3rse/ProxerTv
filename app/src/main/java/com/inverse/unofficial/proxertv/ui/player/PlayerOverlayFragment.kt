@@ -78,16 +78,16 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         super.onCreate(savedInstanceState)
         Timber.d("onCreate")
 
-        videoPlayer = VideoPlayer(savedInstanceState)
-        videoPlayer.setStatusListener(PlayerListener())
-
-        audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         // create a MediaSession
         mediaSession = MediaSession(activity, "ProxerTv")
         mediaSession.setCallback(MediaSessionCallback())
         mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
         mediaSession.isActive = true
+
+        videoPlayer = VideoPlayer(savedInstanceState)
+        videoPlayer.setStatusListener(PlayerListener())
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -107,7 +107,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
             setPendingIntent()
 
             // connect session to controls
-            playbackControlsHelper = PlaybackControlsHelper(context, this)
+            playbackControlsHelper = PlaybackControlsHelper(activity, this)
             mediaControllerCallback = playbackControlsHelper.createMediaControllerCallback()
             activity.mediaController.registerCallback(mediaControllerCallback)
 
@@ -115,6 +115,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
             setupAdapter()
             loadData()
         } else {
+            Timber.d("missing extras, finishing!")
             activity.finish()
         }
     }
