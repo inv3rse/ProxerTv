@@ -22,18 +22,28 @@ import javax.inject.Singleton
 class BaseModule(val applicationContext: Context) {
 
     @Provides
+    fun provideServerConfig(): ServerConfig {
+        return ServerConfig()
+    }
+
+    @Provides
+    fun provideGson(): Gson {
+        return Gson()
+    }
+
+    @Provides
     fun provideApplicationContext(): Context {
         return applicationContext
     }
 
     @Provides
-    fun provideOkHttpClient(applicationContext: Context): OkHttpClient {
+    fun provideOkHttpClient(applicationContext: Context, serverConfig: ServerConfig): OkHttpClient {
         val cookieJar = PersistentCookieJar(SetCookieCache(), SharedPrefsCookiePersistor(applicationContext))
 
         val builder = OkHttpClient.Builder()
                 .cache(Cache(File(applicationContext.cacheDir, "httpCache"), 10 * 1024 * 1024)) // 10 MiB
                 .cookieJar(cookieJar)
-                .addNetworkInterceptor(ProxerCacheRewriteInterceptor())
+                .addNetworkInterceptor(ProxerCacheRewriteInterceptor(serverConfig))
                 .addInterceptor(NoCacheCaptchaInterceptor())
                 .addInterceptor(CloudFlareInterceptor())
                 .connectTimeout(30, TimeUnit.SECONDS)
@@ -49,11 +59,6 @@ class BaseModule(val applicationContext: Context) {
     }
 
     @Provides
-    fun provideGson(): Gson {
-        return Gson()
-    }
-
-    @Provides
     fun provideSeriesDbHelper(context: Context): SeriesDbHelper {
         return SeriesDbHelper(context)
     }
@@ -62,11 +67,6 @@ class BaseModule(val applicationContext: Context) {
     @Singleton
     fun provideMySeriesRepository(dbHelper: SeriesDbHelper): MySeriesRepository {
         return MySeriesRepository(dbHelper)
-    }
-
-    @Provides
-    fun provideServerConfig(): ServerConfig {
-        return ServerConfig()
     }
 
     // automatically providing the ArrayList does not work properly

@@ -38,10 +38,13 @@ class ProxerClientTest {
     @Before
     fun setup() {
         val httpClient = OkHttpClient.Builder().connectTimeout(180, TimeUnit.SECONDS)
-                .readTimeout(180, TimeUnit.SECONDS).build()
+                .readTimeout(180, TimeUnit.SECONDS)
+                .build()
         val resolvers = listOf(ProxerStreamResolver(httpClient), StreamCloudResolver(httpClient))
+        val mockServerUrl = mockServer.url("/")
+        val serverConfig = ServerConfig(mockServerUrl.scheme(), mockServerUrl.host() + ":" + mockServerUrl.port())
 
-        proxerClient = ProxerClient(httpClient, Gson(), resolvers, ServerConfig(mockServer.url("/").toString()))
+        proxerClient = ProxerClient(httpClient, Gson(), resolvers, serverConfig)
     }
 
     @Test

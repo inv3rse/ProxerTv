@@ -1,18 +1,18 @@
 package com.inverse.unofficial.proxertv.model
 
 class ServerConfig(
-        val baseUrl: String = "https://proxer.me/",
-        val topAccessListUrl: String = baseUrl + "anime/animeseries/clicks/all#top",
-        val topRatingListUrl: String = baseUrl + "anime/animeseries/rating/all#top",
-        val airingListUrl: String = baseUrl + "anime/airing#top",
-        val topRatingMovieListUrl: String = baseUrl + "anime/movie/rating/all#top",
-        val searchUrl: (query: String) -> String = { query -> baseUrl + "search?s=search&name=$query&typ=all-anime" },
-        val detailUrl: (seriesId: Int) -> String = { id -> baseUrl + "info/$id" },
-        val episodesListUrl: (seriesId: Int) -> String = { id -> baseUrl + "info/$id/list" },
-        val episodesListJsonUrl: (seriesId: Int, page: Int) -> String = { id, page -> baseUrl + "info/$id/list/$page?format=json" },
-        val episodeStreamsUrl: (seriesId: Int, episodeNum: Int, subType: String) -> String = {
-            seriesId, episodeNum, subType ->
-            baseUrl + "watch/$seriesId/$episodeNum/$subType"
-        },
-        val coverUrl: (seriesId: Int) -> String = { id -> "https://cdn.proxer.me/cover/$id.jpg" }) {
+        schema: String = "https",
+        val host: String = "proxer.me") {
+    val baseUrl = "$schema://$host/"
+    val topAccessListUrl = baseUrl + "anime/animeseries/clicks/all#top"
+    val topRatingListUrl = baseUrl + "anime/animeseries/rating/all#top"
+    val airingListUrl = baseUrl + "anime/airing#top"
+    val topRatingMovieListUrl = baseUrl + "anime/movie/rating/all#top"
+
+    fun searchUrl(query: String) = baseUrl + "search?s=search&name=$query&typ=all-anime"
+    fun detailUrl(seriesId: Int) = baseUrl + "info/$seriesId"
+    fun episodesListUrl(seriesId: Int) = baseUrl + "info/$seriesId/list"
+    fun episodesListJsonUrl(seriesId: Int, page: Int) = baseUrl + "info/$seriesId/list/$page?format=json"
+    fun episodeStreamsUrl(seriesId: Int, episodeNum: Int, subType: String) = baseUrl + "watch/$seriesId/$episodeNum/$subType"
+    fun coverUrl(seriesId: Int) = "https://cdn.proxer.me/cover/$seriesId.jpg"
 }
