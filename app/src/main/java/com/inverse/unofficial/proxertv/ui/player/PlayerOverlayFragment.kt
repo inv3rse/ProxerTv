@@ -23,7 +23,7 @@ import com.google.android.exoplayer.ExoPlaybackException
 import com.google.android.exoplayer.ExoPlayer
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.ProxerClient
+import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.Stream

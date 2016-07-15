@@ -1,4 +1,4 @@
-package com.inverse.unofficial.proxertv.base
+package com.inverse.unofficial.proxertv.base.db
 
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import org.jetbrains.anko.db.*

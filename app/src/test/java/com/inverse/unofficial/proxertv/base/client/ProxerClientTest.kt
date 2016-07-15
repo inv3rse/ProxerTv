@@ -1,4 +1,4 @@
-package com.inverse.unofficial.proxertv.base
+package com.inverse.unofficial.proxertv.base.client
 
 import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.model.Series

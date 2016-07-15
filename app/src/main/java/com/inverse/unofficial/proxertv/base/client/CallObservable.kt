@@ -1,4 +1,4 @@
-package com.inverse.unofficial.proxertv.base
+package com.inverse.unofficial.proxertv.base.client
 
 import okhttp3.Call
 import okhttp3.Callback

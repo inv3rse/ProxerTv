@@ -1,10 +1,10 @@
-package com.inverse.unofficial.proxertv
+package com.inverse.unofficial.proxertv.db
 
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
 import android.test.RenamingDelegatingContext
-import com.inverse.unofficial.proxertv.base.MySeriesRepository
-import com.inverse.unofficial.proxertv.base.SeriesDbHelper
+import com.inverse.unofficial.proxertv.base.db.MySeriesRepository
+import com.inverse.unofficial.proxertv.base.db.SeriesDbHelper
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import org.junit.After
 import org.junit.Before
@@ -22,7 +22,7 @@ class MySeriesRepositoryTest {
 
     @Before
     fun setup() {
-        val context = RenamingDelegatingContext(InstrumentationRegistry.getTargetContext(), "test");
+        val context = RenamingDelegatingContext(InstrumentationRegistry.getTargetContext(), "test")
         dbHelper = SeriesDbHelper(context)
         repository = MySeriesRepository(dbHelper)
 

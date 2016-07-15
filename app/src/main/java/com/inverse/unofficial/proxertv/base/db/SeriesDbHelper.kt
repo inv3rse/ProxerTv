@@ -1,4 +1,4 @@
-package com.inverse.unofficial.proxertv.base
+package com.inverse.unofficial.proxertv.base.db
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
