@@ -2,8 +2,8 @@
     <string name="app_name">ProxerTv Alpha</string>
     <string name="row_my_list">My List</string>
     <string name="row_top_access">Top Access Series</string>
-    <string name="row_top_rating">Top Rating Series</string>
-    <string name="row_top_rating_movies">Top Rating Movies</string>
+    <string name="row_top_rating">Top Rated Series</string>
+    <string name="row_top_rating_movies">Top Rated Movies</string>
     <string name="row_airing">Airing Series</string>
     <string name="row_streams">Streams</string>
     <string name="page_title">Page %d</string>
