@@ -14,8 +14,11 @@ import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
-import com.inverse.unofficial.proxertv.ui.util.CoverCardPresenter
+import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
+import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
+import org.jetbrains.anko.toast
 import rx.Observable
+import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
@@ -27,11 +30,17 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     private val subscriptions = CompositeSubscription()
 
     private val client = App.component.getProxerClient()
+    private val progressRepository = App.component.getSeriesProgressRepository()
     private val myListRepository = App.component.getMySeriesRepository()
 
+    private var episodeSubscription: Subscription? = null
     private var series: Series? = null
-    private var currentEpisodePage = -1
     private var inList = false
+    private var currentPage = 1
+
+    private val episodeAdapters = arrayListOf<EpisodeAdapter>()
+    private lateinit var seriesProgress: Observable<Int>
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,12 +56,13 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     override fun onDestroy() {
         super.onDestroy()
         subscriptions.clear()
+        episodeSubscription?.unsubscribe()
     }
 
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
-        if (item is Episode) {
+        if (item is EpisodeAdapter.EpisodeHolder) {
             val intent = Intent(activity, PlayerActivity::class.java)
-            intent.putExtra(PlayerActivity.EXTRA_EPISODE, item)
+            intent.putExtra(PlayerActivity.EXTRA_EPISODE, item.episode)
             intent.putExtra(PlayerActivity.EXTRA_SERIES, series)
             activity.startActivity(intent)
         }
@@ -65,8 +75,22 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                 val cover = SeriesCover(series!!.id, series!!.originalTitle, series!!.imageUrl)
                 if (inList) {
                     myListRepository.removeSeries(cover.id)
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe({ },
+                                    {
+                                        toast("Failed to remove series")
+                                        it.printStackTrace()
+                                    })
                 } else {
                     myListRepository.addSeries(cover)
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe({ },
+                                    {
+                                        toast("Failed to add series")
+                                        it.printStackTrace()
+                                    })
                 }
 
                 inList = !inList
@@ -74,7 +98,12 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                 action.label1 = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
                 actionsAdapter.notifyArrayItemRangeChanged(0, 1)
             } else {
-                loadEpisodes(series!!, action.id.toInt())
+                // load selected episode page
+                val page = action.id.toInt()
+                if (page != currentPage) {
+                    currentPage = page
+                    loadEpisodes(series!!, page)
+                }
             }
         }
     }
@@ -95,14 +124,26 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     private fun loadContent() {
         val seriesId = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
 
+        seriesProgress = progressRepository.observeProgress(seriesId).replay(1).refCount()
+
+        // update episode progress
+        subscriptions.add(seriesProgress
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({
+                    for (adapter in episodeAdapters) {
+                        adapter.progress = it
+                    }
+                }, { it.printStackTrace() }))
+
+
         val observable = Observable.zip(
                 client.loadSeries(seriesId),
                 myListRepository.containsSeries(seriesId),
                 { series, inList -> Pair(series, inList) })
 
         subscriptions.add(
-                observable
-                        .subscribeOn(Schedulers.io())
+                observable.subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({ pair: Pair<Series?, Boolean> ->
                             val series = pair.first
@@ -140,41 +181,42 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     }
 
     private fun loadEpisodes(series: Series, page: Int) {
-        if (currentEpisodePage != page) {
-            currentEpisodePage = page
-            contentAdapter.removeItems(1, contentAdapter.size() - 1)
+        // remove old episode list
+        contentAdapter.removeItems(1, contentAdapter.size() - 1)
+        episodeSubscription?.unsubscribe()
 
-            subscriptions.add(client.loadEpisodesPage(series.id, page)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(fun(episodesMap: Map<String, List<Int>>) {
-                        val cardPresenter = CoverCardPresenter()
-                        episodesMap.keys.forEach { name ->
-                            val header = HeaderItem(name)
-                            val listRowAdapter = ArrayObjectAdapter(cardPresenter)
+        episodeSubscription = Observable.zip(
+                client.loadEpisodesPage(series.id, page),
+                seriesProgress.first(),
+                { episodes, progress -> Pair(episodes, progress) })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(fun(episodesProgress: Pair<Map<String, List<Int>>, Int>) {
+                    // remove old episodes (if the action is not triggered by calling the function)
+                    contentAdapter.removeItems(1, contentAdapter.size() - 1)
+                    episodeAdapters.clear()
 
-                            val episodes = episodesMap[name] ?: emptyList()
-                            for (i in episodes) {
-                                listRowAdapter.add(Episode(series.id, i, name, series.imageUrl))
-                            }
+                    val (episodesMap, progress) = episodesProgress
+                    val episodePresenter = EpisodePresenter()
 
-                            contentAdapter.add(ListRow(header, listRowAdapter))
+                    for (subType in episodesMap.keys) {
+
+                        val header = HeaderItem(subType)
+                        val adapter = EpisodeAdapter(progress, episodePresenter)
+
+                        val episodes = episodesMap[subType] ?: emptyList()
+                        for (i in episodes) {
+                            adapter.add(Episode(series.id, i, subType, series.imageUrl))
                         }
-                    }, { it.printStackTrace() }, {}))
-        }
+
+                        episodeAdapters.add(adapter)
+                        contentAdapter.add(ListRow(header, adapter))
+                    }
+
+                }, { it.printStackTrace() })
     }
 
     companion object {
-        private const val ARG_SERIES_ID = "ARG_SERIES_ID"
         private const val ACTION_ADD_REMOVE = -1L
-
-        fun createInstance(seriesId: Int): DetailsFragment {
-            val fragment = DetailsFragment()
-            val args = Bundle()
-            args.putInt(ARG_SERIES_ID, seriesId)
-            fragment.arguments = args
-
-            return fragment
-        }
     }
 }

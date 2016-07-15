@@ -41,6 +41,7 @@ import timber.log.Timber
 class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListener {
     private var seekLength = 10000 // 10 seconds, overridden once the video length is known
     private val subscriptions = CompositeSubscription()
+    private val progressRepository = App.component.getSeriesProgressRepository()
     private lateinit var playbackControlsHelper: PlaybackControlsHelper
 
     private lateinit var videoPlayer: VideoPlayer
@@ -54,6 +55,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     private lateinit var metadataBuilder: MediaMetadata.Builder
     private var episode: Episode? = null
     private var series: Series? = null
+    private var isTracked = false
 
     private var hasAudioFocus: Boolean = false
     private var pauseTransient: Boolean = false
@@ -175,6 +177,13 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 initMediaMetadata()
                 setPendingIntent()
                 loadStreams()
+
+                // check if the episode is already marked as watched
+                progressRepository.getProgress(seriesExtra.id)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({ isTracked = episodeExtra.episodeNum <= it },
+                                { it.printStackTrace() })
             }
         } else {
             Timber.d("missing extras, finishing!")
@@ -390,6 +399,16 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
         override fun progressChanged(currentProgress: Long, bufferedProgress: Long) {
             setPlaybackState(state)
+            if (!isTracked && videoPlayer.duration > 0) {
+                val progressPercent = currentProgress.toFloat() / videoPlayer.duration
+                if (progressPercent > TRACK_PERCENT) {
+                    // track episode
+                    isTracked = true
+                    progressRepository.setProgress(series!!.id, episode!!.episodeNum)
+                            .subscribeOn(Schedulers.io())
+                            .subscribe({ }, { it.printStackTrace() })
+                }
+            }
         }
 
         override fun videoDurationChanged(length: Long) {
@@ -408,5 +427,6 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
     companion object {
         private const val SEEK_STEPS = 100
+        private const val TRACK_PERCENT = 0.75F
     }
 }

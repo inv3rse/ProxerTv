@@ -14,8 +14,19 @@ class StorageModule {
     }
 
     @Provides
+    fun provideSeriesProgressDbHelper(application: Application): SeriesProgressDbHelper {
+        return SeriesProgressDbHelper(application)
+    }
+
+    @Provides
     @Singleton
     fun provideMySeriesRepository(dbHelper: SeriesDbHelper): MySeriesRepository {
         return MySeriesRepository(dbHelper)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSeriesProgressRepository(dbHelper: SeriesProgressDbHelper): SeriesProgressRepository {
+        return SeriesProgressRepository(dbHelper)
     }
 }

@@ -18,14 +18,14 @@ import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
-import com.inverse.unofficial.proxertv.ui.util.CoverCardPresenter
+import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
 
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
-    private val coverPresenter = CoverCardPresenter()
+    private val coverPresenter = SeriesCoverPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private val myListAdapter = ArrayObjectAdapter(coverPresenter)
     private val rowTargetMap = mutableMapOf<ListRow, Int>()

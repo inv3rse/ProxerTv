@@ -22,6 +22,7 @@ class MySeriesRepositoryTest {
 
     @Before
     fun setup() {
+        @Suppress("DEPRECATION")
         val context = RenamingDelegatingContext(InstrumentationRegistry.getTargetContext(), "test")
         dbHelper = SeriesDbHelper(context)
         repository = MySeriesRepository(dbHelper)
@@ -39,21 +40,21 @@ class MySeriesRepositoryTest {
         val series1 = SeriesCover(1, "1", "1")
         val series2 = SeriesCover(2, "2", "2")
 
-        repository.addSeries(series1)
+        repository.addSeries(series1).subscribeAssert { assertNoErrors() }
         repository.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1))
         }
 
         // add same key (should not appear twice)
-        repository.addSeries(series1)
+        repository.addSeries(series1).subscribeAssert { assertNoErrors() }
         repository.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1))
         }
 
         // add series 2
-        repository.addSeries(series2)
+        repository.addSeries(series2).subscribeAssert { assertNoErrors() }
         repository.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1, series2))
@@ -66,7 +67,11 @@ class MySeriesRepositoryTest {
         val series2 = SeriesCover(2, "2", "2")
         val series3 = SeriesCover(3, "3", "3")
 
-        repository.apply { addSeries(series1); addSeries(series2); addSeries(series3) }
+        repository.apply {
+            addSeries(series1).subscribeAssert { assertNoErrors() }
+            addSeries(series2).subscribeAssert { assertNoErrors() }
+            addSeries(series3).subscribeAssert { assertNoErrors() }
+        }
 
         repository.containsSeries(series1.id).subscribeAssert {
             assertNoErrors()
@@ -95,14 +100,18 @@ class MySeriesRepositoryTest {
         val series2 = SeriesCover(2, "2", "2")
         val series3 = SeriesCover(3, "3", "3")
 
-        repository.apply { addSeries(series1); addSeries(series2); addSeries(series3) }
+        repository.apply {
+            addSeries(series1).subscribeAssert { assertNoErrors() }
+            addSeries(series2).subscribeAssert { assertNoErrors() }
+            addSeries(series3).subscribeAssert { assertNoErrors() }
+        }
 
         repository.containsSeries(series1.id).subscribeAssert {
             assertNoErrors()
             assertValue(true)
         }
 
-        repository.removeSeries(series1.id)
+        repository.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
         repository.containsSeries(series1.id).subscribeAssert {
             assertNoErrors()
             assertValue(false)
@@ -121,11 +130,15 @@ class MySeriesRepositoryTest {
         val series2 = SeriesCover(2, "2", "2")
         val series3 = SeriesCover(3, "3", "3")
 
-        repository.apply { addSeries(series1); addSeries(series2) }
+        repository.apply {
+            addSeries(series1).subscribeAssert { assertNoErrors() }
+            addSeries(series2).subscribeAssert { assertNoErrors() }
+        }
+
         repository.observeSeriesList().take(3).subscribe(testSubscriber)
 
-        repository.removeSeries(series1.id)
-        repository.addSeries(series3)
+        repository.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
+        repository.addSeries(series3).subscribeAssert { assertNoErrors() }
 
         testSubscriber.awaitTerminalEvent(1, TimeUnit.SECONDS)
         testSubscriber.assertNoErrors()

@@ -202,4 +202,8 @@ class ProxerClient(
     }
 
     class SeriesCaptchaException : Exception("Content not accessible due to captcha")
+
+    companion object {
+        const val EPISODES_PER_PAGE = 50
+    }
 }

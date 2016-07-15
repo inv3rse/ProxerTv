@@ -11,7 +11,7 @@ import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
-import com.inverse.unofficial.proxertv.ui.util.CoverCardPresenter
+import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
@@ -39,7 +39,7 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
 
     private fun setupResultAdapter() {
         rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-        resultsAdapter = ArrayObjectAdapter(CoverCardPresenter())
+        resultsAdapter = ArrayObjectAdapter(SeriesCoverPresenter())
 
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_search_results)), resultsAdapter))
     }
