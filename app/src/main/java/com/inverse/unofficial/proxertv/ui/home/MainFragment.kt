@@ -164,7 +164,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
     private fun loadEpisodesUpdateRow(): Observable<List<SeriesCover>> {
         val calendar = GregorianCalendar.getInstance()
-        calendar.add(Calendar.DAY_OF_MONTH, -4)
+        calendar.add(Calendar.DAY_OF_MONTH, -3)
         val lastUpdateDate = calendar.time
 
         return client.loadUpdatesList()
