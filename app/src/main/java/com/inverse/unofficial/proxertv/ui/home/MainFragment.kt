@@ -105,8 +105,11 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                     myListAdapter.addAll(0, it)
                 }))
 
-        loadAndAddRow(Observable.interval(0, 30, TimeUnit.MINUTES)
-                .flatMap { loadEpisodesUpdateRow() }, getString(R.string.row_updates), 1)
+        val updateObservable = Observable.interval(0, 30, TimeUnit.MINUTES).share()
+
+        loadAndAddRow(updateObservable.flatMap {
+            loadEpisodesUpdateRow().takeUntil(updateObservable)
+        }, getString(R.string.row_updates), 1)
 
         loadAndAddRow(client.loadTopAccessSeries(), getString(R.string.row_top_access), 2)
         loadAndAddRow(client.loadTopRatingSeries(), getString(R.string.row_top_rating), 3)
@@ -161,12 +164,12 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
     private fun loadEpisodesUpdateRow(): Observable<List<SeriesCover>> {
         val calendar = GregorianCalendar.getInstance()
-        calendar.add(Calendar.DAY_OF_MONTH, -3)
+        calendar.add(Calendar.DAY_OF_MONTH, -4)
         val lastUpdateDate = calendar.time
 
         return client.loadUpdatesList()
                 .flatMap { Observable.from(it) }
-                .filter { it.updateDate > lastUpdateDate }
+                .filter { it.updateDate >= lastUpdateDate }
                 .map { it.seriesCover }
                 .distinct()
                 .map {
