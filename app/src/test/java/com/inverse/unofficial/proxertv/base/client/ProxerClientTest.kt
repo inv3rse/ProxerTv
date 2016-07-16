@@ -3,19 +3,20 @@ package com.inverse.unofficial.proxertv.base.client
 import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesUpdate
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import loadResponse
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.AfterClass
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import rx.observers.TestSubscriber
 import subscribeAssert
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class ProxerClientTest {
@@ -61,6 +62,43 @@ class ProxerClientTest {
         assertEquals(50, subscriber.onNextEvents[0].size)
         val kabaneri = SeriesCover(15371, "Koutetsujou no Kabaneri", "https://cdn.proxer.me/cover/15371.jpg")
         assertEquals(kabaneri, subscriber.onNextEvents[0][0])
+    }
+
+    @Test
+    fun testLoadUpdateList() {
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/updateListResponse.html")))
+
+        val calendar = GregorianCalendar.getInstance()
+
+        calendar.clear()
+        calendar.set(2016, 6, 16, 0, 0, 0)
+        val date16_7 = calendar.time
+        calendar.set(2016, 6, 15, 0, 0, 0)
+        val date15_7 = calendar.time
+        calendar.set(2016, 6, 13, 0, 0, 0)
+        val date13_7 = calendar.time
+        calendar.set(2016, 5, 18, 0, 0, 0)
+        val date18_6 = calendar.time
+
+        val series1 = SeriesCover(14873, "Kyoukai no Rinne (TV) 2nd Season", "https://cdn.proxer.me/cover/14873.jpg")
+        val series2 = SeriesCover(16257, "91 Days", "https://cdn.proxer.me/cover/16257.jpg")
+        val series3 = SeriesCover(16330, "Cheer Danshi!!", "https://cdn.proxer.me/cover/16330.jpg")
+        val series4 = SeriesCover(14889, "Magi: Sinbad no Bouken", "https://cdn.proxer.me/cover/14889.jpg")
+
+        val wrongSeries1 = SeriesCover(14873, "Updates", "https://cdn.proxer.me/cover/14873.jpg")
+        val wrongSeries2 = SeriesCover(16257, "Updates", "https://cdn.proxer.me/cover/16257.jpg")
+
+        proxerClient.loadUpdatesList().subscribeAssert {
+            assertNoErrors()
+            assertValueCount(1)
+            assertEquals(SeriesUpdate(series1, date16_7), onNextEvents[0][0])
+            assertTrue(onNextEvents[0].contains(SeriesUpdate(series2, date15_7)))
+            assertTrue(onNextEvents[0].contains(SeriesUpdate(series3, date13_7)))
+            assertTrue(onNextEvents[0].contains(SeriesUpdate(series4, date18_6)))
+
+            assertFalse(onNextEvents[0].contains(SeriesUpdate(wrongSeries1, date16_7)))
+            assertFalse(onNextEvents[0].contains(SeriesUpdate(wrongSeries2, date15_7)))
+        }
     }
 
     @Test

@@ -9,6 +9,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
 import rx.Observable
+import java.text.ParseException
+import java.text.SimpleDateFormat
 import java.util.*
 
 class ProxerClient(
@@ -39,6 +41,43 @@ class ProxerClient(
 
     fun loadAiringSeries(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.airingListUrl)
+    }
+
+    fun loadUpdatesList(): Observable<List<SeriesUpdate>> {
+        val request = Request.Builder().get().url(serverConfig.updatesListUrl).build()
+
+        return CallObservable(httpClient.newCall(request))
+                .map(fun(response): List<SeriesUpdate> {
+                    val body = response.body()
+                    val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
+                    body.close()
+
+                    val idRegex = Regex("/info/(\\d+)(/list)?#top")
+                    val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+                    val seriesUpdates = arrayListOf<SeriesUpdate>()
+
+                    val rowElements = soup.select("#box-table-a>tbody>tr")
+
+                    rowElements.forEach {
+                        val nameLinkElement = it.select("a").first()
+                        val dateElement = it.child(5)
+
+                        if (nameLinkElement != null && dateElement != null) {
+                            val id = idRegex.find(nameLinkElement.attr("href"))?.groupValues?.get(1)?.toInt()
+                            val title = nameLinkElement.text()
+
+                            if (id != null) {
+                                try {
+                                    val date = dateFormat.parse(dateElement.text())
+                                    seriesUpdates.add(SeriesUpdate(SeriesCover(id, title, serverConfig.coverUrl(id)), date))
+                                } catch (e: ParseException) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                    }
+                    return seriesUpdates
+                })
     }
 
     fun searchSeries(query: String): Observable<List<SeriesCover>> {
@@ -187,13 +226,12 @@ class ProxerClient(
                     val elements = soup.select("#box-table-a>tbody>tr>td>a")
 
                     val seriesCovers = arrayListOf<SeriesCover>()
+                    val idRegex = Regex("/info/(\\d+)(/list)?#top")
                     elements.forEach {
-                        try {
-                            val id = it.attr("href").substringAfter("/info/").substringBefore('#').toInt()
-                            val title = it.text()
+                        val id = idRegex.find(it.attr("href"))?.groupValues?.get(1)?.toInt()
+                        val title = it.text()
+                        if (id != null) {
                             seriesCovers.add(SeriesCover(id, title, serverConfig.coverUrl(id)))
-                        } catch (e: NumberFormatException) {
-                            e.printStackTrace()
                         }
                     }
 
@@ -205,5 +243,12 @@ class ProxerClient(
 
     companion object {
         const val EPISODES_PER_PAGE = 50
+
+        fun getTargetPageForEpisode(episodeNum: Int): Int {
+            if (episodeNum <= 0) {
+                return 0
+            }
+            return Math.ceil(episodeNum.toDouble() / EPISODES_PER_PAGE).toInt()
+        }
     }
 }

@@ -15,6 +15,7 @@ import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
+import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
@@ -23,18 +24,26 @@ import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
     private val coverPresenter = SeriesCoverPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private val myListAdapter = ArrayObjectAdapter(coverPresenter)
-    private val rowTargetMap = mutableMapOf<ListRow, Int>()
     private val handler = Handler()
-
     private lateinit var backgroundManager: BackgroundManager
+
+    // access to ListRow and corresponding adapter based on target position
+    private val rowTargetMap = mutableMapOf<ListRow, Int>()
+    private val targetRowMap = mutableMapOf<Int, ArrayObjectAdapter>()
+
     private lateinit var metrics: DisplayMetrics
 
     private val subscriptions = CompositeSubscription()
+    private val progressRepository = App.component.getSeriesProgressRepository()
+    private val myListRepository = App.component.getMySeriesRepository()
+    private val client = App.component.getProxerClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,14 +90,13 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     }
 
     private fun initEmptyRows() {
+        // we need at least one row before onStart or the BrowseFragment crashes,
+        // https://code.google.com/p/android/issues/detail?id=214795
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_my_list)), myListAdapter))
         adapter = rowsAdapter
     }
 
     private fun loadContent() {
-        val client = App.component.getProxerClient()
-        val myListRepository = App.component.getMySeriesRepository()
-
         subscriptions.add(myListRepository.observeSeriesList()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -97,10 +105,13 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                     myListAdapter.addAll(0, it)
                 }))
 
-        loadAndAddRow(client.loadTopAccessSeries(), getString(R.string.row_top_access), 1)
-        loadAndAddRow(client.loadTopRatingSeries(), getString(R.string.row_top_rating), 2)
-        loadAndAddRow(client.loadTopRatingMovies(), getString(R.string.row_top_rating_movies), 3)
-        loadAndAddRow(client.loadAiringSeries(), getString(R.string.row_airing), 4)
+        loadAndAddRow(Observable.interval(0, 30, TimeUnit.MINUTES)
+                .flatMap { loadEpisodesUpdateRow() }, getString(R.string.row_updates), 1)
+
+        loadAndAddRow(client.loadTopAccessSeries(), getString(R.string.row_top_access), 2)
+        loadAndAddRow(client.loadTopRatingSeries(), getString(R.string.row_top_rating), 3)
+        loadAndAddRow(client.loadTopRatingMovies(), getString(R.string.row_top_rating_movies), 4)
+        loadAndAddRow(client.loadAiringSeries(), getString(R.string.row_airing), 5)
     }
 
     private fun loadAndAddRow(loadObservable: Observable<List<SeriesCover>>, rowName: String, position: Int) {
@@ -109,7 +120,26 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         {
-                            if (it.size > 0) {
+                            val existingAdapter = targetRowMap[position]
+                            if (existingAdapter != null) {
+                                if (!it.isEmpty()) {
+                                    // update existing content
+                                    existingAdapter.clear()
+                                    existingAdapter.addAll(0, it)
+                                } else {
+                                    // list is empty, remove row
+                                    for (i in 1..rowsAdapter.size()) {
+                                        val row = rowsAdapter.get(i - 1)
+                                        val rowTarget = rowTargetMap[row]
+                                        if (position == rowTarget) {
+                                            rowsAdapter.remove(row)
+                                            rowTargetMap.remove(row)
+                                            targetRowMap.remove(position)
+                                            break
+                                        }
+                                    }
+                                }
+                            } else if (it.size > 0) {
                                 val adapter = ArrayObjectAdapter(coverPresenter)
                                 adapter.addAll(0, it)
                                 val listRow = ListRow(HeaderItem(rowName), adapter)
@@ -123,9 +153,57 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                                 }
                                 rowsAdapter.add(targetIndex, listRow)
                                 rowTargetMap.put(listRow, position)
+                                targetRowMap.put(position, adapter)
                             }
                         }, { it.printStackTrace() }
                 ))
+    }
+
+    private fun loadEpisodesUpdateRow(): Observable<List<SeriesCover>> {
+        val calendar = GregorianCalendar.getInstance()
+        calendar.add(Calendar.DAY_OF_MONTH, -3)
+        val lastUpdateDate = calendar.time
+
+        return client.loadUpdatesList()
+                .flatMap { Observable.from(it) }
+                .filter { it.updateDate > lastUpdateDate }
+                .map { it.seriesCover }
+                .distinct()
+                .map {
+                    Observable.combineLatest(
+                            Observable.just(it),
+                            progressRepository.observeProgress(it.id),
+                            { series, progress -> Pair(series, progress) })
+                }
+                .toList()
+                .flatMap(fun(observables: List<Observable<Pair<SeriesCover, Int>>>): Observable<List<Pair<SeriesCover, Int>>> {
+                    return Observable.combineLatest(
+                            observables,
+                            fun(array: Array<out Any>): List<Pair<SeriesCover, Int>> {
+                                val seriesList = arrayListOf<Pair<SeriesCover, Int>>()
+                                for (element in array) {
+                                    @Suppress("UNCHECKED_CAST")
+                                    val seriesProgressPair = element as Pair<SeriesCover, Int>
+                                    seriesList.add(seriesProgressPair)
+                                }
+
+                                return seriesList
+                            }
+                    )
+                })
+                .flatMap {
+                    Observable.from(it)
+                            .filter { it.second > 0 }
+                            .flatMap {
+                                Observable.zip(
+                                        Observable.just(it),
+                                        client.loadEpisodesPage(it.first.id, ProxerClient.getTargetPageForEpisode(it.second + 1)),
+                                        { seriesProgress, episodesMap -> Triple(seriesProgress.first, seriesProgress.second, episodesMap) })
+                            }
+                            .filter { it.third.any { entry -> entry.value.contains(it.second + 1) } }
+                            .map { it.first }
+                            .toList()
+                }
     }
 
     private fun setBackgroundImage(uri: String) {

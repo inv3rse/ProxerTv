@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">ProxerTv Alpha</string>
     <string name="row_my_list">My List</string>
+    <string name="row_updates">Updates</string>
     <string name="row_top_access">Top Access Series</string>
     <string name="row_top_rating">Top Rated Series</string>
     <string name="row_top_rating_movies">Top Rated Movies</string>

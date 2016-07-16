@@ -6,8 +6,9 @@ class ServerConfig(
     val baseUrl = "$schema://$host/"
     val topAccessListUrl = baseUrl + "anime/animeseries/clicks/all#top"
     val topRatingListUrl = baseUrl + "anime/animeseries/rating/all#top"
-    val airingListUrl = baseUrl + "anime/airing#top"
+    val airingListUrl = baseUrl + "anime/airing/rating/all#top"
     val topRatingMovieListUrl = baseUrl + "anime/movie/rating/all#top"
+    val updatesListUrl = baseUrl + "anime/updates#top"
 
     fun searchUrl(query: String) = baseUrl + "search?s=search&name=$query&typ=all-anime"
     fun detailUrl(seriesId: Int) = baseUrl + "info/$seriesId"
