@@ -3,16 +3,10 @@ package com.inverse.unofficial.proxertv.ui.home
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.support.v17.leanback.app.BackgroundManager
 import android.support.v17.leanback.app.BrowseFragment
 import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
-import android.util.DisplayMetrics
 import android.view.View
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.GlideDrawable
-import com.bumptech.glide.request.animation.GlideAnimation
-import com.bumptech.glide.request.target.SimpleTarget
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
@@ -23,27 +17,34 @@ import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import rx.subjects.PublishSubject
 import rx.subscriptions.CompositeSubscription
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
     private val coverPresenter = SeriesCoverPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private val myListAdapter = ArrayObjectAdapter(coverPresenter)
-    private val handler = Handler()
-    private lateinit var backgroundManager: BackgroundManager
+    private val seriesUpdateHandler = Handler()
 
     // access to ListRow and corresponding adapter based on target position
     private val rowTargetMap = mutableMapOf<ListRow, Int>()
     private val targetRowMap = mutableMapOf<Int, ArrayObjectAdapter>()
 
-    private lateinit var metrics: DisplayMetrics
-
     private val subscriptions = CompositeSubscription()
     private val progressRepository = App.component.getSeriesProgressRepository()
     private val myListRepository = App.component.getMySeriesRepository()
     private val client = App.component.getProxerClient()
+
+    private val updateSubject = PublishSubject.create<Int>()
+    private var nextUpdate: Long? = null
+    private val updateRunner = object : Runnable {
+        override fun run() {
+            updateSubject.onNext(0)
+            nextUpdate = Date().time + SERIES_UPDATE_DELAY
+            seriesUpdateHandler.postDelayed(this, SERIES_UPDATE_DELAY)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,13 +59,20 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        backgroundManager = BackgroundManager.getInstance(activity)
-        backgroundManager.attach(activity.window)
-
-        metrics = DisplayMetrics()
-        activity.windowManager.defaultDisplay.getMetrics(metrics)
-
         loadContent()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // little optimization to avoid updating on start if not necessary
+        seriesUpdateHandler.removeCallbacks(updateRunner)
+        val delay = (nextUpdate ?: 0) - Date().time
+        seriesUpdateHandler.postDelayed(updateRunner, Math.max(delay, 0))
+    }
+
+    override fun onStop() {
+        super.onStop()
+        seriesUpdateHandler.removeCallbacks(updateRunner)
     }
 
     override fun onDestroy() {
@@ -105,10 +113,8 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                     myListAdapter.addAll(0, it)
                 }))
 
-        val updateObservable = Observable.interval(0, 30, TimeUnit.MINUTES).share()
-
-        loadAndAddRow(updateObservable.flatMap {
-            loadEpisodesUpdateRow().takeUntil(updateObservable)
+        loadAndAddRow(updateSubject.flatMap {
+            loadEpisodesUpdateRow().takeUntil(updateSubject)
         }, getString(R.string.row_updates), 1)
 
         loadAndAddRow(client.loadTopAccessSeries(), getString(R.string.row_top_access), 2)
@@ -209,24 +215,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                 }
     }
 
-    private fun setBackgroundImage(uri: String) {
-        Glide.with(activity)
-                .load(uri)
-                .centerCrop()
-                .into(object : SimpleTarget<GlideDrawable>(metrics.widthPixels, metrics.heightPixels) {
-                    override fun onResourceReady(resource: GlideDrawable, glideAnimation: GlideAnimation<in GlideDrawable>) {
-                        backgroundManager.drawable = resource
-                    }
-                })
-    }
-
-    private fun scheduleBackgroundUpdate(uri: String) {
-        handler.removeCallbacksAndMessages(null)
-        handler.postDelayed({ setBackgroundImage(uri) }, BACKGROUND_UPDATE_DELAY)
-    }
-
     companion object {
-        const val BACKGROUND_UPDATE_DELAY: Long = 300
+        private const val SERIES_UPDATE_DELAY: Long = 30 * 60 * 1000 // 30 minutes in milliseconds
     }
-
 }
