@@ -19,12 +19,14 @@
              android:id="@+id/player_root_frame"
              android:layout_width="match_parent"
              android:layout_height="match_parent"
+             android:background="@android:color/black"
              android:keepScreenOn="true">
 
     <com.google.android.exoplayer.AspectRatioFrameLayout
         android:id="@+id/player_ratio_frame"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_gravity="center">
 
         <SurfaceView
             android:id="@+id/player_surface_view"
