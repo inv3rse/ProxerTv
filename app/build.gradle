@@ -9,8 +9,8 @@ android {
         applicationId "com.inverse.unofficial.proxertv"
         minSdkVersion 21
         targetSdkVersion 24
-        versionCode 5
-        versionName "Alpha 5"
+        versionCode 6
+        versionName "Alpha 6"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
