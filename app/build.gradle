@@ -43,7 +43,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Support Library
-    def support_library_version = '24.0.0'
+    def support_library_version = '24.1.0'
     compile "com.android.support:appcompat-v7:$support_library_version"
     compile "com.android.support:recyclerview-v7:$support_library_version"
     compile "com.android.support:leanback-v17:$support_library_version"
@@ -56,10 +56,16 @@ dependencies {
     compile 'io.reactivex:rxandroid:1.2.1'
 
     // OkHttp
-    def okhttp_version = '3.3.1'
+    def okhttp_version = '3.4.1'
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
     compile "com.squareup.okhttp3:logging-interceptor:$okhttp_version"
     compile 'com.github.franmontiel:PersistentCookieJar:v0.9.3'
+
+    // Retrofit
+    def retrofit_version = "2.1.0"
+    compile "com.squareup.retrofit2:retrofit:$retrofit_version"
+    compile "com.squareup.retrofit2:converter-gson:$retrofit_version"
+    compile "com.squareup.retrofit2:adapter-rxjava:$retrofit_version"
 
     // Kotlin Gson
     compile 'com.github.salomonbrys.kotson:kotson:2.2.1'
