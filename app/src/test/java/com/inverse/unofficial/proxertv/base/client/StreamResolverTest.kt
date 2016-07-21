@@ -2,6 +2,10 @@ package com.inverse.unofficial.proxertv.base.client
 
 import MockRedirector
 import com.google.gson.Gson
+import com.inverse.unofficial.proxertv.base.client.util.DailyMotionStreamResolver
+import com.inverse.unofficial.proxertv.base.client.util.Mp4UploadStreamResolver
+import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
+import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
 import com.inverse.unofficial.proxertv.model.Stream
 import loadResponse
 import okhttp3.OkHttpClient

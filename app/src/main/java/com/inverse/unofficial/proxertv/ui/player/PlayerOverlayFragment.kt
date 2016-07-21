@@ -26,6 +26,7 @@ import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
+import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.model.Stream
 import com.inverse.unofficial.proxertv.ui.util.ErrorFragment
 import com.inverse.unofficial.proxertv.ui.util.StreamAdapter
@@ -221,7 +222,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         val client = App.component.getProxerClient()
         streamAdapter.clear()
 
-        subscriptions.add(client.loadEpisodeStreams(episode!!.seriesId, episode!!.episodeNum, episode!!.languageType)
+        subscriptions.add(client.loadEpisodeStreams(series!!.id, episode!!.episodeNum, episode!!.languageType)
                 .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ stream ->
                     // add the stream to the adapter first
@@ -281,13 +282,13 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     private fun initMediaMetadata() {
         val episodeText = getString(R.string.episode, episode!!.episodeNum)
         metadataBuilder = MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, series!!.englishTitle)
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, series!!.name)
                 .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, episodeText)
-                .putString(MediaMetadata.METADATA_KEY_TITLE, series!!.englishTitle)
+                .putString(MediaMetadata.METADATA_KEY_TITLE, series!!.name)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, episodeText)
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, 0L)
 
-        Glide.with(this).load(episode!!.coverUrl).asBitmap().into(object : SimpleTarget<Bitmap>() {
+        Glide.with(this).load(ServerConfig.coverUrl(series!!.id)).asBitmap().into(object : SimpleTarget<Bitmap>() {
             override fun onResourceReady(bitmap: Bitmap?, glideAnimation: GlideAnimation<in Bitmap>?) {
                 metadataBuilder.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap)
                 mediaSession.setMetadata(metadataBuilder.build())

@@ -7,8 +7,7 @@ class DetailsDescriptionPresenter: AbstractDetailsDescriptionPresenter() {
 
     override fun onBindDescription(vh: ViewHolder, item: Any?) {
         if (item is Series) {
-            vh.title.text = item.englishTitle
-            vh.subtitle.text = item.originalTitle
+            vh.title.text = item.name
             vh.body.text = item.description
         }
     }

@@ -3,6 +3,7 @@ package com.inverse.unofficial.proxertv.ui.util
 import android.support.v17.leanback.widget.ImageCardView
 import com.bumptech.glide.Glide
 import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.ServerConfig
 
 class SeriesCoverPresenter : BaseCoverPresenter() {
 
@@ -15,7 +16,7 @@ class SeriesCoverPresenter : BaseCoverPresenter() {
         cardView.titleText = series.title
         cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT)
         Glide.with(context)
-                .load(series.coverImage)
+                .load(ServerConfig.coverUrl(series.id))
                 .centerCrop()
                 .into(cardView.mainImageView)
     }

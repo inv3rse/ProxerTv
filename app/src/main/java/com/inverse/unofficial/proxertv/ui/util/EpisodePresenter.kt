@@ -3,8 +3,10 @@ package com.inverse.unofficial.proxertv.ui.util
 import android.support.v17.leanback.widget.ImageCardView
 import com.bumptech.glide.Glide
 import com.inverse.unofficial.proxertv.R
+import com.inverse.unofficial.proxertv.model.ServerConfig
 
-class EpisodePresenter : BaseCoverPresenter() {
+class EpisodePresenter(seriesId: Int) : BaseCoverPresenter() {
+    private val coverUrl = ServerConfig.coverUrl(seriesId)
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any) {
         val context = viewHolder.view.context
@@ -19,7 +21,7 @@ class EpisodePresenter : BaseCoverPresenter() {
         }
 
         Glide.with(context)
-                .load(episodeHolder.episode.coverUrl)
+                .load(coverUrl)
                 .centerCrop()
                 .into(cardView.mainImageView)
     }

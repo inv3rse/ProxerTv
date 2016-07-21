@@ -1,4 +1,4 @@
-package com.inverse.unofficial.proxertv.base.client;
+package com.inverse.unofficial.proxertv.base.client.util;
 
 /*
  * Copyright (C) 2008 Google Inc.

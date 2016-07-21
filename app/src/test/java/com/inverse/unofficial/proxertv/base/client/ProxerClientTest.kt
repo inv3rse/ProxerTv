@@ -1,6 +1,9 @@
 package com.inverse.unofficial.proxertv.base.client
 
 import com.google.gson.Gson
+import com.inverse.unofficial.proxertv.base.client.util.ApiResponseConverterFactory
+import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
+import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesUpdate
@@ -14,6 +17,9 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
+import retrofit2.Retrofit
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 import rx.observers.TestSubscriber
 import subscribeAssert
 import java.util.*
@@ -44,8 +50,16 @@ class ProxerClientTest {
         val resolvers = listOf(ProxerStreamResolver(httpClient), StreamCloudResolver(httpClient))
         val mockServerUrl = mockServer.url("/")
         val serverConfig = ServerConfig(mockServerUrl.scheme(), mockServerUrl.host() + ":" + mockServerUrl.port())
+        val gson = Gson()
+        val api = Retrofit.Builder()
+                .baseUrl(serverConfig.apiBaseUrl)
+                .client(httpClient)
+                .addConverterFactory(ApiResponseConverterFactory())
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                .build().create(ProxerApi::class.java)
 
-        proxerClient = ProxerClient(httpClient, Gson(), resolvers, serverConfig)
+        proxerClient = ProxerClient(httpClient, api, gson, resolvers, serverConfig)
     }
 
     @Test
@@ -60,7 +74,7 @@ class ProxerClientTest {
         subscriber.assertValueCount(1)
 
         assertEquals(50, subscriber.onNextEvents[0].size)
-        val kabaneri = SeriesCover(15371, "Koutetsujou no Kabaneri", "https://cdn.proxer.me/cover/15371.jpg")
+        val kabaneri = SeriesCover(15371, "Koutetsujou no Kabaneri")
         assertEquals(kabaneri, subscriber.onNextEvents[0][0])
     }
 
@@ -80,13 +94,13 @@ class ProxerClientTest {
         calendar.set(2016, 5, 18, 0, 0, 0)
         val date18_6 = calendar.time
 
-        val series1 = SeriesCover(14873, "Kyoukai no Rinne (TV) 2nd Season", "https://cdn.proxer.me/cover/14873.jpg")
-        val series2 = SeriesCover(16257, "91 Days", "https://cdn.proxer.me/cover/16257.jpg")
-        val series3 = SeriesCover(16330, "Cheer Danshi!!", "https://cdn.proxer.me/cover/16330.jpg")
-        val series4 = SeriesCover(14889, "Magi: Sinbad no Bouken", "https://cdn.proxer.me/cover/14889.jpg")
+        val series1 = SeriesCover(14873, "Kyoukai no Rinne (TV) 2nd Season")
+        val series2 = SeriesCover(16257, "91 Days")
+        val series3 = SeriesCover(16330, "Cheer Danshi!!")
+        val series4 = SeriesCover(14889, "Magi: Sinbad no Bouken")
 
-        val wrongSeries1 = SeriesCover(14873, "Updates", "https://cdn.proxer.me/cover/14873.jpg")
-        val wrongSeries2 = SeriesCover(16257, "Updates", "https://cdn.proxer.me/cover/16257.jpg")
+        val wrongSeries1 = SeriesCover(14873, "Updates")
+        val wrongSeries2 = SeriesCover(16257, "Updates")
 
         proxerClient.loadUpdatesList().subscribeAssert {
             assertNoErrors()
@@ -112,7 +126,7 @@ class ProxerClientTest {
         subscriber.assertValueCount(1)
 
         assertEquals(1, subscriber.onNextEvents[0].size)
-        val rakudai = SeriesCover(12806, "Rakudai Kishi no Cavalry", "https://cdn.proxer.me/cover/12806.jpg")
+        val rakudai = SeriesCover(12806, "Rakudai Kishi no Cavalry")
         assertEquals(rakudai, subscriber.onNextEvents[0][0])
     }
 
@@ -132,9 +146,8 @@ class ProxerClientTest {
 
         assertNotNull(series)
         assertEquals(15371, series!!.id)
-        assertEquals("Koutetsujou no Kabaneri", series.originalTitle)
-        assertEquals("Kabaneri of the Iron Fortress", series.englishTitle)
-        assertEquals(1, series.pages)
+        assertEquals("Koutetsujou no Kabaneri", series.name)
+        assertEquals(1, series.pages())
     }
 
     @Test

@@ -37,8 +37,8 @@ class MySeriesRepositoryTest {
 
     @Test
     fun testAddSeries() {
-        val series1 = SeriesCover(1, "1", "1")
-        val series2 = SeriesCover(2, "2", "2")
+        val series1 = SeriesCover(1, "1")
+        val series2 = SeriesCover(2, "2")
 
         repository.addSeries(series1).subscribeAssert { assertNoErrors() }
         repository.loadSeriesList().subscribeAssert {
@@ -63,9 +63,9 @@ class MySeriesRepositoryTest {
 
     @Test
     fun testContainsSeries() {
-        val series1 = SeriesCover(1, "1", "1")
-        val series2 = SeriesCover(2, "2", "2")
-        val series3 = SeriesCover(3, "3", "3")
+        val series1 = SeriesCover(1, "1")
+        val series2 = SeriesCover(2, "2")
+        val series3 = SeriesCover(3, "3")
 
         repository.apply {
             addSeries(series1).subscribeAssert { assertNoErrors() }
@@ -96,9 +96,9 @@ class MySeriesRepositoryTest {
 
     @Test
     fun testRemoveSeries() {
-        val series1 = SeriesCover(1, "1", "1")
-        val series2 = SeriesCover(2, "2", "2")
-        val series3 = SeriesCover(3, "3", "3")
+        val series1 = SeriesCover(1, "1")
+        val series2 = SeriesCover(2, "2")
+        val series3 = SeriesCover(3, "3")
 
         repository.apply {
             addSeries(series1).subscribeAssert { assertNoErrors() }
@@ -126,9 +126,9 @@ class MySeriesRepositoryTest {
     @Test
     fun testObserveSeriesList() {
         val testSubscriber = TestSubscriber<List<SeriesCover>>()
-        val series1 = SeriesCover(1, "1", "1")
-        val series2 = SeriesCover(2, "2", "2")
-        val series3 = SeriesCover(3, "3", "3")
+        val series1 = SeriesCover(1, "1")
+        val series2 = SeriesCover(2, "2")
+        val series3 = SeriesCover(3, "3")
 
         repository.apply {
             addSeries(series1).subscribeAssert { assertNoErrors() }

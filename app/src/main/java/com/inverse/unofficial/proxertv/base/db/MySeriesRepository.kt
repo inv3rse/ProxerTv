@@ -12,16 +12,13 @@ internal object SeriesScheme {
     const val TABLE = "mySeries"
     const val ID = "id"
     const val TITLE = "title"
-    const val IMAGE = "imageUrl"
 }
 
 class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
     override fun onCreate(db: SQLiteDatabase) {
         db.createTable(SeriesScheme.TABLE, true,
                 SeriesScheme.ID to INTEGER + PRIMARY_KEY + UNIQUE,
-                SeriesScheme.TITLE to TEXT,
-                SeriesScheme.IMAGE to TEXT)
-
+                SeriesScheme.TITLE to TEXT)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -38,7 +35,7 @@ class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAM
 
     companion object {
         private const val DB_NAME = "mySeriesList.db"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
     }
 }
 
@@ -73,8 +70,7 @@ class MySeriesRepository(val dbHelper: SeriesDbHelper) {
             transaction {
                 insert(SeriesScheme.TABLE,
                         SeriesScheme.ID to series.id,
-                        SeriesScheme.TITLE to series.title,
-                        SeriesScheme.IMAGE to series.coverImage)
+                        SeriesScheme.TITLE to series.title)
             }
         }.doOnCompleted { notifyListChange() }
     }
@@ -108,7 +104,7 @@ class MySeriesRepository(val dbHelper: SeriesDbHelper) {
     }
 
     private class SeriesRowParser : RowParser<SeriesCover> {
-        private val parser = rowParser { id: Int, title: String, image: String -> SeriesCover(id, title, image) }
+        private val parser = rowParser { id: Int, title: String -> SeriesCover(id, title) }
 
         override fun parseRow(columns: Array<Any>): SeriesCover {
             return parser.parseRow(columns)

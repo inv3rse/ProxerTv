@@ -4,6 +4,7 @@ class ServerConfig(
         schema: String = "https",
         val host: String = "proxer.me") {
     val baseUrl = "$schema://$host/"
+    val apiBaseUrl = baseUrl + "api/v1/"
     val topAccessListUrl = baseUrl + "anime/animeseries/clicks/all#top"
     val topRatingListUrl = baseUrl + "anime/animeseries/rating/all#top"
     val airingListUrl = baseUrl + "anime/airing/rating/all#top"
@@ -15,5 +16,9 @@ class ServerConfig(
     fun episodesListUrl(seriesId: Int) = baseUrl + "info/$seriesId/list"
     fun episodesListJsonUrl(seriesId: Int, page: Int) = baseUrl + "info/$seriesId/list/$page?format=json"
     fun episodeStreamsUrl(seriesId: Int, episodeNum: Int, subType: String) = baseUrl + "watch/$seriesId/$episodeNum/$subType"
-    fun coverUrl(seriesId: Int) = "https://cdn.proxer.me/cover/$seriesId.jpg"
+
+    companion object {
+        // for ease of use
+        fun coverUrl(seriesId: Int) = "https://cdn.proxer.me/cover/$seriesId.jpg"
+    }
 }
