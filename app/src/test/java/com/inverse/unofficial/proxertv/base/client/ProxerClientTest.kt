@@ -12,10 +12,9 @@ import loadResponse
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.junit.AfterClass
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory
@@ -26,24 +25,14 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 class ProxerClientTest {
-    companion object {
-        val mockServer = MockWebServer()
-
-        @BeforeClass
-        fun startWebServer() {
-            mockServer.start()
-        }
-
-        @AfterClass
-        fun stopWebServer() {
-            mockServer.shutdown()
-        }
-    }
-
+    lateinit var mockServer: MockWebServer
     lateinit var proxerClient: ProxerClient
 
     @Before
     fun setup() {
+        mockServer = MockWebServer()
+        mockServer.start()
+
         val httpClient = OkHttpClient.Builder().connectTimeout(180, TimeUnit.SECONDS)
                 .readTimeout(180, TimeUnit.SECONDS)
                 .build()
@@ -60,6 +49,11 @@ class ProxerClientTest {
                 .build().create(ProxerApi::class.java)
 
         proxerClient = ProxerClient(httpClient, api, gson, resolvers, serverConfig)
+    }
+
+    @After
+    fun after() {
+        mockServer.shutdown()
     }
 
     @Test
@@ -132,8 +126,7 @@ class ProxerClientTest {
 
     @Test
     fun testLoadSeries() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailResponse.html")))
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesSingle.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/series_detail_15371.json")))
 
         val subscriber = TestSubscriber<Series?>()
         proxerClient.loadSeries(15371).subscribe(subscriber)
