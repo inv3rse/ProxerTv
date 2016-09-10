@@ -179,7 +179,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                                         })
                             }
-                        }, { CrashReporting.logExeptionForRelease(it) }))
+                        }, { CrashReporting.logException(it) }))
     }
 
     private fun loadEpisodes(series: Series, page: Int) {
@@ -215,7 +215,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                         contentAdapter.add(ListRow(header, adapter))
                     }
 
-                }, { CrashReporting.logExeptionForRelease(it) })
+                }, { CrashReporting.logException(it) })
     }
 
     companion object {

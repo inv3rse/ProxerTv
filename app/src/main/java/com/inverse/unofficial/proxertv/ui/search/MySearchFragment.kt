@@ -70,7 +70,7 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({ resultList ->
                         resultsAdapter.addAll(0, resultList)
-                    }, { CrashReporting.logExeptionForRelease(it) }))
+                    }, { CrashReporting.logException(it) }))
         }
         return true
     }

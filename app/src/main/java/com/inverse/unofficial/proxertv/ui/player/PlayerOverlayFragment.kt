@@ -185,7 +185,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({ isTracked = episodeExtra.episodeNum <= it },
-                                { CrashReporting.logExeptionForRelease(it) })
+                                { CrashReporting.logException(it) })
             }
         } else {
             Timber.d("missing extras, finishing!")
@@ -235,7 +235,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                     if (throwable is ProxerClient.SeriesCaptchaException) {
                         showErrorFragment(getString(R.string.stream_captcha_error))
                     } else {
-                        CrashReporting.logExeptionForRelease(throwable)
+                        CrashReporting.logException(throwable)
                         checkValidStreamsFound()
                     }
                 }, { checkValidStreamsFound() }))

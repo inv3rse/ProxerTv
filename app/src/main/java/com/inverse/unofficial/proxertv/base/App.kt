@@ -5,7 +5,6 @@ import com.crashlytics.android.Crashlytics
 import com.inverse.unofficial.proxertv.BuildConfig
 import io.fabric.sdk.android.Fabric
 import timber.log.Timber
-import java.io.IOException
 
 class App : Application() {
 
@@ -13,11 +12,9 @@ class App : Application() {
         super.onCreate()
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
-        } else {
-            Fabric.with(this, Crashlytics())
         }
+        Fabric.with(this, Crashlytics())
 
-        CrashReporting.logExeptionForRelease(IOException("test error"))
         component = DaggerBaseComponent.builder().baseModule(BaseModule(this)).build()
     }
 

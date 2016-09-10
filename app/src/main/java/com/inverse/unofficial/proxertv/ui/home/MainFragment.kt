@@ -112,7 +112,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                 .subscribe({
                     myListAdapter.clear()
                     myListAdapter.addAll(0, it)
-                }, { throwable -> CrashReporting.logExeptionForRelease(throwable) }))
+                }, { throwable -> CrashReporting.logException(throwable) }))
 
         loadAndAddRow(updateSubject.flatMap {
             loadEpisodesUpdateRow().takeUntil(updateSubject)
@@ -165,7 +165,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                                 rowTargetMap.put(listRow, position)
                                 targetRowMap.put(position, adapter)
                             }
-                        }, { CrashReporting.logExeptionForRelease(it) }
+                        }, { CrashReporting.logException(it) }
                 ))
     }
 

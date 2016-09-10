@@ -1,7 +1,7 @@
 package com.inverse.unofficial.proxertv.base
 
+import com.crashlytics.android.BuildConfig
 import com.crashlytics.android.Crashlytics
-import com.inverse.unofficial.proxertv.BuildConfig
 
 /**
  * Util object to log errors
@@ -9,12 +9,11 @@ import com.inverse.unofficial.proxertv.BuildConfig
 object CrashReporting {
 
     /**
-     * Log the exception if we are running a release build
+     * Log the exception
      */
-    fun logExeptionForRelease(error: Throwable) {
-        if (!BuildConfig.DEBUG) {
-            Crashlytics.logException(error)
-        } else {
+    fun logException(error: Throwable) {
+        Crashlytics.logException(error)
+        if (BuildConfig.DEBUG) {
             error.printStackTrace()
         }
     }
