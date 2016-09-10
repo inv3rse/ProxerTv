@@ -10,7 +10,7 @@ import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.client.ProxerClient
+import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
@@ -179,7 +179,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                                         })
                             }
-                        }, { it.printStackTrace() }, {}))
+                        }, { CrashReporting.logExeptionForRelease(it) }))
     }
 
     private fun loadEpisodes(series: Series, page: Int) {
@@ -215,7 +215,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                         contentAdapter.add(ListRow(header, adapter))
                     }
 
-                }, { it.printStackTrace() })
+                }, { CrashReporting.logExeptionForRelease(it) })
     }
 
     companion object {
