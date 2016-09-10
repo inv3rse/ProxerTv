@@ -1,7 +1,9 @@
 package com.inverse.unofficial.proxertv.base.client
 
 import com.google.gson.Gson
-import com.inverse.unofficial.proxertv.model.Series
+import com.inverse.unofficial.proxertv.base.client.util.ApiResponseConverterFactory
+import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
+import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesUpdate
 import com.inverse.unofficial.proxertv.model.ServerConfig
@@ -9,43 +11,48 @@ import loadResponse
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.junit.AfterClass
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
+import retrofit2.Retrofit
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 import rx.observers.TestSubscriber
 import subscribeAssert
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 class ProxerClientTest {
-    companion object {
-        val mockServer = MockWebServer()
-
-        @BeforeClass
-        fun startWebServer() {
-            mockServer.start()
-        }
-
-        @AfterClass
-        fun stopWebServer() {
-            mockServer.shutdown()
-        }
-    }
-
+    lateinit var mockServer: MockWebServer
     lateinit var proxerClient: ProxerClient
 
     @Before
     fun setup() {
+        mockServer = MockWebServer()
+        mockServer.start()
+
         val httpClient = OkHttpClient.Builder().connectTimeout(180, TimeUnit.SECONDS)
                 .readTimeout(180, TimeUnit.SECONDS)
                 .build()
         val resolvers = listOf(ProxerStreamResolver(httpClient), StreamCloudResolver(httpClient))
         val mockServerUrl = mockServer.url("/")
         val serverConfig = ServerConfig(mockServerUrl.scheme(), mockServerUrl.host() + ":" + mockServerUrl.port())
+        val gson = Gson()
+        val api = Retrofit.Builder()
+                .baseUrl(serverConfig.apiBaseUrl)
+                .client(httpClient)
+                .addConverterFactory(ApiResponseConverterFactory())
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                .build().create(ProxerApi::class.java)
 
-        proxerClient = ProxerClient(httpClient, Gson(), resolvers, serverConfig)
+        proxerClient = ProxerClient(httpClient, api, gson, resolvers, serverConfig)
+    }
+
+    @After
+    fun after() {
+        mockServer.shutdown()
     }
 
     @Test
@@ -60,7 +67,7 @@ class ProxerClientTest {
         subscriber.assertValueCount(1)
 
         assertEquals(50, subscriber.onNextEvents[0].size)
-        val kabaneri = SeriesCover(15371, "Koutetsujou no Kabaneri", "https://cdn.proxer.me/cover/15371.jpg")
+        val kabaneri = SeriesCover(15371, "Koutetsujou no Kabaneri")
         assertEquals(kabaneri, subscriber.onNextEvents[0][0])
     }
 
@@ -80,13 +87,13 @@ class ProxerClientTest {
         calendar.set(2016, 5, 18, 0, 0, 0)
         val date18_6 = calendar.time
 
-        val series1 = SeriesCover(14873, "Kyoukai no Rinne (TV) 2nd Season", "https://cdn.proxer.me/cover/14873.jpg")
-        val series2 = SeriesCover(16257, "91 Days", "https://cdn.proxer.me/cover/16257.jpg")
-        val series3 = SeriesCover(16330, "Cheer Danshi!!", "https://cdn.proxer.me/cover/16330.jpg")
-        val series4 = SeriesCover(14889, "Magi: Sinbad no Bouken", "https://cdn.proxer.me/cover/14889.jpg")
+        val series1 = SeriesCover(14873, "Kyoukai no Rinne (TV) 2nd Season")
+        val series2 = SeriesCover(16257, "91 Days")
+        val series3 = SeriesCover(16330, "Cheer Danshi!!")
+        val series4 = SeriesCover(14889, "Magi: Sinbad no Bouken")
 
-        val wrongSeries1 = SeriesCover(14873, "Updates", "https://cdn.proxer.me/cover/14873.jpg")
-        val wrongSeries2 = SeriesCover(16257, "Updates", "https://cdn.proxer.me/cover/16257.jpg")
+        val wrongSeries1 = SeriesCover(14873, "Updates")
+        val wrongSeries2 = SeriesCover(16257, "Updates")
 
         proxerClient.loadUpdatesList().subscribeAssert {
             assertNoErrors()
@@ -112,55 +119,38 @@ class ProxerClientTest {
         subscriber.assertValueCount(1)
 
         assertEquals(1, subscriber.onNextEvents[0].size)
-        val rakudai = SeriesCover(12806, "Rakudai Kishi no Cavalry", "https://cdn.proxer.me/cover/12806.jpg")
+        val rakudai = SeriesCover(12806, "Rakudai Kishi no Cavalry")
         assertEquals(rakudai, subscriber.onNextEvents[0][0])
     }
 
     @Test
     fun testLoadSeries() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailResponse.html")))
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesSingle.html")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/series_detail_15371.json")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/series_detail_46.json")))
 
-        val subscriber = TestSubscriber<Series?>()
-        proxerClient.loadSeries(15371).subscribe(subscriber)
+        proxerClient.loadSeries(15371).subscribeAssert {
+            assertNoErrors()
+            assertValueCount(1)
 
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-        subscriber.assertValueCount(1)
+            val series = onNextEvents[0]
+            assertNotNull(series)
+            assertEquals(15371, series.id)
+            assertEquals("Koutetsujou no Kabaneri", series.name)
+            assertEquals(12, series.count)
+            assertEquals(1, series.pages())
+        }
 
-        val series = subscriber.onNextEvents[0]
+        proxerClient.loadSeries(46).subscribeAssert {
+            assertNoErrors()
+            assertValueCount(1)
 
-        assertNotNull(series)
-        assertEquals(15371, series!!.id)
-        assertEquals("Koutetsujou no Kabaneri", series.originalTitle)
-        assertEquals("Kabaneri of the Iron Fortress", series.englishTitle)
-        assertEquals(1, series.pages)
-    }
-
-    @Test
-    fun testLoadNumStreamSinglePage() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesSingle.html")))
-        val subscriber = TestSubscriber<Int>()
-
-        // single page
-        proxerClient.loadNumStreamPages(15371).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-        subscriber.assertValueCount(1)
-        assertEquals(1, subscriber.onNextEvents[0])
-    }
-
-    @Test
-    fun testLoadNumStreamMultiplePages() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesMultiple.html")))
-        val subscriber = TestSubscriber<Int>()
-
-        // multiple pages
-        proxerClient.loadNumStreamPages(53).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-        subscriber.assertValueCount(1)
-        assertEquals(16, subscriber.onNextEvents[0])
+            val series = onNextEvents[0]
+            assertNotNull(series)
+            assertEquals(46, series.id)
+            assertEquals("Naruto Shippuuden", series.name)
+            assertEquals(500, series.count)
+            assertEquals(10, series.pages())
+        }
     }
 
     @Test

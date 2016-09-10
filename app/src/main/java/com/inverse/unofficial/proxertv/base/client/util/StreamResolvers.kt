@@ -1,4 +1,4 @@
-package com.inverse.unofficial.proxertv.base.client
+package com.inverse.unofficial.proxertv.base.client.util
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson

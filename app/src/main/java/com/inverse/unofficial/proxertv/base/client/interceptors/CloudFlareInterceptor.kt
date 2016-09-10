@@ -1,4 +1,4 @@
-package com.inverse.unofficial.proxertv.base.client
+package com.inverse.unofficial.proxertv.base.client.interceptors
 
 import okhttp3.HttpUrl
 import okhttp3.Interceptor

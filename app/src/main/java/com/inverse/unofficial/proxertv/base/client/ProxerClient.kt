@@ -2,6 +2,9 @@ package com.inverse.unofficial.proxertv.base.client
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
+import com.inverse.unofficial.proxertv.base.client.util.CallObservable
+import com.inverse.unofficial.proxertv.base.client.util.StreamResolver
+import com.inverse.unofficial.proxertv.base.client.util.containsCaptcha
 import com.inverse.unofficial.proxertv.model.*
 import okhttp3.Cookie
 import okhttp3.HttpUrl
@@ -13,8 +16,12 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Client for proxer.me that combines the usage of the official api and web parsing.
+ */
 class ProxerClient(
         val httpClient: OkHttpClient,
+        val api: ProxerApi,
         val gson: Gson,
         val streamResolvers: List<StreamResolver>,
         val serverConfig: ServerConfig) {
@@ -69,7 +76,7 @@ class ProxerClient(
                             if (id != null) {
                                 try {
                                     val date = dateFormat.parse(dateElement.text())
-                                    seriesUpdates.add(SeriesUpdate(SeriesCover(id, title, serverConfig.coverUrl(id)), date))
+                                    seriesUpdates.add(SeriesUpdate(SeriesCover(id, title), date))
                                 } catch (e: ParseException) {
                                     e.printStackTrace()
                                 }
@@ -84,53 +91,23 @@ class ProxerClient(
         return loadSeriesList(serverConfig.searchUrl(query))
     }
 
-    fun loadNumStreamPages(seriesId: Int): Observable<Int> {
-        val request = Request.Builder().get().url(serverConfig.episodesListUrl(seriesId))
-                .build()
-
-        return CallObservable(httpClient.newCall(request))
-                .map(fun(response): Int {
-                    val body = response.body()
-                    val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
-                    body.close()
-
-                    val contentList = soup.getElementById("contentList")
-                    return if (contentList != null && contentList.children().size > 1) {
-                        Math.max(1, contentList.child(0).children().size)
-                    } else {
-                        1
-                    }
-                })
-    }
-
     /**
      * Returns the available episodes by sub/dub type
      */
     fun loadEpisodesPage(seriesId: Int, page: Int): Observable<Map<String, List<Int>>> {
-        val request = Request.Builder().get().url(serverConfig.episodesListJsonUrl(seriesId, page))
-                .build()
-
-        return CallObservable(httpClient.newCall(request))
-                .map(fun(response): Map<String, List<Int>> {
-                    val body = response.body()
-                    val info: ApiEpisodesInfo? = gson.fromJson(body.string(), ApiEpisodesInfo::class.java)
-                    body.close()
-
+        return api.entryEpisodes(seriesId, page, EPISODES_PER_PAGE)
+                .map(fun(episodesData): Map<String, List<Int>> {
                     val episodeMap = hashMapOf<String, ArrayList<Int>>()
-                    if (info != null) {
-                        for (episode in info.data) {
-                            episodeMap.getOrPut(episode.typ, { arrayListOf<Int>() }).add(episode.no)
-                        }
+                    for ((episodeNum, languageType) in episodesData.episodes) {
+                        episodeMap.getOrPut(languageType, { arrayListOf<Int>() }).add(episodeNum)
                     }
 
                     return episodeMap
                 })
     }
 
-    fun loadSeries(id: Int): Observable<Series?> {
-        return Observable.zip(loadSeriesDetails(id), loadNumStreamPages(id), fun(series: Series?, numPages: Int): Series? {
-            return series?.copy(pages = numPages) ?: null
-        })
+    fun loadSeries(id: Int): Observable<Series> {
+        return api.entryInfo(id)
     }
 
     fun loadEpisodeStreams(seriesId: Int, episode: Int, subType: String): Observable<Stream> {
@@ -175,45 +152,6 @@ class ProxerClient(
                 })
     }
 
-    private fun loadSeriesDetails(id: Int): Observable<Series?> {
-        val request = Request.Builder().get().url(serverConfig.detailUrl(id)).build()
-
-        return CallObservable(httpClient.newCall(request))
-                .map(fun(response): Series? {
-                    val body = response.body()
-                    val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
-                    body.close()
-
-                    val tableElement = soup.select(".details>tbody")?.first()?.children()
-                    if (tableElement != null && tableElement.size >= 3) {
-                        var title: String? = null
-                        var engTitle: String? = null
-                        var description: String? = null
-
-                        tableElement.forEach {
-                            if (it.children().size >= 2) {
-                                when (it.child(0).text()) {
-                                    "Original Titel" -> title = it.child(1).text()
-                                    "Eng. Titel" -> engTitle = it.child(1).text()
-                                }
-                            } else if (it.children().size == 1) {
-                                description = it.child(0).text()
-                            }
-                        }
-
-                        if (title != null && description != null) {
-                            if (engTitle == null) {
-                                engTitle = title
-                            }
-
-                            return Series(id, title!!, engTitle!!, description!!, serverConfig.coverUrl(id))
-                        }
-                    }
-
-                    return null
-                })
-    }
-
     private fun loadSeriesList(url: String): Observable<List<SeriesCover>> {
         val request = Request.Builder().get().url(url).build()
 
@@ -231,7 +169,7 @@ class ProxerClient(
                         val id = idRegex.find(it.attr("href"))?.groupValues?.get(1)?.toInt()
                         val title = it.text()
                         if (id != null) {
-                            seriesCovers.add(SeriesCover(id, title, serverConfig.coverUrl(id)))
+                            seriesCovers.add(SeriesCover(id, title))
                         }
                     }
 
@@ -245,10 +183,7 @@ class ProxerClient(
         const val EPISODES_PER_PAGE = 50
 
         fun getTargetPageForEpisode(episodeNum: Int): Int {
-            if (episodeNum <= 0) {
-                return 0
-            }
-            return Math.ceil(episodeNum.toDouble() / EPISODES_PER_PAGE).toInt()
+            return episodeNum / EPISODES_PER_PAGE
         }
     }
 }

@@ -174,25 +174,34 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         val lastUpdateDate = calendar.time
 
         return client.loadUpdatesList()
+                // series list to single items
                 .flatMap { Observable.from(it) }
+                // discard anything older than 3 days
                 .filter { it.updateDate >= lastUpdateDate }
+                // remove the update date information
                 .map { it.seriesCover }
+                // no duplicates
                 .distinct()
+                // map to an observable (not subscribed) that combines the series with the local progress and a boolean
+                // indicating whether it is on the user list or not
                 .map {
                     Observable.combineLatest(
                             Observable.just(it),
                             progressRepository.observeProgress(it.id),
-                            { series, progress -> Pair(series, progress) })
+                            myListRepository.observeSeriesList().map { myList -> myList.contains(it) },
+                            { series, progress, inList -> Triple(series, progress, inList) })
                 }
                 .toList()
-                .flatMap(fun(observables: List<Observable<Pair<SeriesCover, Int>>>): Observable<List<Pair<SeriesCover, Int>>> {
+                // to automatically re emitting list of series with progress
+                // as soon as the progress for a series changes, the list is updated
+                .flatMap(fun(observables: List<Observable<Triple<SeriesCover, Int, Boolean>>>): Observable<List<Triple<SeriesCover, Int, Boolean>>> {
                     return Observable.combineLatest(
                             observables,
-                            fun(array: Array<out Any>): List<Pair<SeriesCover, Int>> {
-                                val seriesList = arrayListOf<Pair<SeriesCover, Int>>()
+                            fun(array: Array<out Any>): List<Triple<SeriesCover, Int, Boolean>> {
+                                val seriesList = arrayListOf<Triple<SeriesCover, Int, Boolean>>()
                                 for (element in array) {
                                     @Suppress("UNCHECKED_CAST")
-                                    val seriesProgressPair = element as Pair<SeriesCover, Int>
+                                    val seriesProgressPair = element as Triple<SeriesCover, Int, Boolean>
                                     seriesList.add(seriesProgressPair)
                                 }
 
@@ -200,9 +209,10 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                             }
                     )
                 })
+                // for series on "my list" where the local progress is > 0 check for a new episode
                 .flatMap {
                     Observable.from(it)
-                            .filter { it.second > 0 }
+                            .filter { it.second > 0 && it.third }
                             .flatMap {
                                 Observable.zip(
                                         Observable.just(it),

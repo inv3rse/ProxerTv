@@ -1,0 +1,19 @@
+{
+    "error": 0,
+    "message": "Abfrage erfolgreich.",
+    "data": {
+        "id": "15371",
+        "name": "Koutetsujou no Kabaneri",
+        "genre": "Action Drama Horror Military Seinen Splatter",
+        "fsk": "fsk18 bad_language violence fear",
+        "description": "Die \"Steampunk-Survival-Story\" spielt im Inselland Hinomoto, wo sich Menschen in Festungen, sogenannten Stationen, vor den zombie-ähnlichen Wesen mit Herzen aus Stahl, den \"Kabane\", verstecken. Nur bewaffnete Lokomotiven, die \"Hayajiro\" bewegen sich zwischen den Stationen hin und her.",
+        "medium": "animeseries",
+        "count": "12",
+        "state": "1",
+        "rate_sum": "18405",
+        "rate_count": "2298",
+        "clicks": "23166",
+        "kat": "anime",
+        "license": "2"
+    }
+}

@@ -10,9 +10,11 @@ import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
+import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
 import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
 import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
@@ -72,7 +74,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         if (series != null) {
             if (action.id == ACTION_ADD_REMOVE) {
                 // add or remove
-                val cover = SeriesCover(series!!.id, series!!.originalTitle, series!!.imageUrl)
+                val cover = SeriesCover(series!!.id, series!!.name)
                 if (inList) {
                     myListRepository.removeSeries(cover.id)
                             .subscribeOn(Schedulers.io())
@@ -151,15 +153,15 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                             if (series != null) {
                                 this.series = series
-                                loadEpisodes(series, 1)
+                                loadEpisodes(series, 0)
 
                                 val detailsRow = DetailsOverviewRow(series)
                                 val addRemove = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
                                 actionsAdapter.add(Action(ACTION_ADD_REMOVE, addRemove))
 
-                                if (series.pages > 1) {
-                                    for (i in 1..series.pages) {
-                                        actionsAdapter.add(Action(i.toLong(), getString(R.string.page_title, i)))
+                                if (series.pages() > 1) {
+                                    for (i in 1..series.pages()) {
+                                        actionsAdapter.add(Action((i - 1).toLong(), getString(R.string.page_title, i)))
                                     }
                                 }
 
@@ -167,7 +169,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                                 contentAdapter.add(detailsRow)
 
                                 Glide.with(activity)
-                                        .load(series.imageUrl)
+                                        .load(ServerConfig.coverUrl(seriesId))
                                         .centerCrop()
                                         .into(object : SimpleTarget<GlideDrawable>(280, 392) {
                                             override fun onResourceReady(resource: GlideDrawable, glideAnimation: GlideAnimation<in GlideDrawable>?) {
@@ -197,7 +199,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                     episodeAdapters.clear()
 
                     val (episodesMap, progress) = episodesProgress
-                    val episodePresenter = EpisodePresenter()
+                    val episodePresenter = EpisodePresenter(series.id)
 
                     for (subType in episodesMap.keys) {
 
@@ -206,7 +208,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                         val episodes = episodesMap[subType] ?: emptyList()
                         for (i in episodes) {
-                            adapter.add(Episode(series.id, i, subType, series.imageUrl))
+                            adapter.add(Episode(i, subType))
                         }
 
                         episodeAdapters.add(adapter)
