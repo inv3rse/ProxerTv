@@ -199,10 +199,7 @@ class ProxerClient(
         const val EPISODES_PER_PAGE = 50
 
         fun getTargetPageForEpisode(episodeNum: Int): Int {
-            if (episodeNum <= 0) {
-                return 0
-            }
-            return Math.ceil(episodeNum.toDouble() / EPISODES_PER_PAGE).toInt()
+            return episodeNum / EPISODES_PER_PAGE
         }
     }
 }

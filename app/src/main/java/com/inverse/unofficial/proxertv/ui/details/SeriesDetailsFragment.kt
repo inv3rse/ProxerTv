@@ -153,15 +153,15 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                             if (series != null) {
                                 this.series = series
-                                loadEpisodes(series, 1)
+                                loadEpisodes(series, 0)
 
                                 val detailsRow = DetailsOverviewRow(series)
                                 val addRemove = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
                                 actionsAdapter.add(Action(ACTION_ADD_REMOVE, addRemove))
 
-                                if (series.count > ProxerClient.EPISODES_PER_PAGE) {
+                                if (series.pages() > 1) {
                                     for (i in 1..series.pages()) {
-                                        actionsAdapter.add(Action(i.toLong(), getString(R.string.page_title, i)))
+                                        actionsAdapter.add(Action((i - 1).toLong(), getString(R.string.page_title, i)))
                                     }
                                 }
 
