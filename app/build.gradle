@@ -13,6 +13,11 @@ buildscript {
     }
 }
 
+final signing = 'com.inverse.unofficial.proxertv'
+if (hasProperty(signing)) {
+    apply from: property(signing)
+}
+
 android {
     compileSdkVersion 24
     buildToolsVersion "24.0.2"
@@ -35,6 +40,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
     sourceSets {
