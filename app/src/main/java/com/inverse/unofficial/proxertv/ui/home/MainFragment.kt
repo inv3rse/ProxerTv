@@ -209,7 +209,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                             }
                     )
                 })
-                // for series on myLit where the local progress is > 0 check for a new episode
+                // for series on "my list" where the local progress is > 0 check for a new episode
                 .flatMap {
                     Observable.from(it)
                             .filter { it.second > 0 && it.third }
