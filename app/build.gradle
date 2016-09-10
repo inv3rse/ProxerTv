@@ -1,6 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'com.getkeepsafe.dexcount'
+apply plugin: 'io.fabric'
 
 buildscript {
     repositories {
@@ -106,9 +107,10 @@ dependencies {
     // Timber
     compile 'com.jakewharton.timber:timber:4.1.2'
 
-    // Firebase crash reporting
-    def firebase_version = '9.4.0'
-    compile "com.google.firebase:firebase-crash:$firebase_version"
+    // Crashlytics
+    compile('com.crashlytics.sdk.android:crashlytics:2.6.2@aar') {
+        transitive = true;
+    }
 
     // Testing
     testCompile 'junit:junit:4.12'
@@ -120,5 +122,3 @@ dependencies {
         exclude module: 'support-annotations'
     }
 }
-
-apply plugin: 'com.google.gms.google-services'

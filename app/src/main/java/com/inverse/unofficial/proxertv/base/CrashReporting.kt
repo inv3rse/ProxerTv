@@ -1,6 +1,6 @@
 package com.inverse.unofficial.proxertv.base
 
-import com.google.firebase.crash.FirebaseCrash
+import com.crashlytics.android.Crashlytics
 import com.inverse.unofficial.proxertv.BuildConfig
 
 /**
@@ -13,7 +13,7 @@ object CrashReporting {
      */
     fun logExeptionForRelease(error: Throwable) {
         if (!BuildConfig.DEBUG) {
-            FirebaseCrash.report(error)
+            Crashlytics.logException(error)
         } else {
             error.printStackTrace()
         }

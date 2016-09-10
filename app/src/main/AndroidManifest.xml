@@ -43,6 +43,10 @@
             android:supportsPictureInPicture="true"
             tools:ignore="UnusedAttribute" />
         <activity android:name="com.inverse.unofficial.proxertv.ui.search.SearchActivity" />
+
+        <meta-data
+            android:name="io.fabric.ApiKey"
+            android:value="d130dda0c7486fa351a7700f07cb7c79e8edbed7" />
     </application>
 
 </manifest>
