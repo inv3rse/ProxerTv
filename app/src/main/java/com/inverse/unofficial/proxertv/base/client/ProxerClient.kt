@@ -16,6 +16,9 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Client for proxer.me that combines the usage of the official api and web parsing.
+ */
 class ProxerClient(
         val httpClient: OkHttpClient,
         val api: ProxerApi,
