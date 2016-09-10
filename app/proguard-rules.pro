@@ -19,6 +19,7 @@
 #----------------Rhino Js Engine------------------------
 -dontwarn org.mozilla.javascript.**
 -dontwarn org.mozilla.classfile.**
+-keep class org.mozilla.javascript.** { *; }
 
 #----------------RxJava---------------------------------
 -dontwarn sun.misc.**
