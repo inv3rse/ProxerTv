@@ -196,7 +196,8 @@ class VideoPlayer(savedState: Bundle? = null) : SurfaceHolder.Callback {
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        Timber.d("surface changed")
+        Timber.d("surface changed format:$format width:$width height:$height")
+        holder.setFixedSize(width, height)
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
