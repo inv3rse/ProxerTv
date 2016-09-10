@@ -88,25 +88,6 @@ class ProxerClient(
         return loadSeriesList(serverConfig.searchUrl(query))
     }
 
-    fun loadNumStreamPages(seriesId: Int): Observable<Int> {
-        val request = Request.Builder().get().url(serverConfig.episodesListUrl(seriesId))
-                .build()
-
-        return CallObservable(httpClient.newCall(request))
-                .map(fun(response): Int {
-                    val body = response.body()
-                    val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
-                    body.close()
-
-                    val contentList = soup.getElementById("contentList")
-                    return if (contentList != null && contentList.children().size > 1) {
-                        Math.max(1, contentList.child(0).children().size)
-                    } else {
-                        1
-                    }
-                })
-    }
-
     /**
      * Returns the available episodes by sub/dub type
      */

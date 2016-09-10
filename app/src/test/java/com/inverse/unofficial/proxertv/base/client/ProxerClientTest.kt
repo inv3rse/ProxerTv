@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.base.client.util.ApiResponseConverterFactory
 import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
 import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
-import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesUpdate
 import com.inverse.unofficial.proxertv.model.ServerConfig
@@ -127,46 +126,31 @@ class ProxerClientTest {
     @Test
     fun testLoadSeries() {
         mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/series_detail_15371.json")))
+        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/series_detail_46.json")))
 
-        val subscriber = TestSubscriber<Series?>()
-        proxerClient.loadSeries(15371).subscribe(subscriber)
+        proxerClient.loadSeries(15371).subscribeAssert {
+            assertNoErrors()
+            assertValueCount(1)
 
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-        subscriber.assertValueCount(1)
+            val series = onNextEvents[0]
+            assertNotNull(series)
+            assertEquals(15371, series.id)
+            assertEquals("Koutetsujou no Kabaneri", series.name)
+            assertEquals(12, series.count)
+            assertEquals(1, series.pages())
+        }
 
-        val series = subscriber.onNextEvents[0]
+        proxerClient.loadSeries(46).subscribeAssert {
+            assertNoErrors()
+            assertValueCount(1)
 
-        assertNotNull(series)
-        assertEquals(15371, series!!.id)
-        assertEquals("Koutetsujou no Kabaneri", series.name)
-        assertEquals(1, series.pages())
-    }
-
-    @Test
-    fun testLoadNumStreamSinglePage() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesSingle.html")))
-        val subscriber = TestSubscriber<Int>()
-
-        // single page
-        proxerClient.loadNumStreamPages(15371).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-        subscriber.assertValueCount(1)
-        assertEquals(1, subscriber.onNextEvents[0])
-    }
-
-    @Test
-    fun testLoadNumStreamMultiplePages() {
-        mockServer.enqueue(MockResponse().setBody(loadResponse("ProxerClientTest/detailEpisodesMultiple.html")))
-        val subscriber = TestSubscriber<Int>()
-
-        // multiple pages
-        proxerClient.loadNumStreamPages(53).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-        subscriber.assertValueCount(1)
-        assertEquals(16, subscriber.onNextEvents[0])
+            val series = onNextEvents[0]
+            assertNotNull(series)
+            assertEquals(46, series.id)
+            assertEquals("Naruto Shippuuden", series.name)
+            assertEquals(500, series.count)
+            assertEquals(10, series.pages())
+        }
     }
 
     @Test

@@ -1,0 +1,19 @@
+{
+    "error": 0,
+    "message": "Abfrage erfolgreich.",
+    "data": {
+        "id": "46",
+        "name": "Naruto Shippuuden",
+        "genre": "Abenteuer Action Comedy Drama Fantasy Martial-Art Shounen Superpower",
+        "fsk": "fsk12 bad_language violence",
+        "description": "Die japanische Serie \"Naruto Shippuuden\" knüpft an die Serie „Naruto“ an und begleitet Naruto Uzumaki auf seinem Weg als Shinobi. In seiner Kindheit wurde er von den Bewohnern seines Heimatdorfes gemieden, weshalb es sein Ziel ist eines Tages der Hokage (Dorfoberhaupt) von Konohagakure zu werden. Er erhofft sich dadurch den Respekt der anderen, der ihm früher versagt geblieben ist.\nDeswegen versucht er mit allen Mitteln die Freundschaft zwischen Sasuke Uchiha und ihm am Leben zu erhalten. Dieser hat es sich jedoch zum Ziel gemacht seinen Bruder Itachi zu ermorden und dafür wendete er sich von seinen Freunden ab und dem Bösen zu, um mehr Macht und Stärke zu erlangen. Naruto und Sakura, die dritte im früheren Team, geben ihn aber nicht auf und versuchen ihn immer wieder zur Umkehr zu bewegen.",
+        "medium": "animeseries",
+        "count": "500",
+        "state": "2",
+        "rate_sum": "62977",
+        "rate_count": "7086",
+        "clicks": "66747",
+        "kat": "anime",
+        "license": "2"
+    }
+}
