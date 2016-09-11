@@ -10,6 +10,7 @@ import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
+import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
@@ -38,7 +39,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     private var episodeSubscription: Subscription? = null
     private var series: Series? = null
     private var inList = false
-    private var currentPage = 1
+    private var currentPage = 0
 
     private val episodeAdapters = arrayListOf<EpisodeAdapter>()
     private lateinit var seriesProgress: Observable<Int>
@@ -103,7 +104,6 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                 // load selected episode page
                 val page = action.id.toInt()
                 if (page != currentPage) {
-                    currentPage = page
                     loadEpisodes(series!!, page)
                 }
             }
@@ -142,18 +142,20 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         val observable = Observable.zip(
                 client.loadSeries(seriesId),
                 myListRepository.containsSeries(seriesId),
-                { series, inList -> Pair(series, inList) })
+                seriesProgress.first(),
+                { series, inList, progress -> Triple(series, inList, progress) })
 
         subscriptions.add(
                 observable.subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe({ pair: Pair<Series?, Boolean> ->
-                            val series = pair.first
-                            inList = pair.second
+                        .subscribe({ triple: Triple<Series?, Boolean, Int> ->
+                            val series = triple.first
+                            val nextEpisode = triple.third + 1
+                            inList = triple.second
 
                             if (series != null) {
                                 this.series = series
-                                loadEpisodes(series, 0)
+                                loadEpisodes(series, ProxerClient.getTargetPageForEpisode(nextEpisode))
 
                                 val detailsRow = DetailsOverviewRow(series)
                                 val addRemove = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
@@ -179,7 +181,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                                         })
                             }
-                        }, { it.printStackTrace() }, {}))
+                        }, { CrashReporting.logException(it) }))
     }
 
     private fun loadEpisodes(series: Series, page: Int) {
@@ -213,9 +215,10 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                         episodeAdapters.add(adapter)
                         contentAdapter.add(ListRow(header, adapter))
+                        currentPage = page
                     }
 
-                }, { it.printStackTrace() })
+                }, { CrashReporting.logException(it) })
     }
 
     companion object {

@@ -1,5 +1,22 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.getkeepsafe.dexcount'
+apply plugin: 'io.fabric'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.getkeepsafe.dexcount:dexcount-gradle-plugin:0.6.0'
+    }
+}
+
+final signing = 'com.inverse.unofficial.proxertv'
+if (hasProperty(signing)) {
+    apply from: property(signing)
+}
 
 android {
     compileSdkVersion 24
@@ -9,8 +26,8 @@ android {
         applicationId "com.inverse.unofficial.proxertv"
         minSdkVersion 21
         targetSdkVersion 24
-        versionCode 6
-        versionName "Alpha 6"
+        versionCode 7
+        versionName "Alpha 7"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PROXER_API_KEY", ProxerApiKey)
@@ -23,6 +40,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
     sourceSets {
@@ -45,8 +63,6 @@ dependencies {
 
     // Support Library
     def support_library_version = '24.2.0'
-    compile "com.android.support:appcompat-v7:$support_library_version"
-    compile "com.android.support:recyclerview-v7:$support_library_version"
     compile "com.android.support:leanback-v17:$support_library_version"
 
     // Glide
@@ -96,6 +112,11 @@ dependencies {
 
     // Timber
     compile 'com.jakewharton.timber:timber:4.1.2'
+
+    // Crashlytics
+    compile('com.crashlytics.sdk.android:crashlytics:2.6.2@aar') {
+        transitive = true;
+    }
 
     // Testing
     testCompile 'junit:junit:4.12'

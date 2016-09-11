@@ -1,5 +1,6 @@
 package com.inverse.unofficial.proxertv.base.client.util
 
+import com.inverse.unofficial.proxertv.model.WrappedData
 import okhttp3.ResponseBody
 import retrofit2.Converter
 import retrofit2.Retrofit
@@ -30,9 +31,9 @@ class ApiResponseConverterFactory : Converter.Factory() {
 
         override fun convert(value: ResponseBody): T {
 
-            val wrappedData = delegate.convert(value)
+            val wrappedData = delegate.convert(value) ?: throw IOException("Failed to get api response")
             if (wrappedData.data == null) {
-                throw IOException(wrappedData.message)
+                throw ApiErrorException(wrappedData.message)
             }
 
             return wrappedData.data
@@ -42,9 +43,4 @@ class ApiResponseConverterFactory : Converter.Factory() {
 
 annotation class WrappedResponse
 
-data class WrappedData<out T>(
-        val error: Int,
-        val message: String,
-        val data: T?,
-        val code: Int?
-)
+class ApiErrorException(msg: String?) : IOException("api error: $msg")

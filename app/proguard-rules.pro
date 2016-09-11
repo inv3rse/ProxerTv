@@ -37,8 +37,18 @@
     rx.internal.util.atomic.LinkedQueueNode consumerNode;
 }
 
-#----------------OkIo-----------------------------------
+#---------------OkIo------------------------------------
 -dontwarn okio.**
+
+#---------------Retrofit--------------------------------
+-dontwarn retrofit2.**
+-keep class retrofit2.** { *; }
+-keepattributes Signature
+-keepattributes Exceptions
+
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
 
 #---------------Gson------------------------------------
 # Gson uses generic type information stored in a class file when working with fields. Proguard
@@ -64,3 +74,8 @@
   static ** FROM_ORIGINAL;
   static ** FROM_PARCELABLE;
 }
+
+#--------------Crashlytics-------------------------------
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-keep public class * extends java.lang.Exception

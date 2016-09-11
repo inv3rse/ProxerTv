@@ -1,7 +1,9 @@
 package com.inverse.unofficial.proxertv.base
 
 import android.app.Application
+import com.crashlytics.android.Crashlytics
 import com.inverse.unofficial.proxertv.BuildConfig
+import io.fabric.sdk.android.Fabric
 import timber.log.Timber
 
 class App : Application() {
@@ -11,6 +13,8 @@ class App : Application() {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
+        Fabric.with(this, Crashlytics())
+
         component = DaggerBaseComponent.builder().baseModule(BaseModule(this)).build()
     }
 

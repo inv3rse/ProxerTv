@@ -9,6 +9,7 @@ import android.support.v4.app.ActivityOptionsCompat
 import android.view.View
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
+import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
@@ -111,7 +112,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                 .subscribe({
                     myListAdapter.clear()
                     myListAdapter.addAll(0, it)
-                }))
+                }, { throwable -> CrashReporting.logException(throwable) }))
 
         loadAndAddRow(updateSubject.flatMap {
             loadEpisodesUpdateRow().takeUntil(updateSubject)
@@ -164,7 +165,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                                 rowTargetMap.put(listRow, position)
                                 targetRowMap.put(position, adapter)
                             }
-                        }, { it.printStackTrace() }
+                        }, { CrashReporting.logException(it) }
                 ))
     }
 

@@ -23,6 +23,7 @@ import com.google.android.exoplayer.ExoPlaybackException
 import com.google.android.exoplayer.ExoPlayer
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
+import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
@@ -184,7 +185,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({ isTracked = episodeExtra.episodeNum <= it },
-                                { it.printStackTrace() })
+                                { CrashReporting.logException(it) })
             }
         } else {
             Timber.d("missing extras, finishing!")
@@ -234,7 +235,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                     if (throwable is ProxerClient.SeriesCaptchaException) {
                         showErrorFragment(getString(R.string.stream_captcha_error))
                     } else {
-                        throwable.printStackTrace()
+                        CrashReporting.logException(throwable)
                         checkValidStreamsFound()
                     }
                 }, { checkValidStreamsFound() }))

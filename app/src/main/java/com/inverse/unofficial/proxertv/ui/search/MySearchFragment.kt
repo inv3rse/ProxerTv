@@ -9,6 +9,7 @@ import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
+import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
@@ -69,7 +70,7 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({ resultList ->
                         resultsAdapter.addAll(0, resultList)
-                    }, { it.printStackTrace() }, {}))
+                    }, { CrashReporting.logException(it) }))
         }
         return true
     }
