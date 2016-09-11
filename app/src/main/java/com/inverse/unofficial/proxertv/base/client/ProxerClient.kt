@@ -183,7 +183,7 @@ class ProxerClient(
         const val EPISODES_PER_PAGE = 50
 
         fun getTargetPageForEpisode(episodeNum: Int): Int {
-            return episodeNum / EPISODES_PER_PAGE
+            return Math.max(episodeNum - 1, 0) / EPISODES_PER_PAGE
         }
     }
 }
