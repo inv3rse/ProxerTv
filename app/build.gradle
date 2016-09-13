@@ -13,6 +13,14 @@ buildscript {
     }
 }
 
+// get api key from properties ore environment variable
+def apiKey = ""
+if (hasProperty("ProxerApiKey")) {
+    apiKey = ProxerApiKey
+} else {
+    apiKey = System.getenv("ProxerApiKey")
+}
+
 final signing = 'com.inverse.unofficial.proxertv'
 if (hasProperty(signing)) {
     apply from: property(signing)
@@ -30,7 +38,7 @@ android {
         versionName "Alpha 7"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "PROXER_API_KEY", ProxerApiKey)
+        buildConfigField("String", "PROXER_API_KEY", apiKey)
     }
     buildTypes {
         debug {
@@ -40,7 +48,9 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (hasProperty("signingConfigs.release")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     sourceSets {
