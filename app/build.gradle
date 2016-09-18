@@ -58,6 +58,10 @@ android {
         test.java.srcDirs += 'src/testUtils/java'
         androidTest.java.srcDirs += 'src/testUtils/java'
     }
+
+    lintOptions {
+        lintConfig file("lint.xml")
+    }
 }
 
 // keep generated classes
@@ -72,7 +76,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Support Library
-    def support_library_version = '24.2.0'
+    def support_library_version = '24.2.1'
     compile "com.android.support:leanback-v17:$support_library_version"
 
     // Glide
