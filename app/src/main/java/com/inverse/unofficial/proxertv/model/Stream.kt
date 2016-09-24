@@ -5,7 +5,7 @@ data class Stream(
         val providerName: String) {
 
     override fun equals(other: Any?): Boolean {
-        return other is Stream && streamUrl.equals(other.streamUrl)
+        return other is Stream && streamUrl == other.streamUrl
     }
 
     override fun hashCode(): Int {

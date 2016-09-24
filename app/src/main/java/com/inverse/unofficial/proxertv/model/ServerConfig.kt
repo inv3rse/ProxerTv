@@ -12,9 +12,6 @@ class ServerConfig(
     val updatesListUrl = baseUrl + "anime/updates#top"
 
     fun searchUrl(query: String) = baseUrl + "search?s=search&name=$query&typ=all-anime"
-    fun detailUrl(seriesId: Int) = baseUrl + "info/$seriesId"
-    fun episodesListUrl(seriesId: Int) = baseUrl + "info/$seriesId/list"
-    fun episodesListJsonUrl(seriesId: Int, page: Int) = baseUrl + "info/$seriesId/list/$page?format=json"
     fun episodeStreamsUrl(seriesId: Int, episodeNum: Int, subType: String) = baseUrl + "watch/$seriesId/$episodeNum/$subType"
 
     companion object {

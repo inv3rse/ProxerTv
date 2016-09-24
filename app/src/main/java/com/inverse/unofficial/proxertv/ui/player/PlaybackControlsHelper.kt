@@ -14,7 +14,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
     private val fastForwardAction = PlaybackControlsRow.FastForwardAction(context)
     private val pictureInPictureAction = PlaybackControlsRow.PictureInPictureAction(context)
 
-    private lateinit var transportControls: MediaController.TransportControls
+    private var transportControls: MediaController.TransportControls
 
     private var metaData: MediaMetadata? = null
     private var playbackState: PlaybackState? = null
