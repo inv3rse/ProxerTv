@@ -13,7 +13,7 @@ buildscript {
     }
 }
 
-// get api key from properties ore environment variable
+// get api key from properties or environment variable
 def apiKey = ""
 if (hasProperty("ProxerApiKey")) {
     apiKey = ProxerApiKey
@@ -48,9 +48,6 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (hasProperty("signingConfigs.release")) {
-                signingConfig signingConfigs.release
-            }
         }
     }
     sourceSets {
