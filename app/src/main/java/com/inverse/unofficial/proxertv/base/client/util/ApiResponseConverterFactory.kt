@@ -32,8 +32,8 @@ class ApiResponseConverterFactory : Converter.Factory() {
         override fun convert(value: ResponseBody): T {
 
             val wrappedData = delegate.convert(value) ?: throw IOException("Failed to get api response")
-            if (wrappedData.data == null) {
-                throw ApiErrorException(wrappedData.message)
+            if (wrappedData.error != 0 || wrappedData.data == null) {
+                throw ApiErrorException(wrappedData.code, wrappedData.message)
             }
 
             return wrappedData.data
@@ -43,4 +43,14 @@ class ApiResponseConverterFactory : Converter.Factory() {
 
 annotation class WrappedResponse
 
-class ApiErrorException(msg: String?) : IOException("api error: $msg")
+class ApiErrorException(val code: Int?, msg: String?) : IOException("api error: $msg") {
+
+    companion object {
+        const val MISSING_LOGIN_DATA = 3000
+        const val INVALID_LOGIN_DATA = 3001
+        const val USER_ALREADY_SIGNED_IN = 3012
+        const val OTHER_USER_ALREADY_SIGNED_IN = 3013
+
+        const val USER_DOES_NOT_EXISTS = 3003
+    }
+}

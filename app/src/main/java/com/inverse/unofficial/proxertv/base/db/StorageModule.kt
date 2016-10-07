@@ -20,13 +20,13 @@ class StorageModule {
 
     @Provides
     @Singleton
-    fun provideMySeriesRepository(dbHelper: SeriesDbHelper): MySeriesRepository {
-        return MySeriesRepository(dbHelper)
+    fun provideMySeriesRepository(dbHelper: SeriesDbHelper): MySeriesDb {
+        return MySeriesDb(dbHelper)
     }
 
     @Provides
     @Singleton
-    fun provideSeriesProgressRepository(dbHelper: SeriesProgressDbHelper): SeriesProgressRepository {
-        return SeriesProgressRepository(dbHelper)
+    fun provideSeriesProgressRepository(dbHelper: SeriesProgressDbHelper): SeriesProgressDb {
+        return SeriesProgressDb(dbHelper)
     }
 }

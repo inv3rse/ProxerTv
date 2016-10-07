@@ -2,6 +2,7 @@ package com.inverse.unofficial.proxertv.base.db
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import org.jetbrains.anko.db.*
 import rx.Observable
@@ -39,7 +40,7 @@ class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAM
     }
 }
 
-class MySeriesRepository(val dbHelper: SeriesDbHelper) {
+class MySeriesDb(val dbHelper: SeriesDbHelper) {
     private val listObservable = SerializedSubject(BehaviorSubject.create<Unit>(Unit))
 
     /**
@@ -58,6 +59,23 @@ class MySeriesRepository(val dbHelper: SeriesDbHelper) {
         return dbHelper.useAsync {
             select(SeriesScheme.TABLE).parseList(SeriesRowParser())
         }
+    }
+
+    /**
+     * Set the list of series. Deletes the current values and inserts the new ones.
+     * @return an Observable emitting onError or OnCompleted
+     */
+    fun setSeries(seriesList : List<Series>): Observable<Unit>  {
+        return dbHelper.useAsync {
+            transaction {
+                delete(SeriesScheme.TABLE)
+                for ((id, name) in seriesList) {
+                    insert(SeriesScheme.TABLE,
+                            SeriesScheme.ID to id,
+                            SeriesScheme.TITLE to name)
+                }
+            }
+        }.doOnCompleted { notifyListChange() }
     }
 
     /**

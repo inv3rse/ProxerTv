@@ -39,7 +39,7 @@ class SeriesProgressDbHelper(context: Context) : ManagedSQLiteOpenHelper(context
     }
 }
 
-class SeriesProgressRepository(val dbHelper: SeriesProgressDbHelper) {
+class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
     // Pair<SeriesId, Progress>
     private val changeSubject = SerializedSubject(PublishSubject.create<Pair<Int, Int>>())
 

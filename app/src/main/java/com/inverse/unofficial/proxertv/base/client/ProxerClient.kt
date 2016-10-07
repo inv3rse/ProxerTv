@@ -34,6 +34,18 @@ class ProxerClient(
         httpClient.cookieJar().saveFromResponse(url, listOf(adultCookie))
     }
 
+    fun login(username: String, password: String): Observable<LoginResponse> {
+        return api.login(username, password)
+    }
+
+    fun logout(): Observable<WrappedData<Unit>> {
+        return api.logout()
+    }
+
+    fun getUserList(): Observable<List<Series>> {
+        return api.userList()
+    }
+
     fun loadTopAccessSeries(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.topAccessListUrl)
     }
