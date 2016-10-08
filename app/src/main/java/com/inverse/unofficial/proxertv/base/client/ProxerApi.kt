@@ -5,10 +5,7 @@ import com.inverse.unofficial.proxertv.model.Episodes
 import com.inverse.unofficial.proxertv.model.LoginResponse
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.WrappedData
-import retrofit2.http.Field
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Query
+import retrofit2.http.*
 import rx.Observable
 
 /**
@@ -25,6 +22,7 @@ interface ProxerApi {
      */
     @POST("user/login")
     @WrappedResponse
+    @FormUrlEncoded
     fun login(@Field("username") username: String, @Field("password") password: String): Observable<LoginResponse>
 
     /**

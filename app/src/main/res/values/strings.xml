@@ -17,4 +17,16 @@
     <string name="stream_error">Stream Error</string>
     <string name="no_streams_found">No supported streams found.</string>
     <string name="stream_captcha_error">Proxer.me requires a captcha input. You can do that on any device with the same ip.</string>
+
+    <!-- Login -->
+    <string name="login_title">Mit Proxer Account verbinden</string>
+    <string name="login_description">Synchronisiert Serien und Fortschritt</string>
+    <string name="login_breadcrumb">Einloggen</string>
+    <string name="login_username_title">Nutzername</string>
+    <string name="login_password_title">Passwort</string>
+    <string name="login_action_title">Login</string>
+
+    <string name="login_error_general">Login fehlgeschlagen</string>
+    <string name="login_error_username_empty">der Nutzername darf nicht leer sein</string>
+    <string name="login_error_password_empty">das Passwort darf nicht leer sein</string>
 </resources>

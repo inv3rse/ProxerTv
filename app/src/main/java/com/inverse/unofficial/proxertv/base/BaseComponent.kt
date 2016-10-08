@@ -1,6 +1,7 @@
 package com.inverse.unofficial.proxertv.base
 
 import android.app.Application
+import android.content.Context
 import com.inverse.unofficial.proxertv.base.client.ClientModule
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
@@ -18,6 +19,24 @@ class BaseModule(val application: Application) {
     fun provideApplication(): Application {
         return application
     }
+
+    @Provides
+    @Singleton
+    fun provideUserSettings(application: Application): UserSettings {
+        val prefs = application.getSharedPreferences("userSettings", Context.MODE_PRIVATE)
+        return UserSettings(prefs)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProxerRepository(
+            client: ProxerClient,
+            mySeriesDb: MySeriesDb,
+            progressDb: SeriesProgressDb,
+            userSettings: UserSettings): ProxerRepository {
+
+        return ProxerRepository(client, mySeriesDb, progressDb, userSettings)
+    }
 }
 
 @Singleton
@@ -26,4 +45,5 @@ interface BaseComponent {
     fun getProxerClient(): ProxerClient
     fun getMySeriesRepository(): MySeriesDb
     fun getSeriesProgressRepository(): SeriesProgressDb
+    fun getProxerRepository(): ProxerRepository
 }

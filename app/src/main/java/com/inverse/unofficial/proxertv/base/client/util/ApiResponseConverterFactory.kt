@@ -43,7 +43,7 @@ class ApiResponseConverterFactory : Converter.Factory() {
 
 annotation class WrappedResponse
 
-class ApiErrorException(val code: Int?, msg: String?) : IOException("api error: $msg") {
+class ApiErrorException(val code: Int?, val msg: String?) : IOException("api error: $msg") {
 
     companion object {
         const val MISSING_LOGIN_DATA = 3000
