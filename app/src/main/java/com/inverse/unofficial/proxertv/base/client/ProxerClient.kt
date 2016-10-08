@@ -2,9 +2,10 @@ package com.inverse.unofficial.proxertv.base.client
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
+import com.inverse.unofficial.proxertv.base.CrashReporting
+import com.inverse.unofficial.proxertv.base.client.interceptors.containsCaptcha
 import com.inverse.unofficial.proxertv.base.client.util.CallObservable
 import com.inverse.unofficial.proxertv.base.client.util.StreamResolver
-import com.inverse.unofficial.proxertv.base.client.util.containsCaptcha
 import com.inverse.unofficial.proxertv.model.*
 import okhttp3.Cookie
 import okhttp3.HttpUrl
@@ -90,7 +91,7 @@ class ProxerClient(
                                     val date = dateFormat.parse(dateElement.text())
                                     seriesUpdates.add(SeriesUpdate(SeriesCover(id, title), date))
                                 } catch (e: ParseException) {
-                                    e.printStackTrace()
+                                    CrashReporting.logException(e)
                                 }
                             }
                         }

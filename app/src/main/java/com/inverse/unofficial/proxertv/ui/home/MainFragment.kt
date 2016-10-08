@@ -33,9 +33,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     private val targetRowMap = mutableMapOf<Int, ArrayObjectAdapter>()
 
     private val subscriptions = CompositeSubscription()
-    private val progressRepository = App.component.getSeriesProgressRepository()
-    private val myListRepository = App.component.getMySeriesRepository()
-    private val client = App.component.getProxerClient()
+    private val proxerRepository = App.component.getProxerRepository()
 
     private val updateSubject = PublishSubject.create<Int>()
     private var nextUpdate: Long? = null
@@ -106,7 +104,9 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     }
 
     private fun loadContent() {
-        subscriptions.add(myListRepository.observeSeriesList()
+        val syncObservable = proxerRepository.syncUserList().subscribeOn(Schedulers.io()).replay()
+
+        subscriptions.add(syncObservable.flatMap { proxerRepository.observeSeriesList() }
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({
@@ -118,10 +118,12 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
             loadEpisodesUpdateRow().takeUntil(updateSubject)
         }, getString(R.string.row_updates), 1)
 
-        loadAndAddRow(client.loadTopAccessSeries(), getString(R.string.row_top_access), 2)
-        loadAndAddRow(client.loadTopRatingSeries(), getString(R.string.row_top_rating), 3)
-        loadAndAddRow(client.loadTopRatingMovies(), getString(R.string.row_top_rating_movies), 4)
-        loadAndAddRow(client.loadAiringSeries(), getString(R.string.row_airing), 5)
+        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadTopAccessSeries() }, getString(R.string.row_top_access), 2)
+        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadTopRatingSeries() }, getString(R.string.row_top_rating), 3)
+        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadTopRatingMovies() }, getString(R.string.row_top_rating_movies), 4)
+        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadAiringSeries() }, getString(R.string.row_airing), 5)
+
+        subscriptions.add(syncObservable.connect())
     }
 
     private fun loadAndAddRow(loadObservable: Observable<List<SeriesCover>>, rowName: String, position: Int) {
@@ -174,7 +176,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         calendar.add(Calendar.DAY_OF_MONTH, -3)
         val lastUpdateDate = calendar.time
 
-        return client.loadUpdatesList()
+        return proxerRepository.loadUpdatesList()
                 // series list to single items
                 .flatMap { Observable.from(it) }
                 // discard anything older than 3 days
@@ -188,8 +190,8 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                 .map {
                     Observable.combineLatest(
                             Observable.just(it),
-                            progressRepository.observeProgress(it.id),
-                            myListRepository.observeSeriesList().map { myList -> myList.contains(it) },
+                            proxerRepository.observeSeriesProgress(it.id),
+                            proxerRepository.observeSeriesList().map { myList -> myList.contains(it) },
                             { series, progress, inList -> Triple(series, progress, inList) })
                 }
                 .toList()
@@ -217,7 +219,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                             .flatMap {
                                 Observable.zip(
                                         Observable.just(it),
-                                        client.loadEpisodesPage(it.first.id, ProxerClient.getTargetPageForEpisode(it.second + 1)),
+                                        proxerRepository.loadEpisodesPage(it.first.id, ProxerClient.getTargetPageForEpisode(it.second + 1)),
                                         { seriesProgress, episodesMap -> Triple(seriesProgress.first, seriesProgress.second, episodesMap) })
                             }
                             .filter { it.third.any { entry -> entry.value.contains(it.second + 1) } }

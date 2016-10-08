@@ -43,7 +43,5 @@ class BaseModule(val application: Application) {
 @Component(modules = arrayOf(BaseModule::class, ClientModule::class, StorageModule::class))
 interface BaseComponent {
     fun getProxerClient(): ProxerClient
-    fun getMySeriesRepository(): MySeriesDb
-    fun getSeriesProgressRepository(): SeriesProgressDb
     fun getProxerRepository(): ProxerRepository
 }

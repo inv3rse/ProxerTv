@@ -32,9 +32,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     private val actionsAdapter = ArrayObjectAdapter()
     private val subscriptions = CompositeSubscription()
 
-    private val client = App.component.getProxerClient()
-    private val progressRepository = App.component.getSeriesProgressRepository()
-    private val myListRepository = App.component.getMySeriesRepository()
+    private val proxerRepository = App.component.getProxerRepository()
 
     private var episodeSubscription: Subscription? = null
     private var series: Series? = null
@@ -77,7 +75,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                 // add or remove
                 val cover = SeriesCover(series!!.id, series!!.name)
                 if (inList) {
-                    myListRepository.removeSeries(cover.id)
+                    proxerRepository.removeSeriesFromList(cover.id)
                             .subscribeOn(Schedulers.io())
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe({ },
@@ -86,7 +84,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                                         it.printStackTrace()
                                     })
                 } else {
-                    myListRepository.addSeries(cover)
+                    proxerRepository.addSeriesToList(cover)
                             .subscribeOn(Schedulers.io())
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe({ },
@@ -126,7 +124,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     private fun loadContent() {
         val seriesId = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
 
-        seriesProgress = progressRepository.observeProgress(seriesId).replay(1).refCount()
+        seriesProgress = proxerRepository.observeSeriesProgress(seriesId).replay(1).refCount()
 
         // update episode progress
         subscriptions.add(seriesProgress
@@ -140,8 +138,8 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
 
         val observable = Observable.zip(
-                client.loadSeries(seriesId),
-                myListRepository.containsSeries(seriesId),
+                proxerRepository.loadSeries(seriesId),
+                proxerRepository.hasSeriesOnList(seriesId),
                 seriesProgress.first(),
                 { series, inList, progress -> Triple(series, inList, progress) })
 
@@ -190,7 +188,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         episodeSubscription?.unsubscribe()
 
         episodeSubscription = Observable.zip(
-                client.loadEpisodesPage(series.id, page),
+                proxerRepository.loadEpisodesPage(series.id, page),
                 seriesProgress.first(),
                 { episodes, progress -> Pair(episodes, progress) })
                 .subscribeOn(Schedulers.io())

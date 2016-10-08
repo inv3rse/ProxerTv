@@ -130,7 +130,10 @@ class LoginFragment : GuidedStepFragment() {
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
                                 // on next
-                                { login: ProxerRepository.Login -> finishGuidedStepFragments() },
+                                { login: ProxerRepository.Login ->
+                                    repository.invalidateLocalList()
+                                    finishGuidedStepFragments()
+                                },
                                 // on error
                                 { error ->
                                     if (error is ApiErrorException) {

@@ -35,6 +35,7 @@ interface ProxerApi {
      * Get the list of series for the currently logged in user
      */
     @GET("user/list")
+    @Headers("Cache-Control: no-cache")
     @WrappedResponse
     fun userList(): Observable<List<Series>>
 
