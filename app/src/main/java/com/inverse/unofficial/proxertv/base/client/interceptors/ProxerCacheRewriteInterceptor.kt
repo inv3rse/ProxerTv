@@ -13,7 +13,10 @@ class ProxerCacheRewriteInterceptor(val serverConfig: ServerConfig) : Intercepto
         val request = chain.request()
         val response = chain.proceed(request)
 
-        if (request.url().host().contains(serverConfig.host) && response.isSuccessful) {
+        if (request.url().host().contains(serverConfig.host)
+                && request.method().equals("GET", true)
+                && response.isSuccessful) {
+
             val maxAge = when (request.url().toString()) {
                 serverConfig.topAccessListUrl,
                 serverConfig.topRatingListUrl,
