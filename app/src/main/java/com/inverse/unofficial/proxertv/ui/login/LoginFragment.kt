@@ -59,7 +59,7 @@ class LoginFragment : GuidedStepFragment() {
      * @param savedInstanceState The saved instance state from onCreate.
      */
     override fun onCreateActions(actions: MutableList<GuidedAction>, savedInstanceState: Bundle?) {
-        actions.add(GuidedAction.Builder(context)
+        actions.add(GuidedAction.Builder(activity)
                 .id(USERNAME_ID)
                 .editable(true)
                 .inputType(InputType.TYPE_CLASS_TEXT)
@@ -67,7 +67,7 @@ class LoginFragment : GuidedStepFragment() {
                 .description(getString(R.string.login_username_title))
                 .build())
 
-        actions.add(GuidedAction.Builder(context)
+        actions.add(GuidedAction.Builder(activity)
                 .id(PASSWORD_ID)
                 .editable(true)
                 .inputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
@@ -75,7 +75,7 @@ class LoginFragment : GuidedStepFragment() {
                 .description(getString(R.string.login_password_title))
                 .build())
 
-        actions.add(GuidedAction.Builder(context)
+        actions.add(GuidedAction.Builder(activity)
                 .id(LOGIN_ID)
                 .title(getString(R.string.login_action_title))
                 .hasNext(true)
@@ -131,7 +131,6 @@ class LoginFragment : GuidedStepFragment() {
                         .subscribe(
                                 // on next
                                 { login: ProxerRepository.Login ->
-                                    repository.invalidateLocalList()
                                     finishGuidedStepFragments()
                                 },
                                 // on error
@@ -159,7 +158,7 @@ class LoginFragment : GuidedStepFragment() {
     }
 
     private fun showErrorMsg(msg: String) {
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
     }
 
     companion object {

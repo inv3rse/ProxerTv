@@ -57,6 +57,7 @@ class ProxerRepository(
                 .doOnNext { login ->
                     userSettings.setUser(login.username, login.password)
                     userSettings.setUserToken(login.token)
+                    invalidateLocalList()
                 }
     }
 
