@@ -41,6 +41,10 @@ class ApiResponseConverterFactory : Converter.Factory() {
     }
 }
 
+/**
+ * Annotation that wraps the model type into a [WrappedData] object and returns only the data object.
+ * If the [WrappedData] does not contain a data object or the error is set an [ApiErrorException] will be thrown.
+ */
 annotation class WrappedResponse
 
 class ApiErrorException(val code: Int?, val msg: String?) : IOException("api error: $msg") {

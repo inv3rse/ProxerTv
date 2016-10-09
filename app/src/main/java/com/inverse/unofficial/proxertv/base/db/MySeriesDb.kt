@@ -45,7 +45,7 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
 
     /**
      * Observe the series list.
-     * @return an Observable emitting the current value and any subsequent changes
+     * @return an [Observable] emitting the current value and any subsequent changes
      */
     fun observeSeriesList(): Observable<List<SeriesCover>> {
         return listObservable.concatMap { loadSeriesList() }
@@ -53,7 +53,7 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
 
     /**
      * Loads the series list.
-     * @return an Observable emitting the current value
+     * @return an [Observable] emitting the current value
      */
     fun loadSeriesList(): Observable<List<SeriesCover>> {
         return dbHelper.useAsync {
@@ -63,7 +63,7 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
 
     /**
      * Set the list of series. Deletes the current values and inserts the new ones.
-     * @return an Observable emitting onError or OnCompleted
+     * @return an [Observable] emitting onError or OnCompleted
      */
     fun setSeries(seriesList : List<Series>): Observable<Unit>  {
         return dbHelper.useAsync {
@@ -81,7 +81,7 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
     /**
      * Add a series to the list.
      * @param series series to add to the list
-     * @return an Observable emitting onError or OnCompleted
+     * @return an [Observable] emitting onError or OnCompleted
      */
     fun addSeries(series: SeriesCover): Observable<Unit> {
         return dbHelper.useAsync {
@@ -96,7 +96,7 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
     /**
      * Check if the list contains a specific series
      * @param seriesId id of the series to check for
-     * @return an Observable emitting true or false
+     * @return an [Observable] emitting true or false
      */
     fun containsSeries(seriesId: Int): Observable<Boolean> {
         return dbHelper.useAsync {
@@ -107,7 +107,7 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
     /**
      * Remove a series from the list.
      * @param seriesId id of the series to remove
-     * @return an Observable emitting onError or OnCompleted
+     * @return an [Observable] emitting onError or OnCompleted
      */
     fun removeSeries(seriesId: Int): Observable<Unit> {
         return dbHelper.useAsync {

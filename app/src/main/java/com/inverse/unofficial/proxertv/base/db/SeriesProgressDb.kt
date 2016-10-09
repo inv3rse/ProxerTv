@@ -47,7 +47,7 @@ class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
      * Set the progress for a specific series.
      * @param seriesId series to set progress for
      * @param progress progress of the series
-     * @return an Observable emitting onError or onCompleted
+     * @return an [Observable] emitting onError or onCompleted
      */
     fun setProgress(seriesId: Int, progress: Int): Observable<Unit> {
         return dbHelper.useAsync {
@@ -62,7 +62,7 @@ class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
     /**
      * Get the progress for a series
      * @param seriesId series to get the progress for
-     * @return an Observable emitting the progress
+     * @return an [Observable] emitting the progress
      */
     fun getProgress(seriesId: Int): Observable<Int> {
         return dbHelper.useAsync {
@@ -74,7 +74,7 @@ class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
     /**
      * Observe the progress for a series
      * @param seriesId series to get the progress for
-     * @return an Observable emitting the progress and any subsequent changes
+     * @return an [Observable] emitting the progress and any subsequent changes
      */
     fun observeProgress(seriesId: Int): Observable<Int> {
         return Observable.concat(

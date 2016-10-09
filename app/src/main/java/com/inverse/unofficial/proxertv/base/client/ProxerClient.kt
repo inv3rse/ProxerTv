@@ -35,34 +35,68 @@ class ProxerClient(
         httpClient.cookieJar().saveFromResponse(url, listOf(adultCookie))
     }
 
+    /**
+     * Login with username and password. If successful the login cookie will be set.
+     * @param username the username
+     * @param password the password
+     * @return an [Observable] emitting the LoginResponse or throwing an error
+     */
     fun login(username: String, password: String): Observable<LoginResponse> {
         return api.login(username, password)
     }
 
+    /**
+     * Logout the user specified by cookie.
+     * @return an [Observable] emitting the response
+     */
     fun logout(): Observable<WrappedData<Unit>> {
         return api.logout()
     }
 
+    /**
+     * Get the list of series from the currently logged in user.
+     * @return an [Observable] emitting the list of series
+     */
     fun getUserList(): Observable<List<Series>> {
         return api.userList()
     }
 
+    /**
+     * Load the top access series list.
+     * @return an [Observable] emitting the series list
+     */
     fun loadTopAccessSeries(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.topAccessListUrl)
     }
 
+    /**
+     * Load the top rating series list.
+     * @return an [Observable] emitting the series list
+     */
     fun loadTopRatingSeries(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.topRatingListUrl)
     }
 
+    /**
+     * Load the top rating movies list.
+     * @return an [Observable] emitting the movies list
+     */
     fun loadTopRatingMovies(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.topRatingMovieListUrl)
     }
 
+    /**
+     * Load the top airing series list.
+     * @return an [Observable] emitting the series list
+     */
     fun loadAiringSeries(): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.airingListUrl)
     }
 
+    /**
+     * Load the list of series updates.
+     * @return an [Observable] emitting the updates list
+     */
     fun loadUpdatesList(): Observable<List<SeriesUpdate>> {
         val request = Request.Builder().get().url(serverConfig.updatesListUrl).build()
 
@@ -100,12 +134,20 @@ class ProxerClient(
                 })
     }
 
+    /**
+     * Query all series by name
+     * @param query the name to search for
+     * @return an [Observable] emitting the matching series list
+     */
     fun searchSeries(query: String): Observable<List<SeriesCover>> {
         return loadSeriesList(serverConfig.searchUrl(query))
     }
 
     /**
-     * Returns the available episodes by sub/dub type
+     * Loads the available episodes map by sub/dub type
+     * @param seriesId the id of the series
+     * @param page the page to load (first page is 0)
+     * @return an [Observable] emitting the available episodes by sub/dub type
      */
     fun loadEpisodesPage(seriesId: Int, page: Int): Observable<Map<String, List<Int>>> {
         return api.entryEpisodes(seriesId, page, EPISODES_PER_PAGE)
@@ -119,10 +161,22 @@ class ProxerClient(
                 })
     }
 
+    /**
+     * Load the series detail information
+     * @param id the series id
+     * @return an [Observable] emitting the Series
+     */
     fun loadSeries(id: Int): Observable<Series> {
         return api.entryInfo(id)
     }
 
+    /**
+     * Load and resolve the possible streams for an episode
+     * @param seriesId the id of the series
+     * @param episode the episode number
+     * @param subType the subtype of the episode
+     * @return an [Observable] emitting {@link Stream}s in the order they are resolved to the video file
+     */
     fun loadEpisodeStreams(seriesId: Int, episode: Int, subType: String): Observable<Stream> {
         val request = Request.Builder().get().url(serverConfig.episodeStreamsUrl(seriesId, episode, subType)).build()
 
@@ -195,6 +249,11 @@ class ProxerClient(
     companion object {
         const val EPISODES_PER_PAGE = 50
 
+        /**
+         * Get the target page for the episode num.
+         * @param episodeNum the episode number (starting with 1)
+         * @return the target page
+         */
         fun getTargetPageForEpisode(episodeNum: Int): Int {
             return Math.max(episodeNum - 1, 0) / EPISODES_PER_PAGE
         }

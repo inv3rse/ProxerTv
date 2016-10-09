@@ -10,7 +10,7 @@ import rx.Observable
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Repository combining the {@link ProxerClient} and local databases.
+ * Repository combining the [ProxerClient] and local databases ([MySeriesDb], [SeriesProgressDb]).
  * Handles the login and synchronizes the local db with online data.
  */
 class ProxerRepository(
@@ -26,7 +26,7 @@ class ProxerRepository(
      *
      * @param username the username
      * @param password the password
-     * @return the Observable emitting the login object or throwing an error
+     * @return the [Observable] emitting the login object or throwing an error
      */
     fun login(username: String, password: String): Observable<Login> {
 
@@ -64,7 +64,7 @@ class ProxerRepository(
     /**
      * Log the current user out.
      *
-     * @return an Observable emitting true or throwing an error
+     * @return an [Observable] emitting true or throwing an error
      */
     fun logout(): Observable<Boolean> {
         userSettings.clearUser()
@@ -75,7 +75,7 @@ class ProxerRepository(
      * Sync the series list if a user is signed in and 30 minutes have passed since the last sync.
      *
      * @param forceSync sync even if the time has not passed jet
-     * @return an Observable emitting true if the list was synced
+     * @return an [Observable] emitting true if the list was synced
      */
     fun syncUserList(forceSync: Boolean = false): Observable<Boolean> {
         val user = userSettings.getUser()
@@ -122,50 +122,113 @@ class ProxerRepository(
     }
 
     /**
-     * Force a sync the next time syncUserList is called.
+     * Remove a series from the users list
+     * @param seriesId the id of the series
+     * @return an [Observable] emitting onError or OnCompleted
      */
-    fun invalidateLocalList() {
-        lastSync.set(0)
-    }
-
     fun removeSeriesFromList(seriesId: Int): Observable<Unit> {
         return mySeriesDb.removeSeries(seriesId)
     }
 
+    /**
+     * Adds a series to the users list
+     * @param series the series to add
+     * @return an [Observable] emitting onError or OnCompleted
+     */
     fun addSeriesToList(series: SeriesCover): Observable<Unit> {
         return mySeriesDb.addSeries(series)
     }
 
+    /**
+     * Get the progress for a series.
+     * @param seriesId the id of the series
+     * @return an [Observable] emitting the progress
+     */
     fun getSeriesProgress(seriesId: Int): Observable<Int> {
         return progressDatabase.getProgress(seriesId)
     }
 
+    /**
+     * Set the progress for a series.
+     * @param seriesId the id of the series
+     * @param progress the progress to set
+     * @return an [Observable] emitting onError or OnCompleted
+     */
     fun setSeriesProgress(seriesId: Int, progress: Int): Observable<Unit> {
         return progressDatabase.setProgress(seriesId, progress)
     }
 
+    /**
+     * Load the top access series list.
+     * @return an [Observable] emitting the series list
+     */
     fun loadTopAccessSeries() = client.loadTopAccessSeries()
 
+    /**
+     * Load the top rating series list.
+     * @return an [Observable] emitting the series list
+     */
     fun loadTopRatingSeries() = client.loadTopRatingSeries()
 
+    /**
+     * Load the top rating movies list.
+     * @return an [Observable] emitting the movies list
+     */
     fun loadTopRatingMovies() = client.loadTopRatingMovies()
 
+    /**
+     * Load the top airing series list.
+     * @return an [Observable] emitting the series list
+     */
     fun loadAiringSeries() = client.loadAiringSeries()
 
+    /**
+     * Load the list of series updates.
+     * @return an [Observable] emitting the updates list
+     */
     fun loadUpdatesList() = client.loadUpdatesList()
 
     /**
-     * Returns the available episodes by sub/dub type
+     * Loads the available episodes map by sub/dub type
+     * @param seriesId the id of the series
+     * @param page the page to load (first page is 0)
+     * @return an [Observable] emitting the available episodes by sub/dub type
      */
     fun loadEpisodesPage(seriesId: Int, page: Int) = client.loadEpisodesPage(seriesId, page)
 
+    /**
+     * Load the series detail information
+     * @param id the series id
+     * @return an Observable emitting the Series
+     */
     fun loadSeries(id: Int) = client.loadSeries(id)
 
+    /**
+     * Observe the series list.
+     * @return an [Observable] emitting the current value and any subsequent changes
+     */
     fun observeSeriesList() = mySeriesDb.observeSeriesList()
 
+    /**
+     * Check if the list contains a specific series
+     * @param seriesId id of the series to check for
+     * @return an [Observable] emitting true or false
+     */
     fun hasSeriesOnList(seriesId: Int) = mySeriesDb.containsSeries(seriesId)
 
+    /**
+     * Observe the progress for a series
+     * @param seriesId series to get the progress for
+     * @return an [Observable] emitting the progress and any subsequent changes
+     */
     fun observeSeriesProgress(seriesId: Int) = progressDatabase.observeProgress(seriesId)
+
+    /**
+     * Force a sync the next time syncUserList is called.
+     */
+    private fun invalidateLocalList() {
+        lastSync.set(0)
+    }
 
     data class Login(
             val username: String,
