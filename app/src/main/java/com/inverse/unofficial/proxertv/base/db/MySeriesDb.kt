@@ -40,7 +40,7 @@ class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAM
     }
 }
 
-class MySeriesDb(val dbHelper: SeriesDbHelper) {
+open class MySeriesDb(val dbHelper: SeriesDbHelper) {
     private val listObservable = SerializedSubject(BehaviorSubject.create<Unit>(Unit))
 
     /**

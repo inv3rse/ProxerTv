@@ -1,27 +1,18 @@
 package com.inverse.unofficial.proxertv.base.client
 
-import com.google.gson.Gson
-import com.inverse.unofficial.proxertv.base.client.util.ApiResponseConverterFactory
-import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
-import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesUpdate
-import com.inverse.unofficial.proxertv.model.ServerConfig
 import loadResponse
-import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Retrofit
-import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory
-import retrofit2.converter.gson.GsonConverterFactory
+import provideTestClient
 import rx.observers.TestSubscriber
 import subscribeAssert
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class ProxerClientTest {
     lateinit var mockServer: MockWebServer
@@ -32,22 +23,7 @@ class ProxerClientTest {
         mockServer = MockWebServer()
         mockServer.start()
 
-        val httpClient = OkHttpClient.Builder().connectTimeout(180, TimeUnit.SECONDS)
-                .readTimeout(180, TimeUnit.SECONDS)
-                .build()
-        val resolvers = listOf(ProxerStreamResolver(httpClient), StreamCloudResolver(httpClient))
-        val mockServerUrl = mockServer.url("/")
-        val serverConfig = ServerConfig(mockServerUrl.scheme(), mockServerUrl.host() + ":" + mockServerUrl.port())
-        val gson = Gson()
-        val api = Retrofit.Builder()
-                .baseUrl(serverConfig.apiBaseUrl)
-                .client(httpClient)
-                .addConverterFactory(ApiResponseConverterFactory())
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .build().create(ProxerApi::class.java)
-
-        proxerClient = ProxerClient(httpClient, api, gson, resolvers, serverConfig)
+        proxerClient = provideTestClient(mockServer)
     }
 
     @After
