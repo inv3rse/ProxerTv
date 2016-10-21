@@ -8,6 +8,7 @@ import com.inverse.unofficial.proxertv.model.ServerConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okio.Okio
 import retrofit2.Retrofit
@@ -58,4 +59,51 @@ fun <T> Observable<T>.subscribeAssert(assert: TestSubscriber<T>.() -> Unit): Sub
     subscriber.awaitTerminalEvent()
     subscriber.assert()
     return subscription
+}
+
+/**
+ * Provides mock responses for the [ProxerApi]
+ */
+object ApiResponses {
+
+    /**
+     * Get a successful login response
+     * @param token the response token
+     * @return the response
+     */
+    fun getSuccessFulLoginResponse(token: String): MockResponse {
+        return MockResponse().setBody("{" +
+                "\"error\": 0," +
+                "\"message\": \"Login erfolgreich\"," +
+                "\"data\": {" +
+                "\"uid\": \"12345\"," +
+                "\"avatar\": \"122345.jpg\"," +
+                "\"token\": \"" + token + "\"" +
+                "}}")
+    }
+
+    /**
+     * Get a successful logout response
+     * @return the response
+     */
+    fun getLogoutResponse(): MockResponse {
+        return MockResponse().setBody("{" +
+                "\"error\": 0," +
+                "\"message\": \"Logout successfull\"" +
+                "}")
+    }
+
+    /**
+     * Get a error response
+     * @param errorCode the error code
+     * @param msg the error message
+     * @return the response
+     */
+    fun getErrorResponse(errorCode: Int, msg: String): MockResponse {
+        return MockResponse().setBody("{" +
+                "\"error\": 1," +
+                "\"message\": \"" + msg + "\"," +
+                "\"code\": " + errorCode +
+                "}")
+    }
 }

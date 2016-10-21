@@ -1,18 +1,23 @@
 package com.inverse.unofficial.proxertv.base
 
+import ApiResponses
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
+import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
-import okhttp3.mockwebserver.MockResponse
+import com.nhaarman.mockito_kotlin.*
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito
 import provideTestClient
+import rx.Observable
 import subscribeAssert
 
+/**
+ * Test cases for the [ProxerRepository]
+ */
 class ProxerRepositoryTest {
     private lateinit var mockServer: MockWebServer
 
@@ -28,8 +33,8 @@ class ProxerRepositoryTest {
         mockServer.start()
 
         client = provideTestClient(mockServer)
-        mySeriesDb = Mockito.mock(MySeriesDb::class.java)
-        seriesPrgressDb = Mockito.mock(SeriesProgressDb::class.java)
+        mySeriesDb = mock()
+        seriesPrgressDb = mock()
         userSettings = UserSettingsMemory()
 
         repository = ProxerRepository(client, mySeriesDb, seriesPrgressDb, userSettings)
@@ -42,7 +47,7 @@ class ProxerRepositoryTest {
 
     @Test
     fun testLogin() {
-        mockServer.enqueue(getSuccessFulLoginResponse())
+        mockServer.enqueue(ApiResponses.getSuccessFulLoginResponse(TEST_TOKEN))
 
         repository.login(TEST_USER, TEST_PASSWORD)
                 .subscribeAssert {
@@ -56,7 +61,7 @@ class ProxerRepositoryTest {
     @Test
     fun testAlreadyLoggedInIsSuccessful() {
         userSettings.setUserToken(TEST_TOKEN)
-        mockServer.enqueue(getErrorResponse(3012, "Der User ist bereits angemeldet"))
+        mockServer.enqueue(ApiResponses.getErrorResponse(3012, "Der User ist bereits angemeldet"))
 
         repository.login(TEST_USER, TEST_PASSWORD)
                 .subscribeAssert {
@@ -69,9 +74,9 @@ class ProxerRepositoryTest {
 
     @Test
     fun testLoginRetryAfterLogout() {
-        mockServer.enqueue(getErrorResponse(3013, "Ein anderer User ist bereits eingeloggt"))
-        mockServer.enqueue(getLogoutResponse())
-        mockServer.enqueue(getSuccessFulLoginResponse())
+        mockServer.enqueue(ApiResponses.getErrorResponse(3013, "Ein anderer User ist bereits eingeloggt"))
+        mockServer.enqueue(ApiResponses.getLogoutResponse())
+        mockServer.enqueue(ApiResponses.getSuccessFulLoginResponse(TEST_TOKEN))
 
         repository.login(TEST_USER, TEST_PASSWORD)
                 .subscribeAssert {
@@ -83,8 +88,28 @@ class ProxerRepositoryTest {
     }
 
     @Test
+    fun testLoginFailure() {
+        mockServer.enqueue(ApiResponses.getErrorResponse(3001, "Ungültige Login-Daten"))
+
+        repository.login(TEST_USER, TEST_PASSWORD)
+                .subscribeAssert {
+                    assertError(ApiErrorException::class.java)
+                }
+
+        // should retry at max once
+        mockServer.enqueue(ApiResponses.getErrorResponse(3013, "Ein anderer User ist bereits eingeloggt"))
+        mockServer.enqueue(ApiResponses.getLogoutResponse())
+        mockServer.enqueue(ApiResponses.getErrorResponse(3013, "Ein anderer User ist bereits eingeloggt"))
+
+        repository.login(TEST_USER, TEST_PASSWORD)
+                .subscribeAssert {
+                    assertError(ApiErrorException::class.java)
+                }
+    }
+
+    @Test
     fun testLogout() {
-        mockServer.enqueue(getLogoutResponse())
+        mockServer.enqueue(ApiResponses.getLogoutResponse())
 
         userSettings.setUser(TEST_USER, TEST_PASSWORD)
         userSettings.setUserToken(TEST_TOKEN)
@@ -98,30 +123,19 @@ class ProxerRepositoryTest {
         assertEquals(null, userSettings.getUser())
     }
 
-    private fun getSuccessFulLoginResponse(): MockResponse {
-        return MockResponse().setBody("{" +
-                "\"error\": 0," +
-                "\"message\": \"Login erfolgreich\"," +
-                "\"data\": {" +
-                "\"uid\": \"12345\"," +
-                "\"avatar\": \"122345.jpg\"," +
-                "\"token\": \"" + TEST_TOKEN + "\"" +
-                "}}")
-    }
+    @Test
+    fun testSetProgress() {
+        // no user, offline only
+        userSettings.clearUser()
+        whenever(seriesPrgressDb.setProgress(any(), any())).thenReturn(Observable.empty())
 
-    private fun getLogoutResponse(): MockResponse {
-        return MockResponse().setBody("{" +
-                "\"error\": 0," +
-                "\"message\": \"Logout successfull\"" +
-                "}")
-    }
+        repository.setSeriesProgress(1234, 5)
+                .subscribeAssert {
+                    assertNoErrors()
+                    assertNoValues()
+                }
 
-    private fun getErrorResponse(errorCode: Int, msg: String): MockResponse {
-        return MockResponse().setBody("{" +
-                "\"error\": 1," +
-                "\"message\": \"" + msg + "\"," +
-                "\"code\": " + errorCode +
-                "}")
+        verify(seriesPrgressDb).setProgress(eq(1234), eq(5))
     }
 
     companion object {

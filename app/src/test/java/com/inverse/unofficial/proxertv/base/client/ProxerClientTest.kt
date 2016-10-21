@@ -1,5 +1,7 @@
 package com.inverse.unofficial.proxertv.base.client
 
+import ApiResponses
+import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesUpdate
 import loadResponse
@@ -144,5 +146,22 @@ class ProxerClientTest {
 //            assertNoErrors()
 //            print(onNextEvents)
 //        }
+    }
+
+    @Test
+    fun testApiErrorExceptionThrown() {
+        mockServer.enqueue(ApiResponses.getErrorResponse(3003, "User existiert nicht"))
+        proxerClient.getUserList().subscribeAssert {
+            assertError(ApiErrorException::class.java)
+            assertEquals(3003, (onErrorEvents[0] as ApiErrorException).code)
+            assertEquals("User existiert nicht", (onErrorEvents[0] as ApiErrorException).msg)
+        }
+
+        mockServer.enqueue(ApiResponses.getErrorResponse(2000, "IP von Firewall geblockt."))
+        proxerClient.loadSeries(1234).subscribeAssert {
+            assertError(ApiErrorException::class.java)
+            assertEquals(2000, (onErrorEvents[0] as ApiErrorException).code)
+            assertEquals("IP von Firewall geblockt.", (onErrorEvents[0] as ApiErrorException).msg)
+        }
     }
 }
