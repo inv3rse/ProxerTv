@@ -14,6 +14,9 @@ import rx.observers.TestSubscriber
 import subscribeAssert
 import java.util.concurrent.TimeUnit
 
+/**
+ * Test cases for the [MySeriesDb]
+ */
 @RunWith(AndroidJUnit4::class)
 class MySeriesDbTest {
 
