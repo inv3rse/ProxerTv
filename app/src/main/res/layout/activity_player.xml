@@ -16,6 +16,7 @@
 
 <FrameLayout android:id="@+id/player_root_frame"
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black"
@@ -34,6 +35,15 @@
             android:layout_gravity="center" />
 
     </com.google.android.exoplayer2.ui.AspectRatioFrameLayout>
+
+    <ProgressBar
+        android:id="@+id/player_buffer_spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminate="true"
+        android:visibility="invisible"
+        tools:visibility="visible" />
 
     <fragment
         android:id="@+id/playback_controls_fragment"
