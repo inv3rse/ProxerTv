@@ -105,7 +105,7 @@ dependencies {
     compile 'org.jsoup:jsoup:1.9.2'
 
     // ExoPlayer
-    compile 'com.google.android.exoplayer:exoplayer:r1.5.10'
+    compile 'com.google.android.exoplayer:exoplayer:r2.0.4'
 
     // Dagger 2
     def dagger_version = '2.6.1'

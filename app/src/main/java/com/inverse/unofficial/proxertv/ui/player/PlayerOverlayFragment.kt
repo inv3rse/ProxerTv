@@ -18,9 +18,9 @@ import android.view.SurfaceView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
-import com.google.android.exoplayer.AspectRatioFrameLayout
-import com.google.android.exoplayer.ExoPlaybackException
-import com.google.android.exoplayer.ExoPlayer
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
@@ -91,7 +91,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
         mediaSession.isActive = true
 
-        videoPlayer = VideoPlayer(savedInstanceState)
+        videoPlayer = VideoPlayer(activity, savedInstanceState)
         videoPlayer.setStatusListener(PlayerListener())
     }
 
@@ -141,6 +141,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     override fun onStop() {
         super.onStop()
         Timber.d("onStop")
+        videoPlayer.disconnectFromUi()
         pause()
     }
 
@@ -381,7 +382,6 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         override fun playStatusChanged(isPlaying: Boolean, playbackState: Int) {
             state = when (playbackState) {
                 ExoPlayer.STATE_IDLE -> PlaybackState.STATE_NONE
-                ExoPlayer.STATE_PREPARING -> PlaybackState.STATE_CONNECTING
                 ExoPlayer.STATE_BUFFERING -> if (isPlaying)
                     PlaybackState.STATE_BUFFERING else
                     PlaybackState.STATE_PAUSED
