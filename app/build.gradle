@@ -27,13 +27,13 @@ if (hasProperty(signing)) {
 }
 
 android {
-    compileSdkVersion 24
-    buildToolsVersion "24.0.2"
+    compileSdkVersion 25
+    buildToolsVersion "25"
 
     defaultConfig {
         applicationId "com.inverse.unofficial.proxertv"
         minSdkVersion 21
-        targetSdkVersion 24
+        targetSdkVersion 25
         versionCode 7
         versionName "Alpha 7"
 
@@ -76,7 +76,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Support Library
-    def support_library_version = '24.2.1'
+    def support_library_version = '25.0.0'
     compile "com.android.support:leanback-v17:$support_library_version"
 
     // Glide
