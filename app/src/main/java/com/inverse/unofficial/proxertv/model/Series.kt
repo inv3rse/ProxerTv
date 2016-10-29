@@ -23,6 +23,7 @@ data class Series(
     companion object {
         @JvmField val CREATOR = PaperParcelable.Creator(Series::class.java)
 
+        // ------------ User list state ------------
         const val STATE_USER_FINISHED = 0
         const val STATE_USER_WATCHING = 1
         const val STATE_USER_BOOKMARKED = 2

@@ -2,6 +2,7 @@ package com.inverse.unofficial.proxertv.base.db
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import org.jetbrains.anko.db.*
@@ -95,6 +96,23 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
                         SeriesScheme.COMMENT_ID to series.cid)
             }
         }.doOnCompleted { notifyListChange() }
+    }
+
+    /**
+     * Get the series for a given id if it exists.
+     * @param seriesId the series id
+     * @return an [Observable] emitting the [SeriesCover] or throwing an error
+     */
+    fun getSeries(seriesId: Int): Observable<SeriesCover> {
+        return dbHelper.useAsync {
+            select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} ) $seriesId)").exec {
+                if (count == 1) {
+                    parseSingle(SeriesRowParser())
+                } else {
+                    throw SQLiteException("no series for id \"$seriesId\"")
+                }
+            }
+        }
     }
 
     /**

@@ -122,6 +122,13 @@ class ProxerRepository(
      * @return an [Observable] emitting onError or OnCompleted
      */
     fun removeSeriesFromList(seriesId: Int): Observable<Unit> {
+        if (userSettings.getUser() != null) {
+            // get the users comment id for the series
+//            mySeriesDb.getSeries(seriesId)
+//                    .filter { it.cid != SeriesCover.NO_COMMENT_ID }
+
+        }
+
         return mySeriesDb.removeSeries(seriesId)
     }
 
