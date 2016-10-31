@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
      Copyright (C) 2014 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,14 +14,15 @@
      limitations under the License.
 -->
 
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-             android:id="@+id/player_root_frame"
-             android:layout_width="match_parent"
-             android:layout_height="match_parent"
-             android:background="@android:color/black"
-             android:keepScreenOn="true">
+<FrameLayout android:id="@+id/player_root_frame"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:keepScreenOn="true">
 
-    <com.google.android.exoplayer.AspectRatioFrameLayout
+    <com.google.android.exoplayer2.ui.AspectRatioFrameLayout
         android:id="@+id/player_ratio_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -32,14 +32,23 @@
             android:id="@+id/player_surface_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center"/>
+            android:layout_gravity="center" />
 
-    </com.google.android.exoplayer.AspectRatioFrameLayout>
+    </com.google.android.exoplayer2.ui.AspectRatioFrameLayout>
+
+    <ProgressBar
+        android:id="@+id/player_buffer_spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminate="true"
+        android:visibility="invisible"
+        tools:visibility="visible" />
 
     <fragment
         android:id="@+id/playback_controls_fragment"
         android:name="com.inverse.unofficial.proxertv.ui.player.PlayerOverlayFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent" />
 
 </FrameLayout>
