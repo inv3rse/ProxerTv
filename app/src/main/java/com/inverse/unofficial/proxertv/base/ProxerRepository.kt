@@ -38,21 +38,18 @@ class ProxerRepository(
                         Observable.just(Login(username, password, userSettings.getUserToken())) else
                         Observable.error(error)
                 }
-                // retry if another user was signed in after we log him out
-                .retryWhen {
-                    // pair error with retry counter
-                    it.zipWith(Observable.range(0, 10), { error, count -> Pair(error, count) })
-                            .flatMap { pair ->
-                                val error = pair.first
-                                val count = pair.second
-                                // retry at most once
-                                if (count < 1 && error is ApiErrorException && ApiErrorException.OTHER_USER_ALREADY_SIGNED_IN == error.code)
-                                // logout
-                                    client.logout() else
-                                // abort with the original error
-                                    Observable.error(error as Throwable)
-                            }
-                }
+                // logout if an other user was signed in and try again
+                .compose(retryAfter<Login>(MAX_LOGIN_RETRY_COUNT, { errorCount: Int, error: Throwable ->
+                    if (errorCount < MAX_LOGIN_RETRY_COUNT && error is ApiErrorException
+                            && ApiErrorException.OTHER_USER_ALREADY_SIGNED_IN == error.code) {
+
+                        // retry after logout
+                        client.logout()
+                    } else {
+                        // abort with the original error
+                        Observable.error<Login>(error)
+                    }
+                }))
                 // save the login data (the backing SharedPreferences are thread safe)
                 .doOnNext { login ->
                     userSettings.setUser(login.username, login.password)
@@ -82,22 +79,20 @@ class ProxerRepository(
 
         // only sync if we are logged in and LIST_SYNC_DELAY has passed or forced
         if (user != null && (forceSync || System.currentTimeMillis() > (lastSync.get() + LIST_SYNC_DELAY))) {
+
             return client.getUserList()
-                    // retry if if we are not logged in anymore
-                    .retryWhen {
-                        // retry counter
-                        it.zipWith(Observable.range(0, 10), { error, count -> Pair(error, count) })
-                                .flatMap { pair ->
-                                    val error = pair.first
-                                    val count = pair.second
-                                    // retry at most once
-                                    if (count < 1 && error is ApiErrorException && ApiErrorException.USER_DOES_NOT_EXISTS == error.code)
-                                    // login again
-                                        login(user.username, user.password) else
-                                    // abort with the original error
-                                        Observable.error(error as Throwable)
-                                }
-                    }
+                    // retry after login if if we are not logged in anymore
+                    .compose(retryAfter<List<Series>>(MAX_LOGIN_RETRY_COUNT, { errorCount: Int, error: Throwable ->
+                        if (errorCount < MAX_LOGIN_RETRY_COUNT && error is ApiErrorException
+                                && ApiErrorException.USER_DOES_NOT_EXISTS == error.code) {
+
+                            // retry again after login
+                            login(user.username, user.password)
+                        } else {
+                            // abort with the original error
+                            Observable.error<List<Series>>(error)
+                        }
+                    }))
                     // list to single elements
                     .flatMap { Observable.from(it) }
                     // filter only active and bookmarked
@@ -127,6 +122,13 @@ class ProxerRepository(
      * @return an [Observable] emitting onError or OnCompleted
      */
     fun removeSeriesFromList(seriesId: Int): Observable<Unit> {
+        if (userSettings.getUser() != null) {
+            // get the users comment id for the series
+//            mySeriesDb.getSeries(seriesId)
+//                    .filter { it.cid != SeriesCover.NO_COMMENT_ID }
+
+        }
+
         return mySeriesDb.removeSeries(seriesId)
     }
 
@@ -236,8 +238,33 @@ class ProxerRepository(
             val token: String?
     )
 
+    /**
+     * Get a [Observable.Transformer] that adds the retry logic
+     * @param maxCount the max retry count
+     * @param checkFun the function that decides if we try again.
+     *      If the Observable emits onNext we retry
+     *      onError or onCompleted get passed to the subscriber directly
+     */
+    private fun <T> retryAfter(maxCount: Int, checkFun: (count: Int, error: Throwable) -> Observable<*>): Observable.Transformer<T, T> {
+        return Observable.Transformer<T, T> { observable ->
+            observable.retryWhen { notificationObservable: Observable<out Throwable> ->
+                notificationObservable
+                        // zip with retry counter
+                        .zipWith(Observable.range(0, maxCount + 1), { error, count -> Pair(error, count) })
+                        // let the checkFun decide if we retry
+                        .flatMap { pair ->
+                            val error = pair.first as Throwable
+                            val count = pair.second
+
+                            checkFun(count, error)
+                        }
+            }
+        }
+    }
+
     companion object {
-        const val LIST_SYNC_DELAY = 30 * 60 * 60 * 1000 // 30 min in millis
+        private const val LIST_SYNC_DELAY = 30 * 60 * 60 * 1000 // 30 min in millis
+        private const val MAX_LOGIN_RETRY_COUNT = 1
     }
 }
 

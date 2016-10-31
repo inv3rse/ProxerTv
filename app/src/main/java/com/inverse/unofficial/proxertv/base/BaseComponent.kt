@@ -24,7 +24,7 @@ class BaseModule(val application: Application) {
     @Singleton
     fun provideUserSettings(application: Application): UserSettings {
         val prefs = application.getSharedPreferences("userSettings", Context.MODE_PRIVATE)
-        return UserSettings(prefs)
+        return UserSettingsPrefs(prefs)
     }
 
     @Provides

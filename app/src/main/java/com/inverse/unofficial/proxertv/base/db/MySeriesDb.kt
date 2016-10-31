@@ -2,6 +2,7 @@ package com.inverse.unofficial.proxertv.base.db
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import org.jetbrains.anko.db.*
@@ -13,13 +14,15 @@ internal object SeriesScheme {
     const val TABLE = "mySeries"
     const val ID = "id"
     const val TITLE = "title"
+    const val COMMENT_ID = "commentId"
 }
 
 class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
     override fun onCreate(db: SQLiteDatabase) {
         db.createTable(SeriesScheme.TABLE, true,
                 SeriesScheme.ID to INTEGER + PRIMARY_KEY + UNIQUE,
-                SeriesScheme.TITLE to TEXT)
+                SeriesScheme.TITLE to TEXT,
+                SeriesScheme.COMMENT_ID to INTEGER)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -36,11 +39,11 @@ class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAM
 
     companion object {
         private const val DB_NAME = "mySeriesList.db"
-        private const val DB_VERSION = 2
+        private const val DB_VERSION = 3
     }
 }
 
-class MySeriesDb(val dbHelper: SeriesDbHelper) {
+open class MySeriesDb(val dbHelper: SeriesDbHelper) {
     private val listObservable = SerializedSubject(BehaviorSubject.create<Unit>(Unit))
 
     /**
@@ -65,14 +68,15 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * Set the list of series. Deletes the current values and inserts the new ones.
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun setSeries(seriesList : List<Series>): Observable<Unit>  {
+    fun setSeries(seriesList: List<Series>): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
                 delete(SeriesScheme.TABLE)
-                for ((id, name) in seriesList) {
+                for ((id, name, cid) in seriesList) {
                     insert(SeriesScheme.TABLE,
                             SeriesScheme.ID to id,
-                            SeriesScheme.TITLE to name)
+                            SeriesScheme.TITLE to name,
+                            SeriesScheme.COMMENT_ID to cid)
                 }
             }
         }.doOnCompleted { notifyListChange() }
@@ -88,9 +92,27 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
             transaction {
                 insert(SeriesScheme.TABLE,
                         SeriesScheme.ID to series.id,
-                        SeriesScheme.TITLE to series.title)
+                        SeriesScheme.TITLE to series.title,
+                        SeriesScheme.COMMENT_ID to series.cid)
             }
         }.doOnCompleted { notifyListChange() }
+    }
+
+    /**
+     * Get the series for a given id if it exists.
+     * @param seriesId the series id
+     * @return an [Observable] emitting the [SeriesCover] or throwing an error
+     */
+    fun getSeries(seriesId: Int): Observable<SeriesCover> {
+        return dbHelper.useAsync {
+            select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} ) $seriesId)").exec {
+                if (count == 1) {
+                    parseSingle(SeriesRowParser())
+                } else {
+                    throw SQLiteException("no series for id \"$seriesId\"")
+                }
+            }
+        }
     }
 
     /**
@@ -123,7 +145,7 @@ class MySeriesDb(val dbHelper: SeriesDbHelper) {
 
     private class SeriesRowParser : RowParser<SeriesCover> {
         @Suppress("ConvertLambdaToReference")
-        private val parser = rowParser { id: Int, title: String -> SeriesCover(id, title) }
+        private val parser = rowParser { id: Int, title: String, cid: Long -> SeriesCover(id, title, cid) }
 
         override fun parseRow(columns: Array<Any>): SeriesCover {
             return parser.parseRow(columns)

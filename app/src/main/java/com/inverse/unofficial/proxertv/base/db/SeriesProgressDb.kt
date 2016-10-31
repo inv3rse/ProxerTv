@@ -39,7 +39,7 @@ class SeriesProgressDbHelper(context: Context) : ManagedSQLiteOpenHelper(context
     }
 }
 
-class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
+open class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
     // Pair<SeriesId, Progress>
     private val changeSubject = SerializedSubject(PublishSubject.create<Pair<Int, Int>>())
 
@@ -49,7 +49,7 @@ class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
      * @param progress progress of the series
      * @return an [Observable] emitting onError or onCompleted
      */
-    fun setProgress(seriesId: Int, progress: Int): Observable<Unit> {
+    open fun setProgress(seriesId: Int, progress: Int): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
                 replace(SeriesProgressScheme.TABLE,
