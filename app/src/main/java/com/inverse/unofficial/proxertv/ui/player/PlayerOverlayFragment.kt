@@ -15,12 +15,13 @@ import android.os.Bundle
 import android.support.v17.leanback.app.PlaybackOverlayFragment
 import android.support.v17.leanback.widget.*
 import android.view.SurfaceView
+import android.view.View
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
-import com.google.android.exoplayer.AspectRatioFrameLayout
-import com.google.android.exoplayer.ExoPlaybackException
-import com.google.android.exoplayer.ExoPlayer
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
@@ -61,6 +62,9 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
     private var hasAudioFocus: Boolean = false
     private var pauseTransient: Boolean = false
+
+    private var progressSpinner: View? = null
+
     private val mOnAudioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_LOSS -> {
@@ -91,7 +95,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
         mediaSession.isActive = true
 
-        videoPlayer = VideoPlayer(savedInstanceState)
+        videoPlayer = VideoPlayer(activity, savedInstanceState)
         videoPlayer.setStatusListener(PlayerListener())
     }
 
@@ -100,6 +104,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         Timber.d("onActivityCreated")
 
         activity.mediaController = MediaController(activity, mediaSession.sessionToken)
+        progressSpinner = activity.findViewById(R.id.player_buffer_spinner)
 
         // connect session to controls
         playbackControlsHelper = PlaybackControlsHelper(activity, this)
@@ -141,6 +146,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     override fun onStop() {
         super.onStop()
         Timber.d("onStop")
+        videoPlayer.disconnectFromUi()
         pause()
     }
 
@@ -381,7 +387,6 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         override fun playStatusChanged(isPlaying: Boolean, playbackState: Int) {
             state = when (playbackState) {
                 ExoPlayer.STATE_IDLE -> PlaybackState.STATE_NONE
-                ExoPlayer.STATE_PREPARING -> PlaybackState.STATE_CONNECTING
                 ExoPlayer.STATE_BUFFERING -> if (isPlaying)
                     PlaybackState.STATE_BUFFERING else
                     PlaybackState.STATE_PAUSED
@@ -391,6 +396,10 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 ExoPlayer.STATE_ENDED -> PlaybackState.STATE_STOPPED
                 else -> PlaybackState.STATE_NONE
             }
+
+            progressSpinner?.visibility = if (playbackState == ExoPlayer.STATE_BUFFERING && isPlaying)
+                View.VISIBLE else
+                View.INVISIBLE
 
             if (playbackState == ExoPlayer.STATE_ENDED) {
                 activity.finish()
