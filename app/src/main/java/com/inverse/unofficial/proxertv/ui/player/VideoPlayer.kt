@@ -11,8 +11,10 @@ import android.view.SurfaceView
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.exoplayer2.source.TrackGroupArray
 import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
@@ -40,7 +42,7 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
     init {
         val bandwidthMeter = DefaultBandwidthMeter()
         val videoTrackSelectionFactory = AdaptiveVideoTrackSelection.Factory(bandwidthMeter)
-        mTrackSelector = DefaultTrackSelector(Handler(), videoTrackSelectionFactory)
+        mTrackSelector = DefaultTrackSelector(videoTrackSelectionFactory)
         val loadControl = DefaultLoadControl()
 
         mPlayer = ExoPlayerFactory.newSimpleInstance(context, mTrackSelector, loadControl)
@@ -240,6 +242,7 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
     }
 
     private inner class ExoPlayerListener : ExoPlayer.EventListener {
+
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             if (playWhenReady) {
                 startProgressUpdate()
@@ -260,6 +263,9 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
         override fun onTimelineChanged(timeline: Timeline?, manifest: Any?) {
         }
 
+        override fun onTracksChanged(trackGroups: TrackGroupArray, trackSelections: TrackSelectionArray) {
+        }
+
         override fun onPlayerError(error: ExoPlaybackException) {
             mStatusListener?.onError(error)
         }
@@ -269,9 +275,6 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
         override fun onVideoSizeChanged(width: Int, height: Int, unappliedRotationDegrees: Int, pixelWidthHeightRatio: Float) {
             mAspectRatio = if (height == 0) 1F else width * pixelWidthHeightRatio / height
             mAspectRatioFrameLayout?.setAspectRatio(mAspectRatio)
-        }
-
-        override fun onVideoTracksDisabled() {
         }
 
         override fun onRenderedFirstFrame() {

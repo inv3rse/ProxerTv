@@ -147,7 +147,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
         @Suppress("ConvertLambdaToReference")
         private val parser = rowParser { id: Int, title: String, cid: Long -> SeriesCover(id, title, cid) }
 
-        override fun parseRow(columns: Array<Any>): SeriesCover {
+        override fun parseRow(columns: Array<Any?>): SeriesCover {
             return parser.parseRow(columns)
         }
     }
