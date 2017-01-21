@@ -82,17 +82,7 @@ class ProxerRepository(
 
             return client.getUserList()
                     // retry after login if if we are not logged in anymore
-                    .compose(retryAfter<List<Series>>(MAX_LOGIN_RETRY_COUNT, { errorCount: Int, error: Throwable ->
-                        if (errorCount < MAX_LOGIN_RETRY_COUNT && error is ApiErrorException
-                                && ApiErrorException.USER_DOES_NOT_EXISTS == error.code) {
-
-                            // retry again after login
-                            login(user.username, user.password)
-                        } else {
-                            // abort with the original error
-                            Observable.error<List<Series>>(error)
-                        }
-                    }))
+                    .compose(retryAfterLogin<List<Series>>())
                     // list to single elements
                     .flatMap { Observable.from(it) }
                     // filter only active and bookmarked
@@ -157,6 +147,10 @@ class ProxerRepository(
      * @return an [Observable] emitting onError or OnCompleted
      */
     fun setSeriesProgress(seriesId: Int, progress: Int): Observable<Unit> {
+        if (userSettings.getUser() != null) {
+            client.invalidateSeriesCache(seriesId)
+        }
+
         return progressDatabase.setProgress(seriesId, progress)
     }
 
@@ -239,6 +233,27 @@ class ProxerRepository(
     )
 
     /**
+     * Get a [Observable.Transformer] that adds the re login logic if the call fails with
+     * [ApiErrorException.USER_DOES_NOT_EXISTS]
+     */
+    private fun <T> retryAfterLogin(): Observable.Transformer<T, T> {
+        return retryAfter(MAX_LOGIN_RETRY_COUNT, { errorCount: Int, error: Throwable ->
+            val user = userSettings.getUser()
+            if (errorCount < MAX_LOGIN_RETRY_COUNT
+                    && error is ApiErrorException
+                    && ApiErrorException.USER_DOES_NOT_EXISTS == error.code
+                    && user != null) {
+
+                // retry again after login
+                login(user.username, user.password)
+            } else {
+                // abort with the original error
+                Observable.error(error)
+            }
+        })
+    }
+
+    /**
      * Get a [Observable.Transformer] that adds the retry logic
      * @param maxCount the max retry count
      * @param checkFun the function that decides if we try again.
@@ -253,7 +268,7 @@ class ProxerRepository(
                         .zipWith(Observable.range(0, maxCount + 1), { error, count -> Pair(error, count) })
                         // let the checkFun decide if we retry
                         .flatMap { pair ->
-                            val error = pair.first as Throwable
+                            val error = pair.first
                             val count = pair.second
 
                             checkFun(count, error)
