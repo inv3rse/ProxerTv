@@ -3,8 +3,10 @@ package com.inverse.unofficial.proxertv.base.db
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
-import com.inverse.unofficial.proxertv.model.Series
+import com.inverse.unofficial.proxertv.model.ISeriesDbEntry
 import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesDbEntry
+import com.inverse.unofficial.proxertv.model.SeriesList
 import org.jetbrains.anko.db.*
 import rx.Observable
 import rx.subjects.BehaviorSubject
@@ -13,16 +15,21 @@ import rx.subjects.SerializedSubject
 internal object SeriesScheme {
     const val TABLE = "mySeries"
     const val ID = "id"
-    const val TITLE = "title"
+    const val NAME = "name"
     const val COMMENT_ID = "commentId"
+    const val USER_LIST = "userList"
 }
 
+/**
+ * Helper for creating and updating the series db.
+ */
 class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
     override fun onCreate(db: SQLiteDatabase) {
         db.createTable(SeriesScheme.TABLE, true,
                 SeriesScheme.ID to INTEGER + PRIMARY_KEY + UNIQUE,
-                SeriesScheme.TITLE to TEXT,
-                SeriesScheme.COMMENT_ID to INTEGER)
+                SeriesScheme.NAME to TEXT,
+                SeriesScheme.COMMENT_ID to INTEGER,
+                SeriesScheme.USER_LIST to INTEGER)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -39,10 +46,13 @@ class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAM
 
     companion object {
         private const val DB_NAME = "mySeriesList.db"
-        private const val DB_VERSION = 3
+        private const val DB_VERSION = 4
     }
 }
 
+/**
+ * The db for the users series.
+ */
 open class MySeriesDb(val dbHelper: SeriesDbHelper) {
     private val listObservable = SerializedSubject(BehaviorSubject.create<Unit>(Unit))
 
@@ -50,7 +60,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * Observe the series list.
      * @return an [Observable] emitting the current value and any subsequent changes
      */
-    fun observeSeriesList(): Observable<List<SeriesCover>> {
+    fun observeSeriesList(): Observable<List<ISeriesDbEntry>> {
         return listObservable.concatMap { loadSeriesList() }
     }
 
@@ -58,7 +68,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * Loads the series list.
      * @return an [Observable] emitting the current value
      */
-    fun loadSeriesList(): Observable<List<SeriesCover>> {
+    fun loadSeriesList(): Observable<List<ISeriesDbEntry>> {
         return dbHelper.useAsync {
             select(SeriesScheme.TABLE).parseList(SeriesRowParser())
         }
@@ -68,32 +78,36 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * Set the list of series. Deletes the current values and inserts the new ones.
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun setSeries(seriesList: List<Series>): Observable<Unit> {
+    fun overrideWithSeriesList(seriesList: List<ISeriesDbEntry>): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
                 delete(SeriesScheme.TABLE)
-                for ((id, name, cid) in seriesList) {
-                    insert(SeriesScheme.TABLE,
-                            SeriesScheme.ID to id,
-                            SeriesScheme.TITLE to name,
-                            SeriesScheme.COMMENT_ID to cid)
-                }
+                seriesList
+                        .filter { it.userList != SeriesList.NONE }
+                        .forEach {
+                            insert(SeriesScheme.TABLE,
+                                    SeriesScheme.ID to it.id,
+                                    SeriesScheme.NAME to it.name,
+                                    SeriesScheme.COMMENT_ID to it.cid,
+                                    SeriesScheme.USER_LIST to it.userList.ordinal)
+                        }
             }
         }.doOnCompleted { notifyListChange() }
     }
 
     /**
-     * Add a series to the list.
+     * Add a series to the list or replaces an existing one if the id already exists.
      * @param series series to add to the list
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun addSeries(series: SeriesCover): Observable<Unit> {
+    fun insertOrUpdateSeries(series: ISeriesDbEntry): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
-                insert(SeriesScheme.TABLE,
+                replace(SeriesScheme.TABLE,
                         SeriesScheme.ID to series.id,
-                        SeriesScheme.TITLE to series.title,
-                        SeriesScheme.COMMENT_ID to series.cid)
+                        SeriesScheme.NAME to series.name,
+                        SeriesScheme.COMMENT_ID to series.cid,
+                        SeriesScheme.USER_LIST to series.userList.ordinal)
             }
         }.doOnCompleted { notifyListChange() }
     }
@@ -103,7 +117,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * @param seriesId the series id
      * @return an [Observable] emitting the [SeriesCover] or throwing an error
      */
-    fun getSeries(seriesId: Int): Observable<SeriesCover> {
+    fun getSeries(seriesId: Int): Observable<ISeriesDbEntry> {
         return dbHelper.useAsync {
             select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} ) $seriesId)").exec {
                 if (count == 1) {
@@ -143,11 +157,11 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
         listObservable.onNext(Unit)
     }
 
-    private class SeriesRowParser : RowParser<SeriesCover> {
+    private class SeriesRowParser : RowParser<ISeriesDbEntry> {
         @Suppress("ConvertLambdaToReference")
-        private val parser = rowParser { id: Int, title: String, cid: Long -> SeriesCover(id, title, cid) }
+        private val parser = rowParser { id: Int, title: String, cid: Long, list: Int -> SeriesDbEntry(id, title, SeriesList.fromOrdinal(list), cid) }
 
-        override fun parseRow(columns: Array<Any?>): SeriesCover {
+        override fun parseRow(columns: Array<Any?>): ISeriesDbEntry {
             return parser.parseRow(columns)
         }
     }

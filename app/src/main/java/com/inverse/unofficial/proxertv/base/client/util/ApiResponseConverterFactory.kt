@@ -87,7 +87,9 @@ class ApiErrorException(val code: Int?, val msg: String?) : IOException("api err
         const val INVALID_LOGIN_DATA = 3001
         const val USER_ALREADY_SIGNED_IN = 3012
         const val OTHER_USER_ALREADY_SIGNED_IN = 3013
+        const val ENTRY_ALREADY_EXISTS = 3010
 
-        const val USER_DOES_NOT_EXISTS = 3003
+        // error codes that say not logged in
+        val USER_NOT_LOGGED_IN = listOf(3003, 3004, 3009)
     }
 }

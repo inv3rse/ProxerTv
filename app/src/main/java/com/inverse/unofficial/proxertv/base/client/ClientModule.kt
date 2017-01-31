@@ -4,7 +4,9 @@ import android.app.Application
 import com.franmontiel.persistentcookiejar.PersistentCookieJar
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor
+import com.github.salomonbrys.kotson.registerNullableTypeAdapter
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.inverse.unofficial.proxertv.BuildConfig
 import com.inverse.unofficial.proxertv.base.client.interceptors.ApiKeyInterceptor
 import com.inverse.unofficial.proxertv.base.client.interceptors.CloudFlareInterceptor

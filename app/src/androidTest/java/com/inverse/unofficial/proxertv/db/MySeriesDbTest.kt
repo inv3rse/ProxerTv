@@ -43,21 +43,21 @@ class MySeriesDbTest {
         val series1 = SeriesCover(1, "1")
         val series2 = SeriesCover(2, "2")
 
-        mDb.addSeries(series1).subscribeAssert { assertNoErrors() }
+        mDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
         mDb.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1))
         }
 
         // add same key (should not appear twice)
-        mDb.addSeries(series1).subscribeAssert { assertNoErrors() }
+        mDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
         mDb.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1))
         }
 
         // add series 2
-        mDb.addSeries(series2).subscribeAssert { assertNoErrors() }
+        mDb.insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
         mDb.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1, series2))
@@ -71,9 +71,9 @@ class MySeriesDbTest {
         val series3 = SeriesCover(3, "3")
 
         mDb.apply {
-            addSeries(series1).subscribeAssert { assertNoErrors() }
-            addSeries(series2).subscribeAssert { assertNoErrors() }
-            addSeries(series3).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
         }
 
         mDb.containsSeries(series1.id).subscribeAssert {
@@ -104,9 +104,9 @@ class MySeriesDbTest {
         val series3 = SeriesCover(3, "3")
 
         mDb.apply {
-            addSeries(series1).subscribeAssert { assertNoErrors() }
-            addSeries(series2).subscribeAssert { assertNoErrors() }
-            addSeries(series3).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
         }
 
         mDb.containsSeries(series1.id).subscribeAssert {
@@ -134,14 +134,14 @@ class MySeriesDbTest {
         val series3 = SeriesCover(3, "3")
 
         mDb.apply {
-            addSeries(series1).subscribeAssert { assertNoErrors() }
-            addSeries(series2).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
+            insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
         }
 
         mDb.observeSeriesList().take(3).subscribe(testSubscriber)
 
         mDb.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
-        mDb.addSeries(series3).subscribeAssert { assertNoErrors() }
+        mDb.insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
 
         testSubscriber.awaitTerminalEvent(1, TimeUnit.SECONDS)
         testSubscriber.assertNoErrors()

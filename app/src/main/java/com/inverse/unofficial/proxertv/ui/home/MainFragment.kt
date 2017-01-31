@@ -11,6 +11,7 @@ import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
+import com.inverse.unofficial.proxertv.model.ISeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
@@ -191,7 +192,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                     Observable.combineLatest(
                             Observable.just(it),
                             proxerRepository.observeSeriesProgress(it.id),
-                            proxerRepository.observeSeriesList().map { myList -> myList.contains(it) },
+                            proxerRepository.observeSeriesList().map { myList -> myList.find { s -> s.id == it.id } != null },
                             { series, progress, inList -> Triple(series, progress, inList) })
                 }
                 .toList()

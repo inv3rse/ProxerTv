@@ -22,7 +22,7 @@ class ProxerClient(
         val api: ProxerApi,
         val gson: Gson,
         val streamResolvers: List<StreamResolver>,
-        val serverConfig: ServerConfig) {
+        val serverConfig: ServerConfig) : ProxerApi by api {
 
     // List of series ids for which the cache is invalid
     private val invalidSeriesCache = mutableSetOf<Int>()
@@ -36,29 +36,12 @@ class ProxerClient(
     }
 
     /**
-     * Login with username and password. If successful the login cookie will be set.
-     * @param username the username
-     * @param password the password
-     * @return an [Observable] emitting the LoginResponse or throwing an error
+     * Adds the series to the users watchlist.
+     * @param seriesId the id of the series
+     * @return an [Observable] emitting true or throwing an error
      */
-    fun login(username: String, password: String): Observable<LoginResponse> {
-        return api.login(username, password)
-    }
-
-    /**
-     * Logout the user specified by cookie.
-     * @return an [Observable] emitting the response
-     */
-    fun logout(): Observable<WrappedData<Unit>> {
-        return api.logout()
-    }
-
-    /**
-     * Get the list of series from the currently logged in user.
-     * @return an [Observable] emitting the list of series
-     */
-    fun getUserList(): Observable<List<Series>> {
-        return api.userList()
+    fun addSeriesToWatchList(seriesId: Int): Observable<Boolean> {
+        return api.addSeriesToList(seriesId, "note")
     }
 
     /**

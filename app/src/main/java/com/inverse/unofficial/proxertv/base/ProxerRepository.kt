@@ -4,9 +4,9 @@ import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
-import com.inverse.unofficial.proxertv.model.Series
-import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.*
 import rx.Observable
+import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -80,21 +80,11 @@ class ProxerRepository(
         // only sync if we are logged in and LIST_SYNC_DELAY has passed or forced
         if (user != null && (forceSync || System.currentTimeMillis() > (lastSync.get() + LIST_SYNC_DELAY))) {
 
-            return client.getUserList()
+            return client.userList()
                     // retry after login if if we are not logged in anymore
-                    .compose(retryAfterLogin<List<Series>>())
-                    // list to single elements
-                    .flatMap { Observable.from(it) }
-                    // filter only active and bookmarked
-                    .filter { Series.STATE_USER_BOOKMARKED == it.state || Series.STATE_USER_WATCHING == it.state }
-                    .toList()
-                    // write to db
-                    .flatMap { seriesList -> mySeriesDb.setSeries(seriesList) }
-                    // return true for successful sync and save sync time
-                    .map {
-                        lastSync.set(System.currentTimeMillis())
-                        true
-                    }
+                    .compose(retryAfterLogin<List<UserListSeriesEntry>>())
+                    // write entries to db
+                    .flatMap { setUserSeriesList(it) }
                     // not successful on error
                     .onErrorReturn { error ->
                         CrashReporting.logException(error)
@@ -106,6 +96,90 @@ class ProxerRepository(
         return Observable.just(false)
     }
 
+    private fun setUserSeriesList(seriesEntries: List<UserListSeriesEntry>): Observable<Boolean> {
+        return Observable.from(seriesEntries)
+                // filter only active and bookmarked
+                .filter { UserListSeriesEntry.MEDIUM_ANIME == it.medium }
+                // map to db entries
+                .map { SeriesDbEntry(it.id, it.name, SeriesList.fromApiState(it.commentState), it.cid) }
+                .toList()
+                // write to db
+                .flatMap { seriesList -> mySeriesDb.overrideWithSeriesList(seriesList) }
+                // return true for successful sync and save sync time
+                .map {
+                    lastSync.set(System.currentTimeMillis())
+                    true
+                }
+    }
+
+
+    fun moveSeriesToList(series: ISeriesCover, list: SeriesList): Observable<Unit> {
+        if (list == SeriesList.NONE) {
+            return removeSeriesFromList(series.id)
+        }
+
+        if (userSettings.getUser() != null) {
+            // check if the series is already on a list and has a comment id
+            val updateObservable = mySeriesDb.getSeries(series.id)
+                    // the series must have a comment id
+                    .filter { it.cid != SeriesDbEntry.NO_COMMENT_ID }
+                    // throw an error if there is no item
+                    .first()
+                    // we do not care about the type, only check if there was an error
+                    .cast(Any::class.java)
+                    // no comment id found -> create a comment for the series
+                    .onErrorResumeNext { error1 ->
+                        client.addSeriesToWatchList(series.id)
+                                // ignore the comment already exists error.
+                                .onErrorResumeNext { error2 ->
+                                    if (error2 is ApiErrorException && error2.code != ApiErrorException.ENTRY_ALREADY_EXISTS) {
+                                        Observable.just(true)
+                                    } else {
+                                        Observable.error(error2)
+                                    }
+                                }
+                    }
+                    // get the users current series list
+                    .flatMap { client.userList() }
+                    // find the item we want to change
+                    .map { seriesList ->
+                        val entry = seriesList.find { series.id == it.id } ?: throw NoSuchElementException("comment id not found")
+                        Pair(entry, seriesList)
+                    }
+                    // update the list state if necessary
+                    .flatMap { pair: Pair<UserListSeriesEntry, List<UserListSeriesEntry>> ->
+                        if (SeriesList.fromApiState(pair.first.commentState) != list) {
+                            val entry = pair.first.copy(commentState = SeriesList.toApiState(list))
+                            val data = entry.commentRating
+                            val comment = Comment(entry.commentState, entry.episode, entry.rating,
+                                    entry.comment, data?.ratingGenre, data?.ratingStory, data?.ratingAnimation,
+                                    data?.ratingCharacters, data?.ratingMusic)
+
+                            // update the entry list to reflect the state updating the comment
+                            val updatedEntryList = mutableListOf(entry)
+                            updatedEntryList.addAll(pair.second.filter { it.id != entry.id })
+
+                            client.setComment(entry.cid, comment)
+                                    .flatMap { setUserSeriesList(updatedEntryList) }
+                                    .map { Unit }
+                        } else {
+                            // no change necessary, use the data to synchronize the local db
+                            setUserSeriesList(pair.second).map { Unit }
+                        }
+                    }
+
+            return updateObservable
+                    .compose(retryAfterLogin<Unit>())
+                    .doOnError { CrashReporting.logException(it) }
+                    .onErrorResumeNext { syncUserList(true).map { Unit } }
+
+        } else {
+            // local only, add the series without a comment id
+            val dbEntry = SeriesDbEntry(series.id, series.name, list, SeriesDbEntry.NO_COMMENT_ID)
+            return mySeriesDb.insertOrUpdateSeries(dbEntry)
+        }
+    }
+
     /**
      * Remove a series from the users list
      * @param seriesId the id of the series
@@ -114,21 +188,13 @@ class ProxerRepository(
     fun removeSeriesFromList(seriesId: Int): Observable<Unit> {
         if (userSettings.getUser() != null) {
             // get the users comment id for the series
-//            mySeriesDb.getSeries(seriesId)
-//                    .filter { it.cid != SeriesCover.NO_COMMENT_ID }
+            mySeriesDb.getSeries(seriesId)
+                    .filter { it.cid != SeriesDbEntry.NO_COMMENT_ID }
+
 
         }
 
         return mySeriesDb.removeSeries(seriesId)
-    }
-
-    /**
-     * Adds a series to the users list
-     * @param series the series to add
-     * @return an [Observable] emitting onError or OnCompleted
-     */
-    fun addSeriesToList(series: SeriesCover): Observable<Unit> {
-        return mySeriesDb.addSeries(series)
     }
 
     /**
@@ -233,15 +299,15 @@ class ProxerRepository(
     )
 
     /**
-     * Get a [Observable.Transformer] that adds the re login logic if the call fails with
-     * [ApiErrorException.USER_DOES_NOT_EXISTS]
+     * Get a [Observable.Transformer] that adds the re login logic if the call fails with any error in
+     * [ApiErrorException.USER_NOT_LOGGED_IN]
      */
     private fun <T> retryAfterLogin(): Observable.Transformer<T, T> {
         return retryAfter(MAX_LOGIN_RETRY_COUNT, { errorCount: Int, error: Throwable ->
             val user = userSettings.getUser()
             if (errorCount < MAX_LOGIN_RETRY_COUNT
                     && error is ApiErrorException
-                    && ApiErrorException.USER_DOES_NOT_EXISTS == error.code
+                    && ApiErrorException.USER_NOT_LOGGED_IN.contains(error.code)
                     && user != null) {
 
                 // retry again after login
