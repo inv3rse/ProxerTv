@@ -1,10 +1,12 @@
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.inverse.unofficial.proxertv.base.client.ProxerApi
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiResponseConverterFactory
 import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
 import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
+import com.inverse.unofficial.proxertv.model.CommentRatings
 import com.inverse.unofficial.proxertv.model.ServerConfig
+import com.inverse.unofficial.proxertv.model.typeAdapter.CommentRatingsTypeAdapter
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -41,7 +43,10 @@ fun provideTestClient(mockWebServer: MockWebServer): ProxerClient {
     val resolvers = listOf(ProxerStreamResolver(httpClient), StreamCloudResolver(httpClient))
     val mockServerUrl = mockWebServer.url("/")
     val serverConfig = ServerConfig(mockServerUrl.scheme(), mockServerUrl.host() + ":" + mockServerUrl.port())
-    val gson = Gson()
+    val gson = GsonBuilder()
+            .registerTypeAdapter(CommentRatings::class.java, CommentRatingsTypeAdapter().nullSafe())
+            .create()
+
     val api = Retrofit.Builder()
             .baseUrl(serverConfig.apiBaseUrl)
             .client(httpClient)
@@ -87,10 +92,24 @@ object ApiResponses {
      * @return the response
      */
     fun getLogoutResponse(): MockResponse {
+        return getSuccessFullResponse("Logout successfull")
+    }
+
+    /**
+     * Get a successful response with msg and optional data.
+     * @param msg the message which is automatically wrapped inside ""
+     * @param data the optional data, it is not wrapped into ""
+     * @return the response
+     */
+    fun getSuccessFullResponse(msg: String, data: String? = null): MockResponse {
         return MockResponse().setBody("{" +
-                "\"error\": 0," +
-                "\"message\": \"Logout successfull\"" +
-                "}")
+                "\"error\": 0,\n" +
+                "\"message\": \"$msg\"" +
+                if (data != null) {
+                    ",\n\"data\": $data\n}"
+                } else {
+                    "\n}"
+                })
     }
 
     /**

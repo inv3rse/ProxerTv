@@ -13,7 +13,7 @@ data class CommentRatings(
         @SerializedName("animation")
         val ratingAnimation: Int?,
         @SerializedName("characters")
-        val ratingCharacters: Int,
+        val ratingCharacters: Int?,
         @SerializedName("music")
         val ratingMusic: Int?
 )

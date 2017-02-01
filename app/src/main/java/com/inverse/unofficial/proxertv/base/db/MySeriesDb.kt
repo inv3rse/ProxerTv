@@ -60,7 +60,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * Observe the series list.
      * @return an [Observable] emitting the current value and any subsequent changes
      */
-    fun observeSeriesList(): Observable<List<ISeriesDbEntry>> {
+    open fun observeSeriesList(): Observable<List<ISeriesDbEntry>> {
         return listObservable.concatMap { loadSeriesList() }
     }
 
@@ -68,7 +68,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * Loads the series list.
      * @return an [Observable] emitting the current value
      */
-    fun loadSeriesList(): Observable<List<ISeriesDbEntry>> {
+    open fun loadSeriesList(): Observable<List<ISeriesDbEntry>> {
         return dbHelper.useAsync {
             select(SeriesScheme.TABLE).parseList(SeriesRowParser())
         }
@@ -78,7 +78,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * Set the list of series. Deletes the current values and inserts the new ones.
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun overrideWithSeriesList(seriesList: List<ISeriesDbEntry>): Observable<Unit> {
+    open fun overrideWithSeriesList(seriesList: List<ISeriesDbEntry>): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
                 delete(SeriesScheme.TABLE)
@@ -100,7 +100,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * @param series series to add to the list
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun insertOrUpdateSeries(series: ISeriesDbEntry): Observable<Unit> {
+    open fun insertOrUpdateSeries(series: ISeriesDbEntry): Observable<Unit> {
         if (series.userList == SeriesList.NONE) {
             return removeSeries(series.id)
         }
@@ -121,7 +121,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * @param seriesId the series id
      * @return an [Observable] emitting the [SeriesCover] or throwing an error
      */
-    fun getSeries(seriesId: Int): Observable<ISeriesDbEntry> {
+    open fun getSeries(seriesId: Int): Observable<ISeriesDbEntry> {
         return dbHelper.useAsync {
             select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} ) $seriesId)").exec {
                 if (count == 1) {
@@ -138,7 +138,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * @param seriesId id of the series to check for
      * @return an [Observable] emitting true or false
      */
-    fun containsSeries(seriesId: Int): Observable<Boolean> {
+    open fun containsSeries(seriesId: Int): Observable<Boolean> {
         return dbHelper.useAsync {
             select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} = $seriesId)").exec { count > 0 }
         }
@@ -149,7 +149,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * @param seriesId id of the series to remove
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun removeSeries(seriesId: Int): Observable<Unit> {
+    open fun removeSeries(seriesId: Int): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
                 delete(SeriesScheme.TABLE, "(${SeriesScheme.ID} = $seriesId)")

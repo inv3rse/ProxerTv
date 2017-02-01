@@ -4,7 +4,6 @@ import android.app.Application
 import com.franmontiel.persistentcookiejar.PersistentCookieJar
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor
-import com.github.salomonbrys.kotson.registerNullableTypeAdapter
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.inverse.unofficial.proxertv.BuildConfig
@@ -13,7 +12,9 @@ import com.inverse.unofficial.proxertv.base.client.interceptors.CloudFlareInterc
 import com.inverse.unofficial.proxertv.base.client.interceptors.NoCacheCaptchaInterceptor
 import com.inverse.unofficial.proxertv.base.client.interceptors.ProxerCacheRewriteInterceptor
 import com.inverse.unofficial.proxertv.base.client.util.*
+import com.inverse.unofficial.proxertv.model.CommentRatings
 import com.inverse.unofficial.proxertv.model.ServerConfig
+import com.inverse.unofficial.proxertv.model.typeAdapter.CommentRatingsTypeAdapter
 import dagger.Module
 import dagger.Provides
 import okhttp3.Cache
@@ -40,7 +41,9 @@ class ClientModule {
     @Provides
     @Singleton
     fun provideGson(): Gson {
-        return Gson()
+        return GsonBuilder()
+                .registerTypeAdapter(CommentRatings::class.java, CommentRatingsTypeAdapter().nullSafe())
+                .create()
     }
 
     @Provides

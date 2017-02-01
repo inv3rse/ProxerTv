@@ -1,10 +1,14 @@
 package com.inverse.unofficial.proxertv.base
 
 import ApiResponses
+import android.database.sqlite.SQLiteException
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
+import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesDbEntry
+import com.inverse.unofficial.proxertv.model.SeriesList
 import com.nhaarman.mockito_kotlin.*
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -138,9 +142,49 @@ class ProxerRepositoryTest {
         verify(seriesProgressDb).setProgress(eq(1234), eq(5))
     }
 
+    @Test
+    fun testMoveSeriesToListOnline() {
+        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+
+        val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
+        val reZeroOnline = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
+
+        // entry does not exists, needs to be created
+        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.error(SQLiteException()))
+        // success create response
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("COM_PROXER_SUCCESS"))
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", USERLIST_RE_ZERO))
+
+        // the comment state is 0 (= FINISHED) and needs to be updated
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Erfolgreich bearbeitet!"))
+        whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))
+
+        repository.moveSeriesToList(reZero, SeriesList.WATCHLIST).subscribeAssert {
+            assertNoErrors()
+        }
+
+        verify(mySeriesDb).overrideWithSeriesList(eq(listOf(reZeroOnline)))
+    }
+
     companion object {
         private const val TEST_USER = "mockUser"
         private const val TEST_PASSWORD = "mockPassword"
         private const val TEST_TOKEN = "testToken"
+
+        private val USERLIST_RE_ZERO = """
+        [{
+            "count": "26",
+            "medium": "animeseries",
+            "estate": "1",
+            "cid": "12345678",
+            "name": "Re:Zero kara Hajimeru Isekai Seikatsu",
+            "id": "13975",
+            "comment": "",
+            "state": "0",
+            "episode": "26",
+            "data": "[]",
+            "rating": "0",
+            "timestamp": "1475871721"
+        }]""".trimIndent()
     }
 }
