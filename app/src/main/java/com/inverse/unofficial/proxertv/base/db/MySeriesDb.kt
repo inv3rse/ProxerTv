@@ -101,6 +101,10 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      * @return an [Observable] emitting onError or OnCompleted
      */
     fun insertOrUpdateSeries(series: ISeriesDbEntry): Observable<Unit> {
+        if (series.userList == SeriesList.NONE) {
+            return removeSeries(series.id)
+        }
+
         return dbHelper.useAsync {
             transaction {
                 replace(SeriesScheme.TABLE,

@@ -23,7 +23,7 @@ class ProxerRepositoryTest {
 
     private lateinit var client: ProxerClient
     private lateinit var mySeriesDb: MySeriesDb
-    private lateinit var seriesPrgressDb: SeriesProgressDb
+    private lateinit var seriesProgressDb: SeriesProgressDb
     private lateinit var userSettings: UserSettings
     private lateinit var repository: ProxerRepository
 
@@ -34,10 +34,10 @@ class ProxerRepositoryTest {
 
         client = provideTestClient(mockServer)
         mySeriesDb = mock()
-        seriesPrgressDb = mock()
+        seriesProgressDb = mock()
         userSettings = UserSettingsMemory()
 
-        repository = ProxerRepository(client, mySeriesDb, seriesPrgressDb, userSettings)
+        repository = ProxerRepository(client, mySeriesDb, seriesProgressDb, userSettings)
     }
 
     @After
@@ -127,7 +127,7 @@ class ProxerRepositoryTest {
     fun testSetProgress() {
         // no user, offline only
         userSettings.clearUser()
-        whenever(seriesPrgressDb.setProgress(any(), any())).thenReturn(Observable.empty())
+        whenever(seriesProgressDb.setProgress(any(), any())).thenReturn(Observable.empty())
 
         repository.setSeriesProgress(1234, 5)
                 .subscribeAssert {
@@ -135,7 +135,7 @@ class ProxerRepositoryTest {
                     assertNoValues()
                 }
 
-        verify(seriesPrgressDb).setProgress(eq(1234), eq(5))
+        verify(seriesProgressDb).setProgress(eq(1234), eq(5))
     }
 
     companion object {

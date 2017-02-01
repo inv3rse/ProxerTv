@@ -5,7 +5,9 @@ import android.support.test.runner.AndroidJUnit4
 import android.test.RenamingDelegatingContext
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesDbHelper
-import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.ISeriesDbEntry
+import com.inverse.unofficial.proxertv.model.SeriesDbEntry
+import com.inverse.unofficial.proxertv.model.SeriesList
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,8 +42,9 @@ class MySeriesDbTest {
 
     @Test
     fun testAddSeries() {
-        val series1 = SeriesCover(1, "1")
-        val series2 = SeriesCover(2, "2")
+        val series1 = SeriesDbEntry(1, "1", SeriesList.WATCHLIST)
+        val series2 = SeriesDbEntry(2, "2", SeriesList.FINISHED)
+        val series3 = SeriesDbEntry(3, "3", SeriesList.NONE)
 
         mDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
         mDb.loadSeriesList().subscribeAssert {
@@ -62,13 +65,20 @@ class MySeriesDbTest {
             assertNoErrors()
             assertValue(listOf(series1, series2))
         }
+
+        // adding to list NONE should do nothing
+        mDb.insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
+        mDb.loadSeriesList().subscribeAssert {
+            assertNoErrors()
+            assertValue(listOf(series1, series2))
+        }
     }
 
     @Test
     fun testContainsSeries() {
-        val series1 = SeriesCover(1, "1")
-        val series2 = SeriesCover(2, "2")
-        val series3 = SeriesCover(3, "3")
+        val series1 = SeriesDbEntry(1, "1", SeriesList.WATCHLIST)
+        val series2 = SeriesDbEntry(2, "2", SeriesList.FINISHED)
+        val series3 = SeriesDbEntry(3, "3", SeriesList.ABORTED)
 
         mDb.apply {
             insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
@@ -99,9 +109,9 @@ class MySeriesDbTest {
 
     @Test
     fun testRemoveSeries() {
-        val series1 = SeriesCover(1, "1")
-        val series2 = SeriesCover(2, "2")
-        val series3 = SeriesCover(3, "3")
+        val series1 = SeriesDbEntry(1, "1", SeriesList.ABORTED)
+        val series2 = SeriesDbEntry(2, "2", SeriesList.WATCHLIST)
+        val series3 = SeriesDbEntry(3, "3", SeriesList.WATCHLIST)
 
         mDb.apply {
             insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
@@ -128,10 +138,10 @@ class MySeriesDbTest {
 
     @Test
     fun testObserveSeriesList() {
-        val testSubscriber = TestSubscriber<List<SeriesCover>>()
-        val series1 = SeriesCover(1, "1")
-        val series2 = SeriesCover(2, "2")
-        val series3 = SeriesCover(3, "3")
+        val testSubscriber = TestSubscriber<List<ISeriesDbEntry>>()
+        val series1 = SeriesDbEntry(1, "1", SeriesList.WATCHLIST)
+        val series2 = SeriesDbEntry(2, "2", SeriesList.WATCHLIST)
+        val series3 = SeriesDbEntry(3, "3", SeriesList.ABORTED)
 
         mDb.apply {
             insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }

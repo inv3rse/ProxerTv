@@ -81,7 +81,7 @@ data class SeriesDbEntry(
         override val cid: Long = SeriesDbEntry.NO_COMMENT_ID) : ISeriesDbEntry {
 
     companion object {
-        const val NO_COMMENT_ID = 1L
+        const val NO_COMMENT_ID = -1L
     }
 }
 

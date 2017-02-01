@@ -151,7 +151,7 @@ class ProxerClientTest {
     @Test
     fun testApiErrorExceptionThrown() {
         mockServer.enqueue(ApiResponses.getErrorResponse(3003, "User existiert nicht"))
-        proxerClient.getUserList().subscribeAssert {
+        proxerClient.userList().subscribeAssert {
             assertError(ApiErrorException::class.java)
             assertEquals(3003, (onErrorEvents[0] as ApiErrorException).code)
             assertEquals("User existiert nicht", (onErrorEvents[0] as ApiErrorException).msg)

@@ -112,7 +112,12 @@ class ProxerRepository(
                 }
     }
 
-
+    /**
+     * Moves the series to the specified list. If there is no entry for the series one will be created,
+     * otherwise the existing will be updated. A series can only be on one or zero lists.
+     * @param series the series to update
+     * @param list the list to add the series to
+     */
     fun moveSeriesToList(series: ISeriesCover, list: SeriesList): Observable<Unit> {
         if (list == SeriesList.NONE) {
             return removeSeriesFromList(series.id)

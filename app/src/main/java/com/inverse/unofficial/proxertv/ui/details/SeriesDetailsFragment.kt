@@ -12,10 +12,7 @@ import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
-import com.inverse.unofficial.proxertv.model.Episode
-import com.inverse.unofficial.proxertv.model.Series
-import com.inverse.unofficial.proxertv.model.SeriesCover
-import com.inverse.unofficial.proxertv.model.ServerConfig
+import com.inverse.unofficial.proxertv.model.*
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
 import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
 import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
@@ -84,7 +81,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                                         it.printStackTrace()
                                     })
                 } else {
-                    proxerRepository.addSeriesToList(cover)
+                    proxerRepository.moveSeriesToList(cover, SeriesList.WATCHLIST)
                             .subscribeOn(Schedulers.io())
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe({ },
