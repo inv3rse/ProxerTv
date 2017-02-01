@@ -2,10 +2,12 @@ package com.inverse.unofficial.proxertv.base
 
 import ApiResponses
 import android.database.sqlite.SQLiteException
+import com.github.salomonbrys.kotson.fromJson
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
+import com.inverse.unofficial.proxertv.model.Comment
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesDbEntry
 import com.inverse.unofficial.proxertv.model.SeriesList
@@ -163,7 +165,25 @@ class ProxerRepositoryTest {
             assertNoErrors()
         }
 
+        // the local db should get updated with the latest data + our changes
         verify(mySeriesDb).overrideWithSeriesList(eq(listOf(reZeroOnline)))
+
+        // get the last requests
+        mockServer.takeRequest()
+        mockServer.takeRequest()
+        val updateRequest = mockServer.takeRequest()
+
+        // the complete comment must be send to update
+        val comment = client.gson.fromJson<Comment>(updateRequest.body.readUtf8())
+        assertEquals("", comment.comment)
+        assertEquals(26, comment.episode)
+        assertEquals(2, comment.state)
+        assertEquals(0, comment.rating)
+        assertEquals(1, comment.ratingGenre)
+        assertEquals(1, comment.ratingStory)
+        assertEquals(2, comment.ratingAnimation)
+        assertEquals(1, comment.ratingCharacters)
+        assertEquals(1, comment.ratingMusic)
     }
 
     companion object {
@@ -182,7 +202,7 @@ class ProxerRepositoryTest {
             "comment": "",
             "state": "0",
             "episode": "26",
-            "data": "[]",
+            "data": "{\"genre\":\"1\",\"story\":\"1\",\"animation\":\"2\",\"characters\":\"1\",\"music\":\"1\"}",
             "rating": "0",
             "timestamp": "1475871721"
         }]""".trimIndent()
