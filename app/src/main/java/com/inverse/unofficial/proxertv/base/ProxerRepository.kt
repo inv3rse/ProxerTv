@@ -96,22 +96,6 @@ class ProxerRepository(
         return Observable.just(false)
     }
 
-    private fun setUserSeriesList(seriesEntries: List<UserListSeriesEntry>): Observable<Boolean> {
-        return Observable.from(seriesEntries)
-                // filter only active and bookmarked
-                .filter { UserListSeriesEntry.MEDIUM_ANIME == it.medium }
-                // map to db entries
-                .map { SeriesDbEntry(it.id, it.name, SeriesList.fromApiState(it.commentState), it.cid) }
-                .toList()
-                // write to db
-                .flatMap { seriesList -> mySeriesDb.overrideWithSeriesList(seriesList) }
-                // return true for successful sync and save sync time
-                .map {
-                    lastSync.set(System.currentTimeMillis())
-                    true
-                }
-    }
-
     /**
      * Moves the series to the specified list. If there is no entry for the series one will be created,
      * otherwise the existing will be updated. A series can only be on one or zero lists.
@@ -125,7 +109,8 @@ class ProxerRepository(
 
         if (userSettings.getUser() != null) {
             // check if the series is already on a list and has a comment id
-            val updateObservable = mySeriesDb.getSeries(series.id)
+            // defer to check again after retryAfterSync
+            val updateObservable = Observable.defer { mySeriesDb.getSeries(series.id) }
                     // the series must have a comment id
                     .filter { it.cid != SeriesDbEntry.NO_COMMENT_ID }
                     // throw an error if there is no item
@@ -148,7 +133,7 @@ class ProxerRepository(
                     .flatMap { client.userList() }
                     // find the item we want to change
                     .map { seriesList ->
-                        val entry = seriesList.find { series.id == it.id } ?: throw NoSuchElementException("comment id not found")
+                        val entry = seriesList.find { series.id == it.id } ?: throw OutOfSyncException(seriesList)
                         Pair(entry, seriesList)
                     }
                     // update the list state if necessary
@@ -175,8 +160,8 @@ class ProxerRepository(
 
             return updateObservable
                     .compose(retryAfterLogin<Unit>())
+                    .compose(retryAfterSync<Unit>())
                     .doOnError { CrashReporting.logException(it) }
-                    .onErrorResumeNext { syncUserList(true).map { Unit } }
 
         } else {
             // local only, add the series without a comment id
@@ -291,17 +276,39 @@ class ProxerRepository(
     fun observeSeriesProgress(seriesId: Int) = progressDatabase.observeProgress(seriesId)
 
     /**
-     * Force a sync the next time syncUserList is called.
+     * Data class that holds the login information.
      */
-    private fun invalidateLocalList() {
-        lastSync.set(0)
-    }
-
     data class Login(
             val username: String,
             val password: String,
             val token: String?
     )
+
+    /**
+     * Overrides the local series lists.
+     */
+    private fun setUserSeriesList(seriesEntries: List<UserListSeriesEntry>): Observable<Boolean> {
+        return Observable.from(seriesEntries)
+                // filter only active and bookmarked
+                .filter { UserListSeriesEntry.MEDIUM_ANIME == it.medium }
+                // map to db entries
+                .map { SeriesDbEntry(it.id, it.name, SeriesList.fromApiState(it.commentState), it.cid) }
+                .toList()
+                // write to db
+                .flatMap { seriesList -> mySeriesDb.overrideWithSeriesList(seriesList) }
+                // return true for successful sync and save sync time
+                .map {
+                    lastSync.set(System.currentTimeMillis())
+                    true
+                }
+    }
+
+    /**
+     * Force a sync the next time syncUserList is called.
+     */
+    private fun invalidateLocalList() {
+        lastSync.set(0)
+    }
 
     /**
      * Get a [Observable.Transformer] that adds the re login logic if the call fails with any error in
@@ -317,6 +324,21 @@ class ProxerRepository(
 
                 // retry again after login
                 login(user.username, user.password)
+            } else {
+                // abort with the original error
+                Observable.error(error)
+            }
+        })
+    }
+
+    /**
+     * Get a [Observable.Transformer] that handles a [OutOfSyncException] by updating the local state an trying again.
+     */
+    private fun <T> retryAfterSync(): Observable.Transformer<T, T> {
+        return retryAfter(MAX_SYNC_RETRY_COUNT, { errorCount: Int, error: Throwable ->
+            if (errorCount < MAX_SYNC_RETRY_COUNT && error is OutOfSyncException) {
+                // retry again after sync
+                setUserSeriesList(error.remoteList)
             } else {
                 // abort with the original error
                 Observable.error(error)
@@ -348,9 +370,15 @@ class ProxerRepository(
         }
     }
 
+    /**
+     * Exception that indicates an error because the local state does not match the remote state
+     */
+    private class OutOfSyncException(val remoteList: List<UserListSeriesEntry>) : RuntimeException()
+
     companion object {
         private const val LIST_SYNC_DELAY = 30 * 60 * 60 * 1000 // 30 min in millis
         private const val MAX_LOGIN_RETRY_COUNT = 1
+        private const val MAX_SYNC_RETRY_COUNT = 1
     }
 }
 

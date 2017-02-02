@@ -7,10 +7,7 @@ import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
-import com.inverse.unofficial.proxertv.model.Comment
-import com.inverse.unofficial.proxertv.model.SeriesCover
-import com.inverse.unofficial.proxertv.model.SeriesDbEntry
-import com.inverse.unofficial.proxertv.model.SeriesList
+import com.inverse.unofficial.proxertv.model.*
 import com.nhaarman.mockito_kotlin.*
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -145,6 +142,27 @@ class ProxerRepositoryTest {
     }
 
     @Test
+    fun testMoveSeriesToListOffline() {
+        userSettings.clearUser()
+        whenever(mySeriesDb.insertOrUpdateSeries(any())).thenReturn(Observable.just(Unit))
+        whenever(mySeriesDb.removeSeries(any())).thenReturn(Observable.just(Unit))
+
+        val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
+
+        // update or insert the series
+        repository.moveSeriesToList(reZero, SeriesList.WATCHLIST).subscribeAssert {
+            assertNoErrors()
+        }
+        verify(mySeriesDb).insertOrUpdateSeries(eq(SeriesDbEntry(reZero.id, reZero.name, SeriesList.WATCHLIST)))
+
+        // no list should delete
+        repository.moveSeriesToList(reZero, SeriesList.NONE).subscribeAssert {
+            assertNoErrors()
+        }
+        verify(mySeriesDb).removeSeries(eq(reZero.id))
+    }
+
+    @Test
     fun testMoveSeriesToListOnline() {
         userSettings.setUser(TEST_USER, TEST_PASSWORD)
 
@@ -155,7 +173,7 @@ class ProxerRepositoryTest {
         whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.error(SQLiteException()))
         // success create response
         mockServer.enqueue(ApiResponses.getSuccessFullResponse("COM_PROXER_SUCCESS"))
-        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", USERLIST_RE_ZERO))
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_FINISHED)))
 
         // the comment state is 0 (= FINISHED) and needs to be updated
         mockServer.enqueue(ApiResponses.getSuccessFullResponse("Erfolgreich bearbeitet!"))
@@ -186,25 +204,114 @@ class ProxerRepositoryTest {
         assertEquals(1, comment.ratingMusic)
     }
 
+    @Test
+    fun testMoveSeriesToListOnlineExists() {
+        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+
+        val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
+        val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
+        val reZeroOnline = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.FINISHED, 12345678)
+
+        // entry does exist, no create request necessary
+        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.just(reZeroDb))
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_BOOKMARKED)))
+
+        // the comment state is 2 (= Bookmarked) and needs to be updated
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Erfolgreich bearbeitet!"))
+        whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))
+
+        repository.moveSeriesToList(reZero, SeriesList.FINISHED).subscribeAssert {
+            assertNoErrors()
+        }
+
+        // the local db should get updated with the latest data + our changes
+        verify(mySeriesDb).overrideWithSeriesList(eq(listOf(reZeroOnline)))
+    }
+
+    @Test
+    fun testMoveSeriesToListOnlineLogin() {
+        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+
+        val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
+        val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
+        val reZeroOnline = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.FINISHED, 12345678)
+
+        // entry does exist, no create request necessary
+        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.just(reZeroDb))
+
+        // list request failed, not logged in
+        mockServer.enqueue(ApiResponses.getErrorResponse(3004, "Der User ist nicht eingeloggt"))
+        mockServer.enqueue(ApiResponses.getSuccessFulLoginResponse(TEST_TOKEN))
+        // list request success after login
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_FINISHED)))
+
+        // the comment state is finished and does not need to be updated
+        whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))
+
+        repository.moveSeriesToList(reZero, SeriesList.FINISHED).subscribeAssert {
+            assertNoErrors()
+        }
+
+        // the local db should get updated with the latest data + our changes
+        verify(mySeriesDb).overrideWithSeriesList(eq(listOf(reZeroOnline)))
+    }
+
+    @Test
+    fun testMoveSeriesToListOnlineChange() {
+        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+
+        val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
+        val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
+        val reZeroOnline = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.FINISHED, 12345678)
+
+        // local entry does exist on first call, but is removed on the second try
+        whenever(mySeriesDb.getSeries(any()))
+                .thenReturn(Observable.just(reZeroDb))
+                .thenReturn(Observable.error(SQLiteException()))
+
+        // overriding the local list is always successful
+        whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))
+
+        // list request success, but the series entry was deleted online before the last sync
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", "[]"))
+        // create entry response
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("COM_PROXER_SUCCESS"))
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_BOOKMARKED)))
+
+        // the comment state is bookmarked and does need to be updated
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Erfolgreich bearbeitet!"))
+
+        repository.moveSeriesToList(reZero, SeriesList.FINISHED).subscribeAssert {
+            assertNoErrors()
+        }
+
+        // the local db should get updated with the latest data + our changes
+        verify(mySeriesDb).overrideWithSeriesList(eq(listOf(reZeroOnline)))
+    }
+
+    private fun getListReZero(state: Int): String {
+        return """
+                [{
+                    "count": "26",
+                    "medium": "animeseries",
+                    "estate": "1",
+                    "cid": "12345678",
+                    "name": "Re:Zero kara Hajimeru Isekai Seikatsu",
+                    "id": "13975",
+                    "comment": "",
+                    "state": "$state",
+                    "episode": "26",
+                    "data": "{\"genre\":\"1\",\"story\":\"1\",\"animation\":\"2\",\"characters\":\"1\",\"music\":\"1\"}",
+                    "rating": "0",
+                    "timestamp": "1475871721"
+                }]
+                """
+                .trimIndent()
+    }
+
     companion object {
         private const val TEST_USER = "mockUser"
         private const val TEST_PASSWORD = "mockPassword"
         private const val TEST_TOKEN = "testToken"
-
-        private val USERLIST_RE_ZERO = """
-        [{
-            "count": "26",
-            "medium": "animeseries",
-            "estate": "1",
-            "cid": "12345678",
-            "name": "Re:Zero kara Hajimeru Isekai Seikatsu",
-            "id": "13975",
-            "comment": "",
-            "state": "0",
-            "episode": "26",
-            "data": "{\"genre\":\"1\",\"story\":\"1\",\"animation\":\"2\",\"characters\":\"1\",\"music\":\"1\"}",
-            "rating": "0",
-            "timestamp": "1475871721"
-        }]""".trimIndent()
     }
 }
