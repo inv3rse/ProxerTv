@@ -8,7 +8,7 @@ import com.inverse.unofficial.proxertv.model.SeriesDbEntry
 import com.inverse.unofficial.proxertv.model.SeriesList
 import org.jetbrains.anko.db.*
 import rx.Observable
-import rx.subjects.BehaviorSubject
+import rx.subjects.PublishSubject
 import rx.subjects.SerializedSubject
 
 internal object SeriesScheme {
@@ -53,15 +53,18 @@ class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAM
  * The db for the users series.
  */
 open class MySeriesDb(val dbHelper: SeriesDbHelper) {
-    private val listObservable = SerializedSubject(BehaviorSubject.create<Unit>(Unit))
+    private val listObservable = SerializedSubject(PublishSubject.create<Int>())
 
     /**
      * Observe the series list.
      * @return an [Observable] emitting the current value and any subsequent changes
      */
     open fun observeSeriesList(): Observable<List<ISeriesDbEntry>> {
-        return listObservable.concatMap { loadSeriesList() }
+        return listObservable
+                .startWith(ALL_CHANGE)
+                .concatMap { loadSeriesList() }
     }
+
 
     /**
      * Loads the series list.
@@ -91,7 +94,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
                                     SeriesScheme.USER_LIST to it.userList.ordinal)
                         }
             }
-        }.doOnCompleted { notifyListChange() }
+        }.doOnCompleted { notifyListChange(ALL_CHANGE) }
     }
 
     /**
@@ -112,7 +115,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
                         SeriesScheme.COMMENT_ID to series.cid,
                         SeriesScheme.USER_LIST to series.userList.ordinal)
             }
-        }.doOnCompleted { notifyListChange() }
+        }.doOnCompleted { notifyListChange(series.id) }
     }
 
     /**
@@ -122,7 +125,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      */
     open fun getSeries(seriesId: Int): Observable<ISeriesDbEntry> {
         return dbHelper.useAsync {
-            select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} ) $seriesId)").exec {
+            select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} = $seriesId)").exec {
                 if (count == 1) {
                     parseSingle(SeriesRowParser())
                 } else {
@@ -130,6 +133,28 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
                 }
             }
         }
+    }
+
+    /**
+     * Observes the on which list the given series is on.
+     * @param seriesId the series id
+     * @return an [Observable] emitting the [SeriesList] an subsequent changes
+     */
+    open fun observeSeriesListState(seriesId: Int): Observable<SeriesList> {
+        return listObservable
+                .startWith(ALL_CHANGE)
+                .filter { it == ALL_CHANGE || it == seriesId }
+                .concatMap {
+                    getSeries(seriesId)
+                            .map(ISeriesDbEntry::userList)
+                            .onErrorResumeNext {
+                                if (it is NoSeriesEntryException) {
+                                    Observable.just(SeriesList.NONE)
+                                } else {
+                                    Observable.error(it)
+                                }
+                            }
+                }
     }
 
     /**
@@ -153,7 +178,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
             transaction {
                 delete(SeriesScheme.TABLE, "(${SeriesScheme.ID} = $seriesId)")
             }
-        }.doOnCompleted { notifyListChange() }
+        }.doOnCompleted { notifyListChange(seriesId) }
     }
 
     /**
@@ -161,8 +186,8 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
      */
     class NoSeriesEntryException(msg: String = "no series found") : RuntimeException(msg)
 
-    private fun notifyListChange() {
-        listObservable.onNext(Unit)
+    private fun notifyListChange(changeId: Int) {
+        listObservable.onNext(changeId)
     }
 
     private class SeriesRowParser : RowParser<ISeriesDbEntry> {
@@ -172,5 +197,9 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
         override fun parseRow(columns: Array<Any?>): ISeriesDbEntry {
             return parser.parseRow(columns)
         }
+    }
+
+    companion object {
+        const val ALL_CHANGE = -1
     }
 }

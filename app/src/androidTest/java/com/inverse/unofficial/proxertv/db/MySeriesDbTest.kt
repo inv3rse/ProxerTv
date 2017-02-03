@@ -23,14 +23,14 @@ import java.util.concurrent.TimeUnit
 class MySeriesDbTest {
 
     lateinit var dbHelper: SeriesDbHelper
-    lateinit var mDb: MySeriesDb
+    lateinit var seriesDb: MySeriesDb
 
     @Before
     fun setup() {
         @Suppress("DEPRECATION")
         val context = RenamingDelegatingContext(InstrumentationRegistry.getTargetContext(), "test")
         dbHelper = SeriesDbHelper(context)
-        mDb = MySeriesDb(dbHelper)
+        seriesDb = MySeriesDb(dbHelper)
 
         dbHelper.clearDb()
     }
@@ -46,29 +46,29 @@ class MySeriesDbTest {
         val series2 = SeriesDbEntry(2, "2", SeriesList.FINISHED)
         val series3 = SeriesDbEntry(3, "3", SeriesList.NONE)
 
-        mDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
-        mDb.loadSeriesList().subscribeAssert {
+        seriesDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
+        seriesDb.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1))
         }
 
         // add same key (should not appear twice)
-        mDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
-        mDb.loadSeriesList().subscribeAssert {
+        seriesDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
+        seriesDb.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1))
         }
 
         // add series 2
-        mDb.insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
-        mDb.loadSeriesList().subscribeAssert {
+        seriesDb.insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
+        seriesDb.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1, series2))
         }
 
         // adding to list NONE should do nothing
-        mDb.insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
-        mDb.loadSeriesList().subscribeAssert {
+        seriesDb.insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
+        seriesDb.loadSeriesList().subscribeAssert {
             assertNoErrors()
             assertValue(listOf(series1, series2))
         }
@@ -80,30 +80,56 @@ class MySeriesDbTest {
         val series2 = SeriesDbEntry(2, "2", SeriesList.FINISHED)
         val series3 = SeriesDbEntry(3, "3", SeriesList.ABORTED)
 
-        mDb.apply {
+        seriesDb.apply {
             insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
             insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
             insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
         }
 
-        mDb.containsSeries(series1.id).subscribeAssert {
+        seriesDb.containsSeries(series1.id).subscribeAssert {
             assertNoErrors()
             assertValue(true)
         }
 
-        mDb.containsSeries(series2.id).subscribeAssert {
+        seriesDb.containsSeries(series2.id).subscribeAssert {
             assertNoErrors()
             assertValue(true)
         }
 
-        mDb.containsSeries(series3.id).subscribeAssert {
+        seriesDb.containsSeries(series3.id).subscribeAssert {
             assertNoErrors()
             assertValue(true)
         }
 
-        mDb.containsSeries(4).subscribeAssert {
+        seriesDb.containsSeries(4).subscribeAssert {
             assertNoErrors()
             assertValue(false)
+        }
+    }
+
+    @Test
+    fun testGetSeries() {
+        val series1 = SeriesDbEntry(1, "1", SeriesList.WATCHLIST)
+        val series2 = SeriesDbEntry(2, "2", SeriesList.FINISHED)
+
+        seriesDb.getSeries(1).subscribeAssert { assertError(MySeriesDb.NoSeriesEntryException::class.java) }
+
+        seriesDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
+        seriesDb.getSeries(1).subscribeAssert {
+            assertNoErrors()
+            assertValue(series1)
+        }
+
+        seriesDb.insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
+
+        seriesDb.getSeries(1).subscribeAssert {
+            assertNoErrors()
+            assertValue(series1)
+        }
+
+        seriesDb.getSeries(2).subscribeAssert {
+            assertNoErrors()
+            assertValue(series2)
         }
     }
 
@@ -113,24 +139,24 @@ class MySeriesDbTest {
         val series2 = SeriesDbEntry(2, "2", SeriesList.WATCHLIST)
         val series3 = SeriesDbEntry(3, "3", SeriesList.WATCHLIST)
 
-        mDb.apply {
+        seriesDb.apply {
             insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
             insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
             insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
         }
 
-        mDb.containsSeries(series1.id).subscribeAssert {
+        seriesDb.containsSeries(series1.id).subscribeAssert {
             assertNoErrors()
             assertValue(true)
         }
 
-        mDb.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
-        mDb.containsSeries(series1.id).subscribeAssert {
+        seriesDb.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
+        seriesDb.containsSeries(series1.id).subscribeAssert {
             assertNoErrors()
             assertValue(false)
         }
 
-        mDb.containsSeries(series3.id).subscribeAssert {
+        seriesDb.containsSeries(series3.id).subscribeAssert {
             assertNoErrors()
             assertValue(true)
         }
@@ -143,19 +169,43 @@ class MySeriesDbTest {
         val series2 = SeriesDbEntry(2, "2", SeriesList.WATCHLIST)
         val series3 = SeriesDbEntry(3, "3", SeriesList.ABORTED)
 
-        mDb.apply {
+        seriesDb.apply {
             insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
             insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
         }
 
-        mDb.observeSeriesList().take(3).subscribe(testSubscriber)
+        seriesDb.observeSeriesList().take(3).subscribe(testSubscriber)
 
-        mDb.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
-        mDb.insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
+        seriesDb.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
+        seriesDb.insertOrUpdateSeries(series3).subscribeAssert { assertNoErrors() }
 
         testSubscriber.awaitTerminalEvent(1, TimeUnit.SECONDS)
         testSubscriber.assertNoErrors()
         // initial, remove1, add3
         testSubscriber.assertValues(listOf(series1, series2), listOf(series2), listOf(series2, series3))
+    }
+
+    @Test
+    fun testObserveSeriesListState() {
+        val testSubscriber = TestSubscriber<SeriesList>()
+        val series1 = SeriesDbEntry(1, "1", SeriesList.WATCHLIST)
+        val series2 = SeriesDbEntry(2, "2", SeriesList.WATCHLIST)
+
+        seriesDb.observeSeriesListState(series1.id).subscribe(testSubscriber)   // initial value
+
+        // to SeriesList.WATCHLIST
+        seriesDb.insertOrUpdateSeries(series1).subscribeAssert { assertNoErrors() }
+        // no change
+        seriesDb.insertOrUpdateSeries(series2).subscribeAssert { assertNoErrors() }
+        // to SeriesList.FINISHED
+        seriesDb.insertOrUpdateSeries(series1.copy(userList = SeriesList.FINISHED)).subscribeAssert { assertNoErrors() }
+        // to SeriesList.NONE
+        seriesDb.removeSeries(series1.id).subscribeAssert { assertNoErrors() }
+        // to SeriesList.WATCHLIST
+        seriesDb.overrideWithSeriesList(listOf(series1, series2)).subscribeAssert { assertNoErrors() }
+
+        testSubscriber.awaitTerminalEvent(1, TimeUnit.SECONDS)
+        testSubscriber.assertNoErrors()
+        testSubscriber.assertValues(SeriesList.NONE, SeriesList.WATCHLIST, SeriesList.FINISHED, SeriesList.NONE, SeriesList.WATCHLIST)
     }
 }
