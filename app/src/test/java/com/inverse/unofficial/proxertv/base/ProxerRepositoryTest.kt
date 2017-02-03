@@ -1,7 +1,6 @@
 package com.inverse.unofficial.proxertv.base
 
 import ApiResponses
-import android.database.sqlite.SQLiteException
 import com.github.salomonbrys.kotson.fromJson
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
@@ -12,6 +11,7 @@ import com.nhaarman.mockito_kotlin.*
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import provideTestClient
@@ -170,7 +170,7 @@ class ProxerRepositoryTest {
         val reZeroOnline = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
 
         // entry does not exists, needs to be created
-        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.error(SQLiteException()))
+        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.error(MySeriesDb.NoSeriesEntryException()))
         // success create response
         mockServer.enqueue(ApiResponses.getSuccessFullResponse("COM_PROXER_SUCCESS"))
         mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_FINISHED)))
@@ -190,6 +190,9 @@ class ProxerRepositoryTest {
         mockServer.takeRequest()
         mockServer.takeRequest()
         val updateRequest = mockServer.takeRequest()
+
+        // the request should have multiple query parameters
+        assertTrue(updateRequest.requestLine.contains("format=json&json=edit"))
 
         // the complete comment must be send to update
         val comment = client.gson.fromJson<Comment>(updateRequest.body.readUtf8())
@@ -267,7 +270,7 @@ class ProxerRepositoryTest {
         // local entry does exist on first call, but is removed on the second try
         whenever(mySeriesDb.getSeries(any()))
                 .thenReturn(Observable.just(reZeroDb))
-                .thenReturn(Observable.error(SQLiteException()))
+                .thenReturn(Observable.error(MySeriesDb.NoSeriesEntryException()))
 
         // overriding the local list is always successful
         whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))
@@ -287,6 +290,39 @@ class ProxerRepositoryTest {
 
         // the local db should get updated with the latest data + our changes
         verify(mySeriesDb).overrideWithSeriesList(eq(listOf(reZeroOnline)))
+    }
+
+    @Test
+    fun testRemoveSeriesFromListOffline() {
+        userSettings.clearUser()
+        whenever(mySeriesDb.removeSeries(any())).thenReturn(Observable.just(Unit))
+
+        repository.removeSeriesFromList(123).subscribeAssert {
+            assertNoErrors()
+        }
+
+        verify(mySeriesDb).removeSeries(eq(123))
+    }
+
+    @Test
+    fun testRemoveSeriesFromListOnline() {
+        val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
+        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+
+        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.just(reZeroDb))
+        whenever(mySeriesDb.removeSeries(any())).thenReturn(Observable.just(Unit))
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Eintrag gelöscht"))
+
+        repository.removeSeriesFromList(123).subscribeAssert {
+            assertNoErrors()
+        }
+
+        assertEquals(1, mockServer.requestCount)
+        verify(mySeriesDb).removeSeries(eq(123))
+
+        // check for query parameters
+        val request = mockServer.takeRequest()
+        assertTrue(request.path.contains("format=json&json=delete"))
     }
 
     private fun getListReZero(state: Int): String {

@@ -2,7 +2,6 @@ package com.inverse.unofficial.proxertv.base.db
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteException
 import com.inverse.unofficial.proxertv.model.ISeriesDbEntry
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesDbEntry
@@ -127,7 +126,7 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
                 if (count == 1) {
                     parseSingle(SeriesRowParser())
                 } else {
-                    throw SQLiteException("no series for id \"$seriesId\"")
+                    throw NoSeriesEntryException("no series for id \"$seriesId\"")
                 }
             }
         }
@@ -156,6 +155,11 @@ open class MySeriesDb(val dbHelper: SeriesDbHelper) {
             }
         }.doOnCompleted { notifyListChange() }
     }
+
+    /**
+     * Exception that indicates that there is no series for the given id.
+     */
+    class NoSeriesEntryException(msg: String = "no series found") : RuntimeException(msg)
 
     private fun notifyListChange() {
         listObservable.onNext(Unit)

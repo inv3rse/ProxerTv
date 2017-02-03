@@ -161,7 +161,6 @@ class ProxerRepository(
             return updateObservable
                     .compose(retryAfterLogin<Unit>())
                     .compose(retryAfterSync<Unit>())
-                    .doOnError { CrashReporting.logException(it) }
 
         } else {
             // local only, add the series without a comment id
@@ -178,10 +177,17 @@ class ProxerRepository(
     fun removeSeriesFromList(seriesId: Int): Observable<Unit> {
         if (userSettings.getUser() != null) {
             // get the users comment id for the series
-            mySeriesDb.getSeries(seriesId)
-                    .filter { it.cid != SeriesDbEntry.NO_COMMENT_ID }
-
-
+            return mySeriesDb.getSeries(seriesId)
+                    .flatMap { client.deleteComment(it.cid) }
+                    .flatMap { mySeriesDb.removeSeries(seriesId) }
+                    // no error if the series is not on the list
+                    .onErrorResumeNext { error ->
+                        if (error is MySeriesDb.NoSeriesEntryException) {
+                            Observable.empty()
+                        } else {
+                            Observable.error(error)
+                        }
+                    }
         }
 
         return mySeriesDb.removeSeries(seriesId)

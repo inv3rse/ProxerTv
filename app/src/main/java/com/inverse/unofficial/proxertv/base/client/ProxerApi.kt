@@ -97,6 +97,15 @@ interface ProxerApi {
     @FailOnError
     fun setComment(@Query("id") commentId: Long, @Body comment: Comment): Observable<Boolean>
 
+    /**
+     * Deletes the specified comment.
+     * @note The resulting ApiErrorException on failure does not contain a status code.
+     * @param commentId the id of the comment.
+     */
+    @POST("/comment?format=json&json=delete")
+    @FailOnError
+    fun deleteComment(@Query("id") commentId: Long): Observable<Boolean>
+
     companion object {
         const val COMMENT_TYPE_WATCHLIST = "note"
         const val COMMENT_TYPE_FINISHED = "finish"
