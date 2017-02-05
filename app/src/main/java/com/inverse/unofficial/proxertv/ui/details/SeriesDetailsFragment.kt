@@ -23,6 +23,9 @@ import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
 
+/**
+ * The details view for a series.
+ */
 class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener {
     private val presenterSelector = ClassPresenterSelector()
     private val contentAdapter = ArrayObjectAdapter(presenterSelector)
@@ -106,12 +109,12 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     }
 
     private fun setupPresenter() {
-//        val detailsOverviewPresenter = DetailsOverviewRowPresenter(DetailsDescriptionPresenter())
-        val detailsOverviewPresenter = FullWidthDetailsOverviewRowPresenter(DetailsDescriptionPresenter())
+        @Suppress("DEPRECATION")
+        val detailsOverviewPresenter = DetailsOverviewRowPresenter(DetailsDescriptionPresenter())
         presenterSelector.addClassPresenter(DetailsOverviewRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
-//        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
+        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
         detailsOverviewPresenter.onActionClickedListener = this
         onItemViewClickedListener = this
 

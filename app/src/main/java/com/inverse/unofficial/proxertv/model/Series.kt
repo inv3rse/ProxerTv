@@ -136,8 +136,6 @@ data class UserListSeriesEntry(
         val commentRating: CommentRatings?) {
 
     companion object {
-        const val MEDIUM_ANIME = "animeseries"
-
         // ------------ User list state ------------
         const val STATE_USER_FINISHED = 0
         const val STATE_USER_WATCHING = 1

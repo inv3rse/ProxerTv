@@ -124,6 +124,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     private fun loadContent() {
         val userListObservable = proxerRepository.syncUserList()
                 .flatMap { proxerRepository.observeSeriesList() }
+                .subscribeOn(Schedulers.io())
                 .publish()
 
         loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.WATCHLIST } },

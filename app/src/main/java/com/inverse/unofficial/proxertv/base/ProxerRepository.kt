@@ -295,8 +295,6 @@ class ProxerRepository(
      */
     private fun setUserSeriesList(seriesEntries: List<UserListSeriesEntry>): Observable<Boolean> {
         return Observable.from(seriesEntries)
-                // filter only active and bookmarked
-                .filter { UserListSeriesEntry.MEDIUM_ANIME == it.medium }
                 // map to db entries
                 .map { SeriesDbEntry(it.id, it.name, SeriesList.fromApiState(it.commentState), it.cid) }
                 .toList()
