@@ -99,8 +99,8 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         } else if (item is UserAction) {
             when (item) {
                 UserAction.LOGIN -> startActivity<LoginActivity>()
-                UserAction.LOGOUT -> proxerRepository.logout().subscribe()
-                UserAction.SYNC -> proxerRepository.syncUserList(true).subscribe()
+                UserAction.LOGOUT -> proxerRepository.logout().subscribeOn(Schedulers.io()).subscribe()
+                UserAction.SYNC -> proxerRepository.syncUserList(true).subscribeOn(Schedulers.io()).subscribe()
             }
         }
     }
@@ -115,9 +115,13 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         val userListRow = ListRow(HeaderItem(getString(R.string.user_action_row)), userRowAdapter)
 
         rowsAdapter.add(userListRow)
-        rowTargetMap.put(userListRow, 6)
-        targetRowMap.put(6, userRowAdapter)
+        rowTargetMap.put(userListRow, 7)
+        targetRowMap.put(7, userRowAdapter)
         adapter = rowsAdapter
+
+        subscriptions.add(userSettings.observeAccount().observeOn(AndroidSchedulers.mainThread()).subscribe({
+            userRowAdapter.notifyAccountChanged()
+        }))
     }
 
     private fun loadContent() {

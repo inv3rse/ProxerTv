@@ -8,6 +8,13 @@ import com.inverse.unofficial.proxertv.base.UserSettings
  */
 class UserActionAdapter(private val userSettings: UserSettings) : ObjectAdapter(UserActionPresenter()) {
 
+    /**
+     * Notifies that the account has changed
+     */
+    fun notifyAccountChanged() {
+        notifyChanged()
+    }
+
     override fun size(): Int {
         if (userSettings.getUser() != null) {
             return ACTIONS_LOGGED_IN.size

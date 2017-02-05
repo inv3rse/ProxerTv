@@ -52,7 +52,7 @@ class ProxerRepository(
                 }))
                 // save the login data (the backing SharedPreferences are thread safe)
                 .doOnNext { login ->
-                    userSettings.setUser(login.username, login.password)
+                    userSettings.setAccount(login.username, login.password)
                     userSettings.setUserToken(login.token)
                     invalidateLocalList()
                 }

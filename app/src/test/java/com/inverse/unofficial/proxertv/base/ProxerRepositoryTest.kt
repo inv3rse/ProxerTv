@@ -114,7 +114,7 @@ class ProxerRepositoryTest {
     fun testLogout() {
         mockServer.enqueue(ApiResponses.getLogoutResponse())
 
-        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
         userSettings.setUserToken(TEST_TOKEN)
 
         repository.logout()
@@ -164,7 +164,7 @@ class ProxerRepositoryTest {
 
     @Test
     fun testMoveSeriesToListOnline() {
-        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
 
         val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
         val reZeroOnline = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
@@ -209,7 +209,7 @@ class ProxerRepositoryTest {
 
     @Test
     fun testMoveSeriesToListOnlineExists() {
-        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
 
         val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
         val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
@@ -233,7 +233,7 @@ class ProxerRepositoryTest {
 
     @Test
     fun testMoveSeriesToListOnlineLogin() {
-        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
 
         val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
         val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
@@ -261,7 +261,7 @@ class ProxerRepositoryTest {
 
     @Test
     fun testMoveSeriesToListOnlineChange() {
-        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
 
         val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
         val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
@@ -307,7 +307,7 @@ class ProxerRepositoryTest {
     @Test
     fun testRemoveSeriesFromListOnline() {
         val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
-        userSettings.setUser(TEST_USER, TEST_PASSWORD)
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
 
         whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.just(reZeroDb))
         whenever(mySeriesDb.removeSeries(any())).thenReturn(Observable.just(Unit))

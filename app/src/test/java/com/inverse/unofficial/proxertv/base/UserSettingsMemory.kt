@@ -3,7 +3,7 @@ package com.inverse.unofficial.proxertv.base
 /**
  * In memory implementation of the [UserSettings] for testing
  */
-class UserSettingsMemory : UserSettings {
+class UserSettingsMemory : UserSettings() {
     private var username: String? = null
     private var password: String? = null
     private var userToken: String? = null
@@ -27,11 +27,5 @@ class UserSettingsMemory : UserSettings {
 
     override fun getUserToken(): String? {
         return userToken
-    }
-
-    override fun clearUser() {
-        username = null
-        password = null
-        userToken = null
     }
 }

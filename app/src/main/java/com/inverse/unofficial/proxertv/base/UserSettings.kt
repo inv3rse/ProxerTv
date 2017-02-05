@@ -1,44 +1,75 @@
 package com.inverse.unofficial.proxertv.base
 
 import android.content.SharedPreferences
+import rx.Observable
+import rx.subjects.PublishSubject
+import rx.subjects.SerializedSubject
 
-interface UserSettings {
+abstract class UserSettings {
+
+    private val changeSubject = SerializedSubject(PublishSubject.create<User>())
+
+    /**
+     * Observe changes to the user account
+     */
+    fun observeAccount(): Observable<User> {
+        return changeSubject
+    }
+
+    /**
+     * Set username and password.
+     * @param username the username
+     * @param password the password
+     */
+    fun setAccount(username: String, password: String) {
+        setUser(username, password)
+        notifyChange()
+    }
+
+    /**
+     * Clears user name, password and token
+     */
+    fun clearUser() {
+        setUser(null, null)
+        setUserToken(null)
+        notifyChange()
+    }
+
+    private fun notifyChange() {
+        changeSubject.onNext(getUser())
+    }
+
     /**
      * Set username and password
      * @param username the username
      * @param password the password
      */
-    fun setUser(username: String?, password: String?)
+    protected abstract fun setUser(username: String?, password: String?)
 
     /**
      * Set the user token
      * @param userToken the user token
      */
-    fun setUserToken(userToken: String?)
+    abstract fun setUserToken(userToken: String?)
 
     /**
      * Get the {@link User} object
      * @return the current user
      */
-    fun getUser(): User?
-
-    /**
-     * Clears user name, password and token
-     */
-    fun clearUser()
+    abstract fun getUser(): User?
 
     /**
      * Get the current user token
      * @return the user token
      */
-    fun getUserToken(): String?
+    abstract fun getUserToken(): String?
 }
 
 
 /**
  * User settings for storing name password and token
  */
-class UserSettingsPrefs(private val prefs: SharedPreferences) : UserSettings {
+class UserSettingsPrefs(private val prefs: SharedPreferences) : UserSettings() {
 
     override fun setUser(username: String?, password: String?) {
         prefs.edit().putString(KEY_USERNAME, username).putString(KEY_PASSWORD, password).apply()
@@ -57,11 +88,6 @@ class UserSettingsPrefs(private val prefs: SharedPreferences) : UserSettings {
         }
 
         return null
-    }
-
-    override fun clearUser() {
-        setUser(null, null)
-        setUserToken(null)
     }
 
     override fun getUserToken(): String? {
