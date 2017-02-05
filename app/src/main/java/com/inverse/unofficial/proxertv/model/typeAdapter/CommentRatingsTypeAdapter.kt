@@ -22,28 +22,30 @@ class CommentRatingsTypeAdapter : TypeAdapter<CommentRatings>() {
         var characters: Int? = null
         var music: Int? = null
 
-        val isArray = reader.peek() == JsonToken.BEGIN_ARRAY
+        if (!arrayString.isBlank()) {
+            val isArray = reader.peek() == JsonToken.BEGIN_ARRAY
 
-        if (isArray) {
-            reader.beginArray()
-        } else {
-            reader.beginObject()
-        }
-
-        while (reader.hasNext()) {
-            when (reader.nextName()) {
-                "genre" -> genre = reader.nextInt()
-                "story" -> story = reader.nextInt()
-                "animation" -> animation = reader.nextInt()
-                "characters" -> characters = reader.nextInt()
-                "music" -> music = reader.nextInt()
+            if (isArray) {
+                reader.beginArray()
+            } else {
+                reader.beginObject()
             }
-        }
 
-        if (isArray) {
-            reader.endArray()
-        } else {
-            reader.endObject()
+            while (reader.hasNext()) {
+                when (reader.nextName()) {
+                    "genre" -> genre = reader.nextInt()
+                    "story" -> story = reader.nextInt()
+                    "animation" -> animation = reader.nextInt()
+                    "characters" -> characters = reader.nextInt()
+                    "music" -> music = reader.nextInt()
+                }
+            }
+
+            if (isArray) {
+                reader.endArray()
+            } else {
+                reader.endObject()
+            }
         }
 
         return CommentRatings(genre, story, animation, characters, music)
