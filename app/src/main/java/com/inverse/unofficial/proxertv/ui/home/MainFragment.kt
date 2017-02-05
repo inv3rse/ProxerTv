@@ -3,6 +3,7 @@ package com.inverse.unofficial.proxertv.ui.home
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
+import android.support.annotation.StringRes
 import android.support.v17.leanback.app.BrowseFragment
 import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
@@ -13,6 +14,7 @@ import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.ISeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.login.LoginActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
@@ -58,14 +60,10 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         title = getString(R.string.app_name)
         headersState = HEADERS_HIDDEN
 
-        initDefaultRows()
         onItemViewClickedListener = this
         setOnSearchClickedListener(this)
-    }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-
+        initDefaultRows()
         loadContent()
     }
 
@@ -112,80 +110,118 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
     private fun initDefaultRows() {
         val userRowAdapter = UserActionAdapter(userSettings)
-        val userListRow = ListRow(HeaderItem(getString(R.string.user_action_row)), userRowAdapter)
+        addRow(R.string.row_account_actions, userRowAdapter, POS_ACCOUNT_ACTIONS_LIST)
 
-        rowsAdapter.add(userListRow)
-        rowTargetMap.put(userListRow, 7)
-        targetRowMap.put(7, userRowAdapter)
+        subscriptions.add(userSettings.observeAccount()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        { userRowAdapter.notifyAccountChanged() },
+                        { CrashReporting.logException(it) }))
+
         adapter = rowsAdapter
-
-        subscriptions.add(userSettings.observeAccount().observeOn(AndroidSchedulers.mainThread()).subscribe({
-            userRowAdapter.notifyAccountChanged()
-        }))
     }
 
     private fun loadContent() {
-        loadAndAddRow(proxerRepository.syncUserList().flatMap { proxerRepository.observeSeriesList() },
-                getString(R.string.row_my_list), 0)
+        val userListObservable = proxerRepository.syncUserList()
+                .flatMap { proxerRepository.observeSeriesList() }
+                .publish()
+
+        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.WATCHLIST } },
+                R.string.row_my_list, POS_USER_LIST)
 
         loadAndAddRow(updateSubject.flatMap { loadEpisodesUpdateRow().takeUntil(updateSubject) },
-                getString(R.string.row_updates), 1)
+                R.string.row_updates, POS_UPDATES_LIST)
 
-        loadAndAddRow(proxerRepository.loadTopAccessSeries(), getString(R.string.row_top_access), 2)
-        loadAndAddRow(proxerRepository.loadTopRatingSeries(), getString(R.string.row_top_rating), 3)
-        loadAndAddRow(proxerRepository.loadTopRatingMovies(), getString(R.string.row_top_rating_movies), 4)
-        loadAndAddRow(proxerRepository.loadAiringSeries(), getString(R.string.row_airing), 5)
+        loadAndAddRow(proxerRepository.loadTopAccessSeries(), R.string.row_top_access, POS_TOP_ACCESS_LIST)
+        loadAndAddRow(proxerRepository.loadTopRatingSeries(), R.string.row_top_rating, POS_TOP_RATING_LIST)
+        loadAndAddRow(proxerRepository.loadTopRatingMovies(), R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST)
+        loadAndAddRow(proxerRepository.loadAiringSeries(), R.string.row_airing, POS_AIRING_LIST)
 
+        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.FINISHED } },
+                R.string.row_user_finished, 7)
+
+        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.ABORTED } },
+                R.string.row_user_aborted, 8)
+
+        subscriptions.add(userListObservable.connect())
     }
 
-    private fun loadAndAddRow(loadObservable: Observable<out List<ISeriesCover>>, rowName: String, position: Int) {
+    /**
+     * Adds a row to the existing rows according to targetPos.
+     */
+    private fun addRow(@StringRes headerName: Int, adapter: ObjectAdapter, targetPos: Int) {
+        val listRow = ListRow(HeaderItem(getString(headerName)), adapter)
+
+        var targetIndex = rowsAdapter.size()
+        // iterate over the existing rows to find the correct index for our targetPos
+        // (the last row might be the only one added yet)
+        for (i in 1..rowsAdapter.size()) {
+            val rowTarget = rowTargetMap[rowsAdapter.get(i - 1)] ?: 0
+            if (targetPos < rowTarget) {
+                targetIndex = i - 1
+                break
+            }
+        }
+
+        rowsAdapter.add(targetIndex, listRow)
+        rowTargetMap.put(listRow, targetPos)
+        targetRowMap.put(targetPos, adapter)
+    }
+
+    /**
+     * Removes the row for targetPos
+     */
+    private fun removeRow(targetPos: Int) {
+        rowTargetMap.filterValues { it == targetPos }.forEach { entry ->
+            rowsAdapter.remove(entry.key)
+            rowTargetMap.remove(entry.key)
+            targetRowMap.remove(entry.value)
+        }
+    }
+
+    /**
+     * Subscribes to the loadObservable and sets the row content once it emits items. If the onNext List is empty or the
+     * observable throws an error the row will be removed.
+     */
+    private fun loadAndAddRow(loadObservable: Observable<out List<ISeriesCover>>, @StringRes headerName: Int, position: Int, addFirst: Boolean = true) {
+        if (addFirst && targetRowMap[position] == null) {
+            // add the empty row first, before the content for it is loaded
+            // it is necessary to keep the selection on app start at the top of the page
+            val adapter = ArrayObjectAdapter(coverPresenter)
+            addRow(headerName, adapter, position)
+        }
+
         subscriptions.add(loadObservable
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        {
+                        { seriesList ->
                             val existingAdapter = targetRowMap[position]
                             if (existingAdapter != null && existingAdapter is ArrayObjectAdapter) {
-                                if (!it.isEmpty()) {
+                                if (!seriesList.isEmpty()) {
                                     // update existing content
                                     existingAdapter.clear()
-                                    existingAdapter.addAll(0, it)
+                                    existingAdapter.addAll(0, seriesList)
                                 } else {
-                                    // list is empty, remove row
-                                    for (i in 1..rowsAdapter.size()) {
-                                        val row = rowsAdapter.get(i - 1)
-                                        val rowTarget = rowTargetMap[row]
-                                        if (position == rowTarget) {
-                                            rowsAdapter.remove(row)
-                                            rowTargetMap.remove(row)
-                                            targetRowMap.remove(position)
-                                            break
-                                        }
-                                    }
+                                    // list is empty, remove it
+                                    removeRow(position)
                                 }
-                            } else if (it.isNotEmpty()) {
+                            } else if (seriesList.isNotEmpty()) {
                                 val adapter = ArrayObjectAdapter(coverPresenter)
-                                adapter.addAll(0, it)
-                                val listRow = ListRow(HeaderItem(rowName), adapter)
-                                var targetIndex = rowsAdapter.size()
-                                for (i in 1..rowsAdapter.size()) {
-                                    val rowTarget = rowTargetMap[rowsAdapter.get(i - 1)] ?: 0
-                                    if (position < rowTarget) {
-                                        targetIndex = i - 1
-                                        break
-                                    }
-                                }
-                                rowsAdapter.add(targetIndex, listRow)
-                                rowTargetMap.put(listRow, position)
-                                targetRowMap.put(position, adapter)
+                                adapter.addAll(0, seriesList)
+                                addRow(headerName, adapter, position)
                             }
-                        }, { CrashReporting.logException(it) }
+                        },
+                        { error ->
+                            removeRow(position)
+                            CrashReporting.logException(error)
+                        }
                 ))
     }
 
     private fun loadEpisodesUpdateRow(): Observable<List<SeriesCover>> {
         val calendar = GregorianCalendar.getInstance()
-        calendar.add(Calendar.DAY_OF_MONTH, -3)
+        calendar.add(Calendar.DAY_OF_MONTH, -UPDATES_HISTORY)
         val lastUpdateDate = calendar.time
 
         return proxerRepository.loadUpdatesList()
@@ -238,5 +274,15 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
     companion object {
         private const val SERIES_UPDATE_DELAY: Long = 30 * 60 * 1000 // 30 minutes in milliseconds
+        private const val UPDATES_HISTORY = 3 // days
+
+        private const val POS_USER_LIST = 0
+        private const val POS_UPDATES_LIST = 1
+        private const val POS_TOP_ACCESS_LIST = 2
+        private const val POS_TOP_RATING_LIST = 3
+        private const val POS_TOP_MOVIES_LIST = 4
+        private const val POS_AIRING_LIST = 5
+        private const val POS_ACCOUNT_ACTIONS_LIST = 6
+
     }
 }
