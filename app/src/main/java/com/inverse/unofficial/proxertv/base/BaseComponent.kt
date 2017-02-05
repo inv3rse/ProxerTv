@@ -42,6 +42,7 @@ class BaseModule(val application: Application) {
 @Singleton
 @Component(modules = arrayOf(BaseModule::class, ClientModule::class, StorageModule::class))
 interface BaseComponent {
+    fun getUserSettings(): UserSettings
     fun getProxerClient(): ProxerClient
     fun getProxerRepository(): ProxerRepository
 }

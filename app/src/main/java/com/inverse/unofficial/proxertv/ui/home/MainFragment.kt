@@ -14,8 +14,12 @@ import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.ISeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
+import com.inverse.unofficial.proxertv.ui.login.LoginActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
 import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
+import com.inverse.unofficial.proxertv.ui.util.UserAction
+import com.inverse.unofficial.proxertv.ui.util.UserActionAdapter
+import org.jetbrains.anko.startActivity
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
@@ -23,18 +27,21 @@ import rx.subjects.PublishSubject
 import rx.subscriptions.CompositeSubscription
 import java.util.*
 
+/**
+ * Main screen of the app. Shows multiple rows of series items with only name and cover.
+ */
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
     private val coverPresenter = SeriesCoverPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-    private val myListAdapter = ArrayObjectAdapter(coverPresenter)
     private val seriesUpdateHandler = Handler()
 
     // access to ListRow and corresponding adapter based on target position
     private val rowTargetMap = mutableMapOf<ListRow, Int>()
-    private val targetRowMap = mutableMapOf<Int, ArrayObjectAdapter>()
+    private val targetRowMap = mutableMapOf<Int, ObjectAdapter>()
 
     private val subscriptions = CompositeSubscription()
     private val proxerRepository = App.component.getProxerRepository()
+    private val userSettings = App.component.getUserSettings()
 
     private val updateSubject = PublishSubject.create<Int>()
     private var nextUpdate: Long? = null
@@ -51,7 +58,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         title = getString(R.string.app_name)
         headersState = HEADERS_HIDDEN
 
-        initEmptyRows()
+        initDefaultRows()
         onItemViewClickedListener = this
         setOnSearchClickedListener(this)
     }
@@ -81,7 +88,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     }
 
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
-        if (item is SeriesCover) {
+        if (item is ISeriesCover) {
             val intent = Intent(activity, DetailsActivity::class.java)
             val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(activity,
                     (itemViewHolder.view as ImageCardView).mainImageView,
@@ -89,6 +96,12 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
             intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
             startActivity(intent, bundle)
+        } else if (item is UserAction) {
+            when (item) {
+                UserAction.LOGIN -> startActivity<LoginActivity>()
+                UserAction.LOGOUT -> proxerRepository.logout().subscribe()
+                UserAction.SYNC -> proxerRepository.syncUserList(true).subscribe()
+            }
         }
     }
 
@@ -97,44 +110,38 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         startActivity(intent)
     }
 
-    private fun initEmptyRows() {
-        // we need at least one row before onStart or the BrowseFragment crashes,
-        // https://code.google.com/p/android/issues/detail?id=214795
-        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_my_list)), myListAdapter))
+    private fun initDefaultRows() {
+        val userRowAdapter = UserActionAdapter(userSettings)
+        val userListRow = ListRow(HeaderItem(getString(R.string.user_action_row)), userRowAdapter)
+
+        rowsAdapter.add(userListRow)
+        rowTargetMap.put(userListRow, 6)
+        targetRowMap.put(6, userRowAdapter)
         adapter = rowsAdapter
     }
 
     private fun loadContent() {
-        val syncObservable = proxerRepository.syncUserList().subscribeOn(Schedulers.io()).replay()
+        loadAndAddRow(proxerRepository.syncUserList().flatMap { proxerRepository.observeSeriesList() },
+                getString(R.string.row_my_list), 0)
 
-        subscriptions.add(syncObservable.flatMap { proxerRepository.observeSeriesList() }
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
-                    myListAdapter.clear()
-                    myListAdapter.addAll(0, it)
-                }, { throwable -> CrashReporting.logException(throwable) }))
+        loadAndAddRow(updateSubject.flatMap { loadEpisodesUpdateRow().takeUntil(updateSubject) },
+                getString(R.string.row_updates), 1)
 
-        loadAndAddRow(updateSubject.flatMap {
-            loadEpisodesUpdateRow().takeUntil(updateSubject)
-        }, getString(R.string.row_updates), 1)
+        loadAndAddRow(proxerRepository.loadTopAccessSeries(), getString(R.string.row_top_access), 2)
+        loadAndAddRow(proxerRepository.loadTopRatingSeries(), getString(R.string.row_top_rating), 3)
+        loadAndAddRow(proxerRepository.loadTopRatingMovies(), getString(R.string.row_top_rating_movies), 4)
+        loadAndAddRow(proxerRepository.loadAiringSeries(), getString(R.string.row_airing), 5)
 
-        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadTopAccessSeries() }, getString(R.string.row_top_access), 2)
-        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadTopRatingSeries() }, getString(R.string.row_top_rating), 3)
-        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadTopRatingMovies() }, getString(R.string.row_top_rating_movies), 4)
-        loadAndAddRow(syncObservable.flatMap { proxerRepository.loadAiringSeries() }, getString(R.string.row_airing), 5)
-
-        subscriptions.add(syncObservable.connect())
     }
 
-    private fun loadAndAddRow(loadObservable: Observable<List<SeriesCover>>, rowName: String, position: Int) {
+    private fun loadAndAddRow(loadObservable: Observable<out List<ISeriesCover>>, rowName: String, position: Int) {
         subscriptions.add(loadObservable
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         {
                             val existingAdapter = targetRowMap[position]
-                            if (existingAdapter != null) {
+                            if (existingAdapter != null && existingAdapter is ArrayObjectAdapter) {
                                 if (!it.isEmpty()) {
                                     // update existing content
                                     existingAdapter.clear()
@@ -152,7 +159,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                                         }
                                     }
                                 }
-                            } else if (it.size > 0) {
+                            } else if (it.isNotEmpty()) {
                                 val adapter = ArrayObjectAdapter(coverPresenter)
                                 adapter.addAll(0, it)
                                 val listRow = ListRow(HeaderItem(rowName), adapter)
@@ -202,14 +209,10 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                     return Observable.combineLatest(
                             observables,
                             fun(array: Array<out Any>): List<Triple<SeriesCover, Int, Boolean>> {
-                                val seriesList = arrayListOf<Triple<SeriesCover, Int, Boolean>>()
-                                for (element in array) {
+                                return array.map {
                                     @Suppress("UNCHECKED_CAST")
-                                    val seriesProgressPair = element as Triple<SeriesCover, Int, Boolean>
-                                    seriesList.add(seriesProgressPair)
+                                    it as Triple<SeriesCover, Int, Boolean>
                                 }
-
-                                return seriesList
                             }
                     )
                 })

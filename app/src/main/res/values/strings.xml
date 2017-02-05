@@ -29,4 +29,10 @@
     <string name="login_error_general">Login fehlgeschlagen</string>
     <string name="login_error_username_empty">der Nutzername darf nicht leer sein</string>
     <string name="login_error_password_empty">das Passwort darf nicht leer sein</string>
+
+    <!-- UserAction -->
+    <string name="user_action_row">Account</string>
+    <string name="user_action_login">Login</string>
+    <string name="user_action_sync">Sync</string>
+    <string name="user_action_logout">Logout</string>
 </resources>

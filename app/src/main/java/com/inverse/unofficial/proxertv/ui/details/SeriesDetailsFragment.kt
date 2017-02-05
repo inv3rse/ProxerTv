@@ -105,13 +105,13 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupPresenter() {
-        val detailsOverviewPresenter = DetailsOverviewRowPresenter(DetailsDescriptionPresenter())
+//        val detailsOverviewPresenter = DetailsOverviewRowPresenter(DetailsDescriptionPresenter())
+        val detailsOverviewPresenter = FullWidthDetailsOverviewRowPresenter(DetailsDescriptionPresenter())
         presenterSelector.addClassPresenter(DetailsOverviewRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
-        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
+//        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
         detailsOverviewPresenter.onActionClickedListener = this
         onItemViewClickedListener = this
 
