@@ -109,13 +109,17 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     }
 
     private fun setupPresenter() {
-        @Suppress("DEPRECATION")
-        val detailsOverviewPresenter = DetailsOverviewRowPresenter(DetailsDescriptionPresenter())
-        presenterSelector.addClassPresenter(DetailsOverviewRow::class.java, detailsOverviewPresenter)
+        val detailsOverviewPresenter = SeriesDetailsRowPresenter()
+//        val detailsOverviewPresenter = FullWidthDetailsOverviewRowPresenter(DetailsDescriptionPresenter())
+        presenterSelector.addClassPresenter(Series::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
-        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
-        detailsOverviewPresenter.onActionClickedListener = this
+//        val transitionHelper = FullWidthDetailsOverviewSharedElementHelper()
+//        transitionHelper.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
+//        detailsOverviewPresenter.setListener(transitionHelper)
+
+//        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
+//        detailsOverviewPresenter.onActionClickedListener = this
         onItemViewClickedListener = this
 
         adapter = contentAdapter
@@ -166,7 +170,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                                 }
 
                                 detailsRow.actionsAdapter = actionsAdapter
-                                contentAdapter.add(detailsRow)
+                                contentAdapter.add(series)
 
                                 Glide.with(activity)
                                         .load(ServerConfig.coverUrl(seriesId))

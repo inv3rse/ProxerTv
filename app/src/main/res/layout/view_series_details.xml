@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.percent.PercentRelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="300dp"
+    android:layout_marginBottom="40dp"
+    android:layout_marginEnd="40dp"
+    android:layout_marginStart="40dp"
+    android:background="@color/lb_default_brand_color">
+
+    <ImageView
+        android:id="@+id/series_details_cover"
+        android:layout_height="300dp"
+        android:contentDescription="@string/series_cover_description"
+        app:layout_aspectRatio="71.4285714%"
+        tools:scaleType="centerCrop"
+        tools:src="@drawable/proxer_tv_banner" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_toEndOf="@id/series_details_cover"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:text="LIST: NONE"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/series_detail_title"
+            style="@style/Widget.Leanback.DetailsDescriptionTitleStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:maxLines="2"
+            tools:text="Some Series Title" />
+
+        <TextView
+            android:id="@+id/series_detail_description"
+            style="@style/Widget.Leanback.DetailsDescriptionBodyStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:maxLines="6"
+            android:textColor="@color/lb_details_description_body_color"
+            android:textSize="17sp"
+            tools:text="Description of a series which might be somewhat long. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet." />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Genres:"
+                android:textSize="17sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="Action, Drama"
+                android:textSize="17sp" />
+
+        </LinearLayout>
+
+
+        <!-- spacer --><FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        tools:ignore="UselessLeaf" />
+
+        <FrameLayout
+            android:id="@+id/series_detail_pages"
+            android:layout_width="match_parent"
+            android:layout_height="60dp" />
+
+    </LinearLayout>
+
+</android.support.percent.PercentRelativeLayout>
