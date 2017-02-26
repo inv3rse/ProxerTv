@@ -4,15 +4,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.support.v17.leanback.app.DetailsFragment
 import android.support.v17.leanback.widget.*
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.GlideDrawable
-import com.bumptech.glide.request.animation.GlideAnimation
-import com.bumptech.glide.request.target.SimpleTarget
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
-import com.inverse.unofficial.proxertv.model.*
+import com.inverse.unofficial.proxertv.model.Episode
+import com.inverse.unofficial.proxertv.model.Series
+import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
 import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
 import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
@@ -26,10 +25,9 @@ import rx.subscriptions.CompositeSubscription
 /**
  * The details view for a series.
  */
-class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener {
+class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener, SeriesDetailsRowPresenter.PageSelectedLister {
     private val presenterSelector = ClassPresenterSelector()
     private val contentAdapter = ArrayObjectAdapter(presenterSelector)
-    private val actionsAdapter = ArrayObjectAdapter()
     private val subscriptions = CompositeSubscription()
 
     private val proxerRepository = App.component.getProxerRepository()
@@ -69,6 +67,13 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         }
     }
 
+    override fun onPageSelected(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow, selection: PageSelection) {
+        // load selected episode page
+        if (selection.pageNumber != currentPage) {
+            loadEpisodes(seriesRow.series, selection.pageNumber)
+        }
+    }
+
     override fun onActionClicked(action: Action) {
         if (series != null) {
             if (action.id == ACTION_ADD_REMOVE) {
@@ -97,13 +102,6 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                 inList = !inList
                 // update action name
                 action.label1 = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
-                actionsAdapter.notifyArrayItemRangeChanged(0, 1)
-            } else {
-                // load selected episode page
-                val page = action.id.toInt()
-                if (page != currentPage) {
-                    loadEpisodes(series!!, page)
-                }
             }
         }
     }
@@ -111,7 +109,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     private fun setupPresenter() {
         val detailsOverviewPresenter = SeriesDetailsRowPresenter()
 //        val detailsOverviewPresenter = FullWidthDetailsOverviewRowPresenter(DetailsDescriptionPresenter())
-        presenterSelector.addClassPresenter(Series::class.java, detailsOverviewPresenter)
+        presenterSelector.addClassPresenter(SeriesDetailsRowPresenter.SeriesDetailsRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
 //        val transitionHelper = FullWidthDetailsOverviewSharedElementHelper()
@@ -159,29 +157,8 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                                 this.series = series
                                 loadEpisodes(series, ProxerClient.getTargetPageForEpisode(nextEpisode))
 
-                                val detailsRow = DetailsOverviewRow(series)
-                                val addRemove = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
-                                actionsAdapter.add(Action(ACTION_ADD_REMOVE, addRemove))
-
-                                if (series.pages() > 1) {
-                                    for (i in 1..series.pages()) {
-                                        actionsAdapter.add(Action((i - 1).toLong(), getString(R.string.page_title, i)))
-                                    }
-                                }
-
-                                detailsRow.actionsAdapter = actionsAdapter
-                                contentAdapter.add(series)
-
-                                Glide.with(activity)
-                                        .load(ServerConfig.coverUrl(seriesId))
-                                        .centerCrop()
-                                        .into(object : SimpleTarget<GlideDrawable>(280, 392) {
-                                            override fun onResourceReady(resource: GlideDrawable, glideAnimation: GlideAnimation<in GlideDrawable>?) {
-                                                detailsRow.imageDrawable = resource
-                                                contentAdapter.notifyArrayItemRangeChanged(0, contentAdapter.size())
-                                            }
-
-                                        })
+                                val detailsRow = SeriesDetailsRowPresenter.SeriesDetailsRow(series, this)
+                                contentAdapter.add(detailsRow)
                             }
                         }, { CrashReporting.logException(it) }))
     }
@@ -217,8 +194,8 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                         episodeAdapters.add(adapter)
                         contentAdapter.add(ListRow(header, adapter))
-                        currentPage = page
                     }
+                    currentPage = page
 
                 }, { CrashReporting.logException(it) })
     }

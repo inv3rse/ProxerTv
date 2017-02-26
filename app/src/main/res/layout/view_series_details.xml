@@ -82,10 +82,30 @@
         android:layout_weight="1"
         tools:ignore="UselessLeaf" />
 
-        <FrameLayout
-            android:id="@+id/series_detail_pages"
+        <LinearLayout
+            android:id="@+id/series_detail_pages_view"
             android:layout_width="match_parent"
-            android:layout_height="60dp" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="Page:"
+                android:textSize="17sp" />
+
+            <android.support.v17.leanback.widget.HorizontalGridView
+                android:id="@+id/series_detail_pages"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:gravity="center_vertical"
+                android:horizontalSpacing="5dp"
+                app:rowHeight="@dimen/lb_details_overview_actions_height" />
+        </LinearLayout>
 
     </LinearLayout>
 
