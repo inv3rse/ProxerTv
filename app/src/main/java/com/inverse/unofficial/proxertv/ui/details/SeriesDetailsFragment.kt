@@ -69,8 +69,9 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
     override fun onPageSelected(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow, selection: PageSelection) {
         // load selected episode page
-        if (selection.pageNumber != currentPage) {
-            loadEpisodes(seriesRow.series, selection.pageNumber)
+        if ((selection.pageNumber - 1) != currentPage) {
+            loadEpisodes(seriesRow.series, selection.pageNumber - 1)
+            seriesRow.currentPageNumber = selection.pageNumber
         }
     }
 
@@ -155,9 +156,10 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
 
                             if (series != null) {
                                 this.series = series
-                                loadEpisodes(series, ProxerClient.getTargetPageForEpisode(nextEpisode))
+                                val episodesPage = ProxerClient.getTargetPageForEpisode(nextEpisode)
+                                loadEpisodes(series, episodesPage)
 
-                                val detailsRow = SeriesDetailsRowPresenter.SeriesDetailsRow(series, this)
+                                val detailsRow = SeriesDetailsRowPresenter.SeriesDetailsRow(series, this, episodesPage + 1)
                                 contentAdapter.add(detailsRow)
                             }
                         }, { CrashReporting.logException(it) }))

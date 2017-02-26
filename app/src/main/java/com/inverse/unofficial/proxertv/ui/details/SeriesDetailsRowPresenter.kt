@@ -14,6 +14,7 @@ import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.details.SeriesDetailsRowPresenter.SeriesDetailsRow
+import kotlin.properties.Delegates
 
 /**
  * Presenter for a [SeriesDetailsRow]. The layout is based on the
@@ -28,6 +29,10 @@ class SeriesDetailsRowPresenter : RowPresenter() {
         selectEffectEnabled = false
     }
 
+    override fun dispatchItemSelectedListener(vh: ViewHolder?, selected: Boolean) {
+        super.dispatchItemSelectedListener(vh, selected)
+    }
+
     override fun createRowViewHolder(parent: ViewGroup): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.view_series_details, parent, false)
         return DetailsViewHolder(view)
@@ -37,16 +42,17 @@ class SeriesDetailsRowPresenter : RowPresenter() {
         super.onBindRowViewHolder(vh, item)
 
         if (item is SeriesDetailsRow) {
-            val holder = vh as DetailsViewHolder
-            holder.titleTextView.text = item.series.name
-            holder.descriptionTextView.text = item.series.description
+            vh as DetailsViewHolder
+            // store the item to unbind the page change listener later
+            vh.item = item
+            vh.titleTextView.text = item.series.name
+            vh.descriptionTextView.text = item.series.description
 
             if (item.series.pages() > 1) {
-                holder.pagesView.visibility = View.VISIBLE
+                vh.pagesView.visibility = View.VISIBLE
 
                 val pagesAdapter = ArrayObjectAdapter(pagePresenter)
-                val pageList = IntProgression.fromClosedRange(1, item.series.pages(), 1).map(::PageSelection)
-                pagesAdapter.addAll(0, pageList)
+                pagesAdapter.addAll(0, createPageSelectionList(item.series.pages(), item.currentPageNumber))
 
                 val bridgeAdapter = ItemBridgeAdapter(pagesAdapter)
 
@@ -64,29 +70,63 @@ class SeriesDetailsRowPresenter : RowPresenter() {
                     }
                 })
 
-                holder.pagesGridView.adapter = bridgeAdapter
+                vh.pagesGridView.adapter = bridgeAdapter
+
+                // react to item page selection change
+                vh.pageSelectionChangeListener = item.addPageSelectionChangeListener {
+                    vh.pagesGridView.itemAnimator = null // disable the change animation
+                    pagesAdapter.clear()
+                    pagesAdapter.addAll(0, createPageSelectionList(item.series.pages(), it))
+                }
             } else {
-                holder.pagesView.visibility = View.INVISIBLE
+                vh.pagesView.visibility = View.INVISIBLE
             }
 
-            Glide.with(holder.view.context)
+            Glide.with(vh.view.context)
                     .load(ServerConfig.coverUrl(item.series.id))
                     .centerCrop()
-                    .into(holder.coverImageView)
+                    .into(vh.coverImageView)
         }
     }
 
     override fun onUnbindRowViewHolder(vh: ViewHolder) {
-        Glide.clear((vh as DetailsViewHolder).coverImageView)
+        vh as DetailsViewHolder
+        Glide.clear(vh.coverImageView)
+        // remove the page selection change listener if it exists
+        vh.pageSelectionChangeListener?.let { vh.item?.removePageSelectionChangeListener(it) }
+        vh.pageSelectionChangeListener = null
+        vh.item = null
         super.onUnbindRowViewHolder(vh)
+    }
+
+    private fun createPageSelectionList(numPages: Int, currentPage: Int): List<PageSelection> {
+        return IntProgression
+                .fromClosedRange(1, numPages, 1)
+                .map { PageSelection(it, it == currentPage) }
     }
 
     /**
      * Presentable series details row
      */
-    data class SeriesDetailsRow(
+    class SeriesDetailsRow(
             val series: Series,
-            var pageSelectionListener: PageSelectedLister? = null)
+            var pageSelectionListener: PageSelectedLister? = null,
+            selectedPageNumber: Int = 1) {
+
+        private val listeners = mutableSetOf<(Int) -> Unit>()
+
+        var currentPageNumber: Int
+                by Delegates.observable(selectedPageNumber, { prop, old, new -> listeners.forEach { it(new) } })
+
+        fun addPageSelectionChangeListener(listener: (Int) -> Unit): (Int) -> Unit {
+            listeners.add(listener)
+            return listener
+        }
+
+        fun removePageSelectionChangeListener(listener: (Int) -> Unit) {
+            listeners.remove(listener)
+        }
+    }
 
     /**
      * Interface for page selection click events
@@ -104,5 +144,8 @@ class SeriesDetailsRowPresenter : RowPresenter() {
         val descriptionTextView = view.findViewById(R.id.series_detail_description) as TextView
         val pagesView: View = view.findViewById(R.id.series_detail_pages_view)
         val pagesGridView = view.findViewById(R.id.series_detail_pages) as HorizontalGridView
+
+        var item: SeriesDetailsRow? = null
+        var pageSelectionChangeListener: ((Int) -> Unit)? = null
     }
 }

@@ -11,7 +11,8 @@ import com.inverse.unofficial.proxertv.R
  * Data class that holds the selectable page number.
  */
 data class PageSelection(
-        val pageNumber: Int)
+        val pageNumber: Int,
+        val activated: Boolean = false)
 
 /**
  * Presenter for a [PageSelection].
@@ -27,6 +28,7 @@ class PageSelectionPresenter : Presenter() {
         val page = item as PageSelection
 
         holder.button.text = page.pageNumber.toString()
+        holder.button.isActivated = item.activated
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder?) {}
