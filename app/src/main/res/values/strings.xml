@@ -22,6 +22,11 @@
     <string name="stream_captcha_error">Proxer.me requires a captcha input. You can do that on any device with the same ip.</string>
     <string name="series_cover_description">series cover</string>
 
+    <!-- Series Details -->
+    <string name="series_details_list_label">List:</string>
+    <string name="series_details_genres_label">Genres:</string>
+    <string name="series_details_page_label">Page:</string>
+
     <!-- Login -->
     <string name="login_title">Mit Proxer Account verbinden</string>
     <string name="login_description">Synchronisiert Serien und Fortschritt</string>

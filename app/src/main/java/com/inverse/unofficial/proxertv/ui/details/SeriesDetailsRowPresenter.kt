@@ -7,6 +7,7 @@ import android.support.v17.leanback.widget.RowPresenter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import com.bumptech.glide.Glide
@@ -20,7 +21,7 @@ import kotlin.properties.Delegates
  * Presenter for a [SeriesDetailsRow]. The layout is based on the
  * [android.support.v17.leanback.widget.DetailsOverviewRowPresenter].
  */
-class SeriesDetailsRowPresenter : RowPresenter() {
+class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetailsRowListener?) : RowPresenter() {
 
     val pagePresenter = PageSelectionPresenter()
 
@@ -47,6 +48,7 @@ class SeriesDetailsRowPresenter : RowPresenter() {
             vh.item = item
             vh.titleTextView.text = item.series.name
             vh.descriptionTextView.text = item.series.description
+            vh.selectListButton.setOnClickListener { selectSeriesDetailsRowListener?.onSelectListClicked(item) }
 
             if (item.series.pages() > 1) {
                 vh.pagesView.visibility = View.VISIBLE
@@ -61,7 +63,7 @@ class SeriesDetailsRowPresenter : RowPresenter() {
                         super.onBind(viewHolder)
                         viewHolder.presenter.setOnClickListener(
                                 viewHolder.viewHolder,
-                                { item.pageSelectionListener?.onPageSelected(item, (viewHolder.item as PageSelection)) })
+                                { selectSeriesDetailsRowListener?.onPageSelected(item, (viewHolder.item as PageSelection)) })
                     }
 
                     override fun onUnbind(viewHolder: ItemBridgeAdapter.ViewHolder) {
@@ -110,7 +112,6 @@ class SeriesDetailsRowPresenter : RowPresenter() {
      */
     class SeriesDetailsRow(
             val series: Series,
-            var pageSelectionListener: PageSelectedLister? = null,
             selectedPageNumber: Int = 1) {
 
         private val listeners = mutableSetOf<(Int) -> Unit>()
@@ -131,7 +132,8 @@ class SeriesDetailsRowPresenter : RowPresenter() {
     /**
      * Interface for page selection click events
      */
-    interface PageSelectedLister {
+    interface SeriesDetailsRowListener {
+        fun onSelectListClicked(seriesRow: SeriesDetailsRow)
         fun onPageSelected(seriesRow: SeriesDetailsRow, selection: PageSelection)
     }
 
@@ -142,8 +144,10 @@ class SeriesDetailsRowPresenter : RowPresenter() {
         val coverImageView = view.findViewById(R.id.series_details_cover) as ImageView
         val titleTextView = view.findViewById(R.id.series_detail_title) as TextView
         val descriptionTextView = view.findViewById(R.id.series_detail_description) as TextView
+        val genresTextView = view.findViewById(R.id.series_details_genres) as TextView
         val pagesView: View = view.findViewById(R.id.series_detail_pages_view)
         val pagesGridView = view.findViewById(R.id.series_detail_pages) as HorizontalGridView
+        val selectListButton = view.findViewById(R.id.series_details_select_list_button) as Button
 
         var item: SeriesDetailsRow? = null
         var pageSelectionChangeListener: ((Int) -> Unit)? = null

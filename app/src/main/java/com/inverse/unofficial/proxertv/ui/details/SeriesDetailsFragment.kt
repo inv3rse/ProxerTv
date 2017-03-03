@@ -25,7 +25,7 @@ import rx.subscriptions.CompositeSubscription
 /**
  * The details view for a series.
  */
-class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener, SeriesDetailsRowPresenter.PageSelectedLister {
+class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener, SeriesDetailsRowPresenter.SeriesDetailsRowListener {
     private val presenterSelector = ClassPresenterSelector()
     private val contentAdapter = ArrayObjectAdapter(presenterSelector)
     private val subscriptions = CompositeSubscription()
@@ -65,6 +65,10 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
             intent.putExtra(PlayerActivity.EXTRA_SERIES, series)
             activity.startActivity(intent)
         }
+    }
+
+    override fun onSelectListClicked(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow) {
+        toast("select list clicked")
     }
 
     override fun onPageSelected(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow, selection: PageSelection) {
@@ -108,7 +112,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     }
 
     private fun setupPresenter() {
-        val detailsOverviewPresenter = SeriesDetailsRowPresenter()
+        val detailsOverviewPresenter = SeriesDetailsRowPresenter(this)
 //        val detailsOverviewPresenter = FullWidthDetailsOverviewRowPresenter(DetailsDescriptionPresenter())
         presenterSelector.addClassPresenter(SeriesDetailsRowPresenter.SeriesDetailsRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
@@ -159,7 +163,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                                 val episodesPage = ProxerClient.getTargetPageForEpisode(nextEpisode)
                                 loadEpisodes(series, episodesPage)
 
-                                val detailsRow = SeriesDetailsRowPresenter.SeriesDetailsRow(series, this, episodesPage + 1)
+                                val detailsRow = SeriesDetailsRowPresenter.SeriesDetailsRow(series, episodesPage + 1)
                                 contentAdapter.add(detailsRow)
                             }
                         }, { CrashReporting.logException(it) }))
