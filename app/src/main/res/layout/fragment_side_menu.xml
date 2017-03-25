@@ -10,13 +10,15 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="4"
-        android:background="@android:color/transparent" />
+        android:alpha="0.5"
+        android:background="@android:color/black" />
 
     <FrameLayout
+        android:id="@+id/side_menu"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="2"
-        android:background="@android:color/holo_red_dark">
+        android:background="@color/lb_default_brand_color">
 
         <android.support.v17.leanback.widget.VerticalGridView
             android:id="@+id/side_menu_items_grid"
@@ -30,6 +32,7 @@
 
         <!--<Button-->
         <!--android:id="@+id/focus_test_btn"-->
+        <!--style="@android:style/Widget.Material.Light.Button.Borderless"-->
         <!--android:layout_width="wrap_content"-->
         <!--android:layout_height="wrap_content"-->
         <!--android:layout_gravity="center"-->

@@ -8,6 +8,7 @@ import android.support.v17.leanback.widget.VerticalGridView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import com.inverse.unofficial.proxertv.R
 
 /**
@@ -16,6 +17,11 @@ import com.inverse.unofficial.proxertv.R
 class SideMenuFragment : Fragment() {
 
     private lateinit var gridView: VerticalGridView
+    private val focusListener = ViewTreeObserver.OnGlobalFocusChangeListener { _, _ ->
+        if (!gridView.hasFocus()) {
+            fragmentManager.beginTransaction().remove(this@SideMenuFragment).commit()
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_side_menu, container, false)
@@ -28,15 +34,18 @@ class SideMenuFragment : Fragment() {
         optionsAdapter.addAll(0, listOf(1, 2, 3, 4, 5))
 
         val bridgeAdapter = ItemBridgeAdapter(optionsAdapter)
-
         gridView.adapter = bridgeAdapter
+
+        view.viewTreeObserver.addOnGlobalFocusChangeListener(focusListener)
+    }
+
+    override fun onDestroyView() {
+        view.viewTreeObserver.removeOnGlobalFocusChangeListener(focusListener)
+        super.onDestroyView()
     }
 
     override fun onStart() {
         super.onStart()
-        view.requestFocus()
-        view.setOnFocusChangeListener { view, hasFocus ->
-            if (!hasFocus && !view.hasFocus()) fragmentManager.beginTransaction().remove(this).commit()
-        }
+        gridView.requestFocus()
     }
 }
