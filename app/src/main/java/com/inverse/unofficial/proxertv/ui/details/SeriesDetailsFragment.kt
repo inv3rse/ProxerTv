@@ -68,7 +68,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
     }
 
     override fun onSelectListClicked(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow) {
-        toast("select list clicked")
+        fragmentManager.beginTransaction().add(android.R.id.content, SideMenuFragment()).commit()
     }
 
     override fun onPageSelected(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow, selection: PageSelection) {
