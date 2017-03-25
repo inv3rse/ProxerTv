@@ -39,6 +39,7 @@
 
             <Button
                 android:id="@+id/series_details_select_list_button"
+                style="@android:style/Widget.Material.Light.Button.Borderless"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"

@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Button android:id="@+id/action_button"
+    style="@android:style/Widget.Material.Button.Borderless"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:textColor="@color/selector_series_page_text"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:lines="1"
-    android:minWidth="0dp"
     android:minHeight="0dp"
+    android:minWidth="0dp"
+    android:textColor="@color/selector_series_page_text"
     tools:text="1" />
