@@ -194,8 +194,13 @@ class ProxerClient(
                                 val code = it["code"]
                                 val providerName = it["name"] ?: it["type"]
                                 if (url != null && code != null && providerName != null) {
-                                    val unresolvedUrl = if (url.isEmpty()) code else url.replace("#", code)
-                                    unresolvedStreams.add(Stream(unresolvedUrl, providerName))
+                                    val replacedUrl = if (url.isEmpty()) code else url.replace("#", code)
+                                    // add missing 'http'
+                                    val fixedUrl = if (replacedUrl.startsWith("//")) "http:" + replacedUrl else replacedUrl
+                                    val httpUrl = HttpUrl.parse(fixedUrl)
+                                    if (httpUrl != null) {
+                                        unresolvedStreams.add(Stream(fixedUrl, providerName))
+                                    }
                                 }
                             }
                         }

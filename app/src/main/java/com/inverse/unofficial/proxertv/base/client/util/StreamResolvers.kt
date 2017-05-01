@@ -3,33 +3,30 @@ package com.inverse.unofficial.proxertv.base.client.util
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.model.Stream
-import okhttp3.FormBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
+import okhttp3.*
 import rx.Observable
 
 interface StreamResolver {
     /**
      * return true if the url might be resolvable
      */
-    fun appliesToUrl(url: String): Boolean
+    fun appliesToUrl(url: HttpUrl): Boolean
 
     /**
      * try to find the stream url
      */
-    fun resolveStream(url: String): Observable<Stream>
+    fun resolveStream(url: HttpUrl): Observable<Stream>
 }
 
 class ProxerStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
     private val name = "Proxer-Stream"
     private val regex = Regex("src=\"(.*\\.mp4)\"")
 
-    override fun appliesToUrl(url: String): Boolean {
-        return url.contains("stream.proxer.me", true)
+    override fun appliesToUrl(url: HttpUrl): Boolean {
+        return url.host().contains("stream.proxer.me", true)
     }
 
-    override fun resolveStream(url: String): Observable<Stream> {
+    override fun resolveStream(url: HttpUrl): Observable<Stream> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
@@ -54,11 +51,11 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
     private val name = "StreamCloud"
     private val regex = Regex("<input.*?name=\"(.*?)\".*?value=\"(.*?)\">")
 
-    override fun appliesToUrl(url: String): Boolean {
-        return url.contains("streamcloud", true)
+    override fun appliesToUrl(url: HttpUrl): Boolean {
+        return url.host().contains("streamcloud", true)
     }
 
-    override fun resolveStream(url: String): Observable<Stream> {
+    override fun resolveStream(url: HttpUrl): Observable<Stream> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
@@ -96,11 +93,11 @@ class Mp4UploadStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
     private val name = "Mp4Upload"
     private val regex = Regex("\"file\": \"(.+)\"")
 
-    override fun appliesToUrl(url: String): Boolean {
-        return url.contains("mp4upload.com")
+    override fun appliesToUrl(url: HttpUrl): Boolean {
+        return url.host().contains("mp4upload.com")
     }
 
-    override fun resolveStream(url: String): Observable<Stream> {
+    override fun resolveStream(url: HttpUrl): Observable<Stream> {
         val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
@@ -123,14 +120,12 @@ class Mp4UploadStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
 class DailyMotionStreamResolver(val httpClient: OkHttpClient, val gson: Gson) : StreamResolver {
     private val regex = Regex("\"qualities\":(\\{.+\\}\\]\\}),")
 
-    override fun appliesToUrl(url: String): Boolean {
-        return url.contains("dailymotion.com")
+    override fun appliesToUrl(url: HttpUrl): Boolean {
+        return url.host().contains("dailymotion.com")
     }
 
-    override fun resolveStream(url: String): Observable<Stream> {
-        // fix missing http  (//www.dailymotion.com/embed/video/someId)
-        val fixedUrl = if (url.startsWith("//")) "http:" + url else url
-        val request = Request.Builder().get().url(fixedUrl).build()
+    override fun resolveStream(url: HttpUrl): Observable<Stream> {
+        val request = Request.Builder().get().url(url).build()
 
         return CallObservable(httpClient.newCall(request))
                 .flatMap(fun(response): Observable<Stream> {

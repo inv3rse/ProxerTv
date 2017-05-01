@@ -270,7 +270,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     private fun setStream(stream: Stream) {
         streamAdapter.removeFailed(stream)
         streamAdapter.setCurrentStream(stream)
-        videoPlayer.initPlayer(Uri.parse(stream.streamUrl), activity, true)
+        videoPlayer.initPlayer(Uri.parse(stream.streamUrl.toString()), activity, true)
         play()
     }
 
