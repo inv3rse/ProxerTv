@@ -9,7 +9,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.getkeepsafe.dexcount:dexcount-gradle-plugin:0.6.0'
+        classpath 'com.getkeepsafe.dexcount:dexcount-gradle-plugin:0.6.3'
     }
 }
 
@@ -28,7 +28,7 @@ if (hasProperty(signing)) {
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "25"
+    buildToolsVersion "25.0.2"
 
     defaultConfig {
         applicationId "com.inverse.unofficial.proxertv"
@@ -73,7 +73,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Support Library
-    def support_library_version = '25.2.0'
+    def support_library_version = '25.3.1'
     compile "com.android.support:leanback-v17:$support_library_version"
     compile "com.android.support:percent:$support_library_version"
 
