@@ -51,9 +51,9 @@ class ProxerRepository(
                     }
                 }))
                 // save the login data (the backing SharedPreferences are thread safe)
-                .doOnNext { login ->
-                    userSettings.setAccount(login.username, login.password)
-                    userSettings.setUserToken(login.token)
+                .doOnNext { (user, pass, token) ->
+                    userSettings.setAccount(user, pass)
+                    userSettings.setUserToken(token)
                     invalidateLocalList()
                 }
     }
@@ -118,7 +118,7 @@ class ProxerRepository(
                     // we do not care about the type, only check if there was an error
                     .cast(Any::class.java)
                     // no comment id found -> create a comment for the series
-                    .onErrorResumeNext { error1 ->
+                    .onErrorResumeNext { _ ->
                         client.addSeriesToWatchList(series.id)
                                 // ignore the comment already exists error.
                                 .onErrorResumeNext { error2 ->
@@ -137,9 +137,9 @@ class ProxerRepository(
                         Pair(entry, seriesList)
                     }
                     // update the list state if necessary
-                    .flatMap { pair: Pair<UserListSeriesEntry, List<UserListSeriesEntry>> ->
-                        if (SeriesList.fromApiState(pair.first.commentState) != list) {
-                            val entry = pair.first.copy(commentState = SeriesList.toApiState(list))
+                    .flatMap { (seriesEntry: UserListSeriesEntry, seriesList) ->
+                        if (SeriesList.fromApiState(seriesEntry.commentState) != list) {
+                            val entry = seriesEntry.copy(commentState = SeriesList.toApiState(list))
                             val data = entry.commentRating
                             val comment = Comment(entry.commentState, entry.episode, entry.rating,
                                     entry.comment, data?.ratingGenre, data?.ratingStory, data?.ratingAnimation,
@@ -147,14 +147,14 @@ class ProxerRepository(
 
                             // update the entry list to reflect the state updating the comment
                             val updatedEntryList = mutableListOf(entry)
-                            updatedEntryList.addAll(pair.second.filter { it.id != entry.id })
+                            updatedEntryList.addAll(seriesList.filter { it.id != entry.id })
 
                             client.setComment(entry.cid, comment)
                                     .flatMap { setUserSeriesList(updatedEntryList) }
                                     .map { Unit }
                         } else {
                             // no change necessary, use the data to synchronize the local db
-                            setUserSeriesList(pair.second).map { Unit }
+                            setUserSeriesList(seriesList).map { Unit }
                         }
                     }
 
@@ -275,6 +275,13 @@ class ProxerRepository(
     fun hasSeriesOnList(seriesId: Int) = mySeriesDb.containsSeries(seriesId)
 
     /**
+     * Observes the on which list the given series is on.
+     * @param seriesId the series id
+     * @return an [Observable] emitting the [SeriesList] an subsequent changes
+     */
+    fun observerSeriesListState(seriesId: Int) = mySeriesDb.observeSeriesListState(seriesId)
+
+    /**
      * Observe the progress for a series
      * @param seriesId series to get the progress for
      * @return an [Observable] emitting the progress and any subsequent changes
@@ -364,12 +371,7 @@ class ProxerRepository(
                         // zip with retry counter
                         .zipWith(Observable.range(0, maxCount + 1), { error, count -> Pair(error, count) })
                         // let the checkFun decide if we retry
-                        .flatMap { pair ->
-                            val error = pair.first
-                            val count = pair.second
-
-                            checkFun(count, error)
-                        }
+                        .flatMap { (error, count) -> checkFun(count, error) }
             }
         }
     }

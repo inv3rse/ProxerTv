@@ -13,8 +13,10 @@ import android.widget.TextView
 import com.bumptech.glide.Glide
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.Series
+import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.details.SeriesDetailsRowPresenter.SeriesDetailsRow
+import com.inverse.unofficial.proxertv.ui.util.getStringRes
 import kotlin.properties.Delegates
 
 /**
@@ -24,6 +26,7 @@ import kotlin.properties.Delegates
 class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetailsRowListener?) : RowPresenter() {
 
     val pagePresenter = PageSelectionPresenter()
+    var seriesList: SeriesList = SeriesList.NONE
 
     init {
         headerPresenter = null
@@ -48,6 +51,7 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
             vh.item = item
             vh.titleTextView.text = item.series.name
             vh.descriptionTextView.text = item.series.description
+            vh.selectListButton.setText(seriesList.getStringRes())
             vh.selectListButton.setOnClickListener { selectSeriesDetailsRowListener?.onSelectListClicked(item) }
 
             if (item.series.pages() > 1) {
@@ -117,7 +121,7 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
         private val listeners = mutableSetOf<(Int) -> Unit>()
 
         var currentPageNumber: Int
-                by Delegates.observable(selectedPageNumber, { prop, old, new -> listeners.forEach { it(new) } })
+                by Delegates.observable(selectedPageNumber, { _, _, new -> listeners.forEach { it(new) } })
 
         fun addPageSelectionChangeListener(listener: (Int) -> Unit): (Int) -> Unit {
             listeners.add(listener)

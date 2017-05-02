@@ -30,16 +30,6 @@
             android:horizontalSpacing="5dp"
             app:rowHeight="60dp" />
 
-        <!--<Button-->
-        <!--android:id="@+id/focus_test_btn"-->
-        <!--style="@android:style/Widget.Material.Light.Button.Borderless"-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_gravity="center"-->
-        <!--android:focusable="true"-->
-        <!--android:focusableInTouchMode="true"-->
-        <!--android:text="focus test" />-->
-
     </FrameLayout>
 
 </LinearLayout>

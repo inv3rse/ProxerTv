@@ -13,8 +13,6 @@
     <string name="page_title">Page %d</string>
     <string name="episode">Episode %d</string>
     <string name="row_search_results">Search Results</string>
-    <string name="add_to_list">Add to list</string>
-    <string name="remove_from_list">Remove from list</string>
     <string name="description_active_stream">currently active stream</string>
     <string name="dismiss_error">Dismiss</string>
     <string name="stream_error">Stream Error</string>
@@ -26,6 +24,10 @@
     <string name="series_details_list_label">List:</string>
     <string name="series_details_genres_label">Genres:</string>
     <string name="series_details_page_label">Page:</string>
+    <string name="series_list_none">None</string>
+    <string name="series_list_watchlist">Watchlist</string>
+    <string name="series_list_finished">Finished</string>
+    <string name="series_list_aborted">Aborted</string>
 
     <!-- Login -->
     <string name="login_title">Mit Proxer Account verbinden</string>

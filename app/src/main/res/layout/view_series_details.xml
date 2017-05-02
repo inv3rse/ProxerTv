@@ -48,7 +48,6 @@
                 android:focusableInTouchMode="true"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
-                android:text="none"
                 tools:text="none" />
 
         </LinearLayout>
