@@ -33,3 +33,14 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            forcedModules = [
+                    "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version",
+                    "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+            ]
+        }
+    }
+}

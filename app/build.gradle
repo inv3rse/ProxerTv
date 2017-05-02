@@ -133,10 +133,7 @@ dependencies {
     // Testing
     testCompile 'junit:junit:4.12'
     testCompile "com.squareup.okhttp3:mockwebserver:$okhttp_version"
-    testCompile ("com.nhaarman:mockito-kotlin:1.3.0") {
-        // uses old/conflicting kotlin version 1.0.6 https://github.com/nhaarman/mockito-kotlin/issues/156
-        exclude module: 'kotlin-stdlib'
-    }
+    testCompile("com.nhaarman:mockito-kotlin:1.4.0")
     androidTestCompile "com.squareup.okhttp3:mockwebserver:$okhttp_version"
     androidTestCompile('com.android.support.test:runner:0.5') {
         exclude module: 'support-annotations'
