@@ -162,14 +162,10 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
                     val episodePresenter = EpisodePresenter(series.id)
 
                     for (subType in episodesMap.keys) {
-
                         val header = HeaderItem(subType)
-                        val adapter = EpisodeAdapter(progress, episodePresenter)
 
-                        val episodes = episodesMap[subType] ?: emptyList()
-                        for (i in episodes) {
-                            adapter.add(Episode(i, subType))
-                        }
+                        val episodes = episodesMap[subType]?.map { Episode(it, subType) } ?: emptyList()
+                        val adapter = EpisodeAdapter(episodes, progress, episodePresenter)
 
                         episodeAdapters.add(adapter)
                         contentAdapter.add(ListRow(header, adapter))
@@ -177,9 +173,5 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
                     currentPage = page
 
                 }, { CrashReporting.logException(it) })
-    }
-
-    companion object {
-        private const val ACTION_ADD_REMOVE = -1L
     }
 }

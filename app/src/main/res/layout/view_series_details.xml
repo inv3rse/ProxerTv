@@ -20,9 +20,10 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginBottom="5dp"
         android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="5dp"
         android:layout_toEndOf="@id/series_details_cover"
         android:orientation="vertical">
 
@@ -57,8 +58,7 @@
             style="@style/Widget.Leanback.DetailsDescriptionTitleStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:maxLines="2"
+            android:maxLines="1"
             tools:text="Some Series Title" />
 
         <TextView
@@ -66,11 +66,11 @@
             style="@style/Widget.Leanback.DetailsDescriptionBodyStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="10dp"
             android:maxLines="6"
             android:textColor="@color/lb_details_description_body_color"
             android:textSize="17sp"
-            tools:text="Description of a series which might be somewhat long. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet." />
+            tools:text="Description of a series which might be somewhat long. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua." />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -89,7 +89,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
-                android:text="placeholder"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:textSize="17sp"
                 tools:text="Action, Drama" />
 

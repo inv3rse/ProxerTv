@@ -94,6 +94,8 @@ data class Series(
         override val id: Int,
         @SerializedName("name")
         override val name: String,
+        @SerializedName("genre")
+        val genres: String,
         @SerializedName("description")
         val description: String = "",
         @SerializedName("count")

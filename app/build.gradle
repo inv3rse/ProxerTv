@@ -73,7 +73,8 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Support Library
-    def support_library_version = '25.3.1'
+    // old version as 25.3 introduces a bug which causes the DetailsFragments item click listener to fail
+    def support_library_version = '25.2.0'
     compile "com.android.support:leanback-v17:$support_library_version"
     compile "com.android.support:percent:$support_library_version"
 

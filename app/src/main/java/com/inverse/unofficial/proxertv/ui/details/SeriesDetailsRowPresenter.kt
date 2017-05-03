@@ -51,6 +51,7 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
             vh.item = item
             vh.titleTextView.text = item.series.name
             vh.descriptionTextView.text = item.series.description
+            vh.genresTextView.text = item.series.genres
             vh.selectListButton.setText(seriesList.getStringRes())
             vh.selectListButton.setOnClickListener { selectSeriesDetailsRowListener?.onSelectListClicked(item) }
 

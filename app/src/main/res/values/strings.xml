@@ -21,8 +21,8 @@
     <string name="series_cover_description">series cover</string>
 
     <!-- Series Details -->
-    <string name="series_details_list_label">List:</string>
-    <string name="series_details_genres_label">Genres:</string>
+    <string name="series_details_list_label"><b>List:</b></string>
+    <string name="series_details_genres_label"><b>Genres:</b></string>
     <string name="series_details_page_label">Page:</string>
     <string name="series_list_none">None</string>
     <string name="series_list_watchlist">Watchlist</string>
