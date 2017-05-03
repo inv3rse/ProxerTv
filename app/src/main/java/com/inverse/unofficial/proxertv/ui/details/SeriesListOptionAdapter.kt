@@ -37,7 +37,9 @@ class SeriesListOptionPresenter(private val selectionListener: SeriesListSelecti
 
         viewHolder.view.tag = item.list
         viewHolder.name.setText(item.list.getStringRes())
-        viewHolder.checkbox.visibility = if (item.selected) View.VISIBLE else View.INVISIBLE
+
+        viewHolder.checkbox.visibility = if (item.selected && !item.loading) View.VISIBLE else View.INVISIBLE
+        viewHolder.progressBar.visibility = if (item.loading) View.VISIBLE else View.INVISIBLE
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder) {
@@ -45,6 +47,7 @@ class SeriesListOptionPresenter(private val selectionListener: SeriesListSelecti
 
     private class SeriesListOptionViewHolder(view: View, clickListener: View.OnClickListener) : Presenter.ViewHolder(view) {
         val checkbox: View = view.findViewById(R.id.series_list_checkbox)
+        val progressBar: View = view.findViewById(R.id.series_list_progressbar)
         val name = view.findViewById(R.id.series_list_name) as TextView
 
         init {

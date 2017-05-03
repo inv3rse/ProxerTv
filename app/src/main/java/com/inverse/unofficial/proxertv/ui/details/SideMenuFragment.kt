@@ -79,18 +79,24 @@ class SideMenuFragment : Fragment(), SeriesListSelectionListener {
     }
 
     override fun listSelected(seriesList: SeriesList) {
-        updateSubscription?.unsubscribe()
-        updateSubscription = repository.moveSeriesToList(series, seriesList)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
-                    optionsAdapter.loadingList = null
-                    optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
-                }, {
-                    CrashReporting.logException(it)
-                    optionsAdapter.loadingList = null
-                    optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
-                })
+        if (seriesList != optionsAdapter.currentState) {
+            updateSubscription?.unsubscribe()
+
+            optionsAdapter.loadingList = seriesList
+            optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
+
+            updateSubscription = repository.moveSeriesToList(series, seriesList)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe({
+                        optionsAdapter.loadingList = null
+                        optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
+                    }, {
+                        CrashReporting.logException(it)
+                        optionsAdapter.loadingList = null
+                        optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
+                    })
+        }
     }
 
     companion object {
