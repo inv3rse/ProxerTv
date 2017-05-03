@@ -4,7 +4,10 @@ import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
-import com.inverse.unofficial.proxertv.model.*
+import com.inverse.unofficial.proxertv.model.ISeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesDbEntry
+import com.inverse.unofficial.proxertv.model.SeriesList
+import com.inverse.unofficial.proxertv.model.UserListSeriesEntry
 import rx.Observable
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
@@ -141,9 +144,19 @@ class ProxerRepository(
                         if (SeriesList.fromApiState(seriesEntry.commentState) != list) {
                             val entry = seriesEntry.copy(commentState = SeriesList.toApiState(list))
                             val data = entry.commentRating
-                            val comment = Comment(entry.commentState, entry.episode, entry.rating,
-                                    entry.comment, data?.ratingGenre, data?.ratingStory, data?.ratingAnimation,
-                                    data?.ratingCharacters, data?.ratingMusic)
+
+                            val comment = mapOf(
+                                    "state" to entry.commentState,
+                                    "episode" to entry.episode,
+                                    "rating" to entry.rating,
+                                    "comment" to entry.comment,
+                                    "misc[genre]" to data?.ratingGenre,
+                                    "misc[story]" to data?.ratingStory,
+                                    "misc[animation]" to data?.ratingAnimation,
+                                    "misc[characters]" to data?.ratingCharacters,
+                                    "misc[music]" to data?.ratingMusic)
+                                    .filterValues { it != null }
+                                    .mapValues { it.value.toString() }
 
                             // update the entry list to reflect the state updating the comment
                             val updatedEntryList = mutableListOf(entry)

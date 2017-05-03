@@ -92,10 +92,12 @@ interface ProxerApi {
      * Updates an existing comment.
      * @param commentId the id of the comment
      * @param comment the new comment data
+     * @note api needs FormUrlEncoded and does not accept json
      */
     @POST("/comment?format=json&json=edit")
     @FailOnError
-    fun setComment(@Query("id") commentId: Long, @Body comment: Comment): Observable<Boolean>
+    @FormUrlEncoded
+    fun setComment(@Query("id") commentId: Long, @FieldMap comment: Map<String, String>): Observable<Boolean>
 
     /**
      * Deletes the specified comment.
@@ -105,9 +107,4 @@ interface ProxerApi {
     @POST("/comment?format=json&json=delete")
     @FailOnError
     fun deleteComment(@Query("id") commentId: Long): Observable<Boolean>
-
-    companion object {
-        const val COMMENT_TYPE_WATCHLIST = "note"
-        const val COMMENT_TYPE_FINISHED = "finish"
-    }
 }

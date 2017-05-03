@@ -1,12 +1,14 @@
 package com.inverse.unofficial.proxertv.base
 
 import ApiResponses
-import com.github.salomonbrys.kotson.fromJson
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
-import com.inverse.unofficial.proxertv.model.*
+import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesDbEntry
+import com.inverse.unofficial.proxertv.model.SeriesList
+import com.inverse.unofficial.proxertv.model.UserListSeriesEntry
 import com.nhaarman.mockito_kotlin.*
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -193,18 +195,6 @@ class ProxerRepositoryTest {
 
         // the request should have multiple query parameters
         assertTrue(updateRequest.requestLine.contains("format=json&json=edit"))
-
-        // the complete comment must be send to update
-        val comment = client.gson.fromJson<Comment>(updateRequest.body.readUtf8())
-        assertEquals("", comment.comment)
-        assertEquals(26, comment.episode)
-        assertEquals(2, comment.state)
-        assertEquals(0, comment.rating)
-        assertEquals(1, comment.ratingGenre)
-        assertEquals(1, comment.ratingStory)
-        assertEquals(2, comment.ratingAnimation)
-        assertEquals(1, comment.ratingCharacters)
-        assertEquals(1, comment.ratingMusic)
     }
 
     @Test

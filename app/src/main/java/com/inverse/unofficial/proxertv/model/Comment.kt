@@ -17,27 +17,3 @@ data class CommentRatings(
         @SerializedName("music")
         val ratingMusic: Int?
 )
-
-/**
- * Represents a comment that holds the progress and rating of a [Series]
- */
-data class Comment(
-        @SerializedName("state")
-        val state: Int,
-        @SerializedName("episode")
-        val episode: Int,
-        @SerializedName("rating")
-        val rating: Int,
-        @SerializedName("comment")
-        val comment: String?,
-        @SerializedName("misc[genre]")
-        val ratingGenre: Int?,
-        @SerializedName("misc[story]")
-        val ratingStory: Int?,
-        @SerializedName("misc[animation]")
-        val ratingAnimation: Int?,
-        @SerializedName("misc[characters]")
-        val ratingCharacters: Int?,
-        @SerializedName("misc[music]")
-        val ratingMusic: Int?
-)
