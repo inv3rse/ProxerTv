@@ -7,7 +7,10 @@ import com.inverse.unofficial.proxertv.base.client.interceptors.containsCaptcha
 import com.inverse.unofficial.proxertv.base.client.util.CallObservable
 import com.inverse.unofficial.proxertv.base.client.util.StreamResolver
 import com.inverse.unofficial.proxertv.model.*
-import okhttp3.*
+import okhttp3.Cookie
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jsoup.Jsoup
 import rx.Observable
 import java.text.ParseException
@@ -23,9 +26,6 @@ class ProxerClient(
         val gson: Gson,
         val streamResolvers: List<StreamResolver>,
         val serverConfig: ServerConfig) : ProxerApi by api {
-
-    // List of series ids for which the cache is invalid
-    private val invalidSeriesCache = mutableSetOf<Int>()
 
     init {
         // set adult content cookie
@@ -150,19 +150,7 @@ class ProxerClient(
      * @return an [Observable] emitting the Series
      */
     fun loadSeries(id: Int): Observable<Series> {
-        if (invalidSeriesCache.remove(id)) {
-            return api.entryInfo(id, CacheControl.FORCE_NETWORK.toString())
-        } else {
-            return api.entryInfo(id)
-        }
-    }
-
-    /**
-     * Invalidates the cache for a specified series and forces a load on the next call.
-     * @param id the id of the series
-     */
-    fun invalidateSeriesCache(id: Int) {
-        invalidSeriesCache.add(id)
+        return api.entryInfo(id)
     }
 
     /**

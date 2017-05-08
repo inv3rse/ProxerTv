@@ -139,12 +139,19 @@ class ProxerRepository(
                         val entry = seriesList.find { series.id == it.id } ?: throw OutOfSyncException(seriesList)
                         Pair(entry, seriesList)
                     }
+                    .zipWith(progressDatabase.getProgress(series.id), {
+                        (seriesEntry, seriesList), localProgress ->
+                        Triple(seriesEntry, seriesList, localProgress)
+                    })
                     // update the list state if necessary
-                    .flatMap { (seriesEntry: UserListSeriesEntry, seriesList) ->
-                        if (SeriesList.fromApiState(seriesEntry.commentState) != list) {
-                            val entry = seriesEntry.copy(commentState = SeriesList.toApiState(list))
-                            val data = entry.commentRating
+                    .flatMap { (seriesEntry, seriesList, localProgress) ->
+                        if (SeriesList.fromApiState(seriesEntry.commentState) != list || localProgress > seriesEntry.episode) {
 
+                            val entry = seriesEntry.copy(
+                                    commentState = SeriesList.toApiState(list),
+                                    episode = Math.max(seriesEntry.episode, localProgress))
+
+                            val data = entry.commentRating
                             val comment = mapOf(
                                     "state" to entry.commentState,
                                     "episode" to entry.episode,
@@ -223,7 +230,19 @@ class ProxerRepository(
      */
     fun setSeriesProgress(seriesId: Int, progress: Int): Observable<Unit> {
         if (userSettings.getUser() != null) {
-            client.invalidateSeriesCache(seriesId)
+            return mySeriesDb.getSeries(seriesId)
+                    .map { it.cid }
+                    .onErrorReturn { SeriesDbEntry.NO_COMMENT_ID }
+                    // only if the series is on a list can we update its remote progress
+                    .flatMap { commentId ->
+                        if (commentId != SeriesDbEntry.NO_COMMENT_ID) {
+                            client.setCommentState(commentId, progress)
+                                    .compose(retryAfterLogin())
+                        } else {
+                            Observable.just(false)
+                        }
+                    }
+                    .flatMap { progressDatabase.setProgress(seriesId, progress) }
         }
 
         return progressDatabase.setProgress(seriesId, progress)
@@ -281,13 +300,6 @@ class ProxerRepository(
     fun observeSeriesList() = mySeriesDb.observeSeriesList()
 
     /**
-     * Check if the list contains a specific series
-     * @param seriesId id of the series to check for
-     * @return an [Observable] emitting true or false
-     */
-    fun hasSeriesOnList(seriesId: Int) = mySeriesDb.containsSeries(seriesId)
-
-    /**
      * Observes the on which list the given series is on.
      * @param seriesId the series id
      * @return an [Observable] emitting the [SeriesList] an subsequent changes
@@ -314,17 +326,21 @@ class ProxerRepository(
      * Overrides the local series lists.
      */
     private fun setUserSeriesList(seriesEntries: List<UserListSeriesEntry>): Observable<Boolean> {
-        return Observable.from(seriesEntries)
+        val listUpdate = Observable.from(seriesEntries)
                 // map to db entries
                 .map { SeriesDbEntry(it.id, it.name, SeriesList.fromApiState(it.commentState), it.cid) }
                 .toList()
                 // write to db
                 .flatMap { seriesList -> mySeriesDb.overrideWithSeriesList(seriesList) }
-                // return true for successful sync and save sync time
-                .map {
-                    lastSync.set(System.currentTimeMillis())
-                    true
-                }
+
+        val progressUpdate = Observable.from(seriesEntries)
+                .flatMap { progressDatabase.setProgress(it.id, it.episode) }
+                .toList()
+
+        return Observable.zip(listUpdate, progressUpdate, { _, _ ->
+            lastSync.set(System.currentTimeMillis())
+            true
+        })
     }
 
     /**

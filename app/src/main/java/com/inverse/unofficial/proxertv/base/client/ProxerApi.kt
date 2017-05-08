@@ -86,7 +86,7 @@ interface ProxerApi {
     @POST("ucp/setcommentstate")
     @FailOnError
     @FormUrlEncoded
-    fun setCommentState(@Field("id") commentId: Int, @Field("value") progress: Int): Observable<Boolean>
+    fun setCommentState(@Field("id") commentId: Long, @Field("value") progress: Int): Observable<Boolean>
 
     /**
      * Updates an existing comment.
