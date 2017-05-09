@@ -2,44 +2,35 @@ package com.inverse.unofficial.proxertv.base.client
 
 import MockRedirector
 import com.google.gson.Gson
-import com.inverse.unofficial.proxertv.base.client.util.DailyMotionStreamResolver
-import com.inverse.unofficial.proxertv.base.client.util.Mp4UploadStreamResolver
-import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
-import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
+import com.inverse.unofficial.proxertv.base.client.util.*
 import com.inverse.unofficial.proxertv.model.Stream
 import loadResponse
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.junit.AfterClass
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import subscribeAssert
 
 class StreamResolverTest {
-    companion object {
-        val mockServer = MockWebServer()
-
-        @BeforeClass
-        fun startWebServer() {
-            mockServer.start()
-        }
-
-        @AfterClass
-        fun stopWebServer() {
-            mockServer.shutdown()
-        }
-    }
-
-    lateinit var httpClient: OkHttpClient
+    private lateinit var httpClient: OkHttpClient
+    private val mockServer = MockWebServer()
 
     @Before
     fun setup() {
+        mockServer.start()
+
         httpClient = OkHttpClient.Builder()
                 .addInterceptor(MockRedirector(mockServer.url("").toString()))
                 .build()
+    }
+
+    @After
+    fun tearDown() {
+        mockServer.shutdown()
     }
 
     @Test
@@ -80,7 +71,6 @@ class StreamResolverTest {
 
         assertTrue(resolver.appliesToUrl("http://www.mp4upload.com/embed-sg71lpccevaa.html"))
         assertTrue(resolver.appliesToUrl("https://www.mp4upload.com/embed-sg71lpccevaa.html"))
-        assertTrue(resolver.appliesToUrl("mp4upload.com/embed-sg71lpccevaa.html"))
 
         resolver.resolveStream("http://www.mp4upload.com/embed-sg71lpccevaa.html").subscribeAssert {
             assertNoErrors()
@@ -93,11 +83,10 @@ class StreamResolverTest {
         mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/dailyMotionResponse.html")))
         val resolver = DailyMotionStreamResolver(httpClient, Gson())
 
-        assertTrue(resolver.appliesToUrl("//www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
-        assertTrue(resolver.appliesToUrl("www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
-        assertTrue(resolver.appliesToUrl("https//www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
+        assertTrue((resolver.appliesToUrl("http://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")))
+        assertTrue(resolver.appliesToUrl("https://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
 
-        resolver.resolveStream("//www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")
+        resolver.resolveStream("http://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")
                 .subscribeAssert {
                     assertNoErrors()
                     assertValues(
@@ -105,4 +94,8 @@ class StreamResolverTest {
                             Stream("http://www.dailymotion.com/cdn/H264-848x480/video/x431e80.mp4?auth=1465835647-2688-zfps31pm-ce51a3286f757207b093282289f24d88", ""))
                 }
     }
+
+    private fun StreamResolver.appliesToUrl(url: String) = appliesToUrl(HttpUrl.parse(url))
+
+    private fun StreamResolver.resolveStream(url: String) = resolveStream(HttpUrl.parse(url))
 }

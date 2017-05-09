@@ -1,0 +1,30 @@
+machine:
+  java:
+    version: openjdk8
+  environment:
+    GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError"'
+
+dependencies:
+  cache_directories:
+    - /usr/local/android-sdk-linux
+  pre:
+    - echo y | android update sdk --no-ui --all --filter "extra-android-m2repository"
+    - echo y | android update sdk --no-ui --all --filter "extra-google-m2repository"
+    - echo y | android update sdk --no-ui --all --filter "extra-android-support"
+    - echo y | android update sdk --no-ui --all --filter "android-24"
+    - echo y | android update sdk --no-ui --all --filter "build-tools-24.0.2"
+  override:
+    - ./gradlew dependencies -Dorg.gradle.daemon=false --console=plain
+
+test:
+  pre:
+    - emulator -avd circleci-android22 -no-audio -no-window:
+        background: true
+        parallel: true
+  override:
+    - ./gradlew lint assembleDebug assembleDebugAndroidTest -PdisablePreDex -Dorg.gradle.daemon=false --console=plain
+    - circle-android wait-for-boot
+    - ./gradlew connectedAndroidTest -PdisablePreDex -Dorg.gradle.daemon=false --console=plain
+  post:
+    - cp -r app/build/outputs $CIRCLE_ARTIFACTS
+    - cp -r app/build/outputs/androidTest-results/* $CIRCLE_TEST_REPORTS

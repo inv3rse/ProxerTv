@@ -8,13 +8,16 @@ import android.media.session.PlaybackState
 import android.support.v17.leanback.widget.*
 import timber.log.Timber
 
+/**
+ * Helper class for creating and managing the player controls
+ */
 class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverlayFragment) {
     private val playPauseAction = PlaybackControlsRow.PlayPauseAction(context)
     private val rewindAction = PlaybackControlsRow.RewindAction(context)
     private val fastForwardAction = PlaybackControlsRow.FastForwardAction(context)
     private val pictureInPictureAction = PlaybackControlsRow.PictureInPictureAction(context)
 
-    private lateinit var transportControls: MediaController.TransportControls
+    private var transportControls = overlayFragment.activity.mediaController.transportControls
 
     private var metaData: MediaMetadata? = null
     private var playbackState: PlaybackState? = null
@@ -24,7 +27,6 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
     lateinit var controlsRowPresenter: PlaybackControlsRowPresenter private set
 
     init {
-        transportControls = overlayFragment.activity.mediaController.transportControls
         buildRowAndPresenter(context)
     }
 
@@ -34,7 +36,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
 
     private fun buildRowAndPresenter(context: Context) {
         controlsRow = PlaybackControlsRow(this)
-        actionsAdapter = ArrayObjectAdapter(ControlButtonPresenterSelector())
+        actionsAdapter = ArrayObjectAdapter(ControlButtonPresenterSelector42())
         controlsRow.primaryActionsAdapter = actionsAdapter
 
         actionsAdapter.add(rewindAction)
@@ -42,6 +44,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
         actionsAdapter.add(fastForwardAction)
 
         if (PlayerActivity.supportsPictureInPicture(context)) {
+            actionsAdapter.add(0, NoAction())
             actionsAdapter.add(pictureInPictureAction)
         }
 
@@ -116,4 +119,6 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
             }
         }
     }
+
+    private class NoAction : Action(Action.NO_ID)
 }

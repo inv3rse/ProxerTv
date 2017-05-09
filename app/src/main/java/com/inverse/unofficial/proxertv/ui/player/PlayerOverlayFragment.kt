@@ -12,15 +12,16 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Bundle
-import android.support.v17.leanback.app.PlaybackOverlayFragment
+import android.support.v17.leanback.app.PlaybackFragment
 import android.support.v17.leanback.widget.*
 import android.view.SurfaceView
+import android.view.View
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
-import com.google.android.exoplayer.AspectRatioFrameLayout
-import com.google.android.exoplayer.ExoPlaybackException
-import com.google.android.exoplayer.ExoPlayer
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
@@ -40,10 +41,10 @@ import timber.log.Timber
  * We use this fragment as an implementation detail of the PlayerActivity.
  * Therefore it is somewhat strongly tied to it.
  */
-class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListener {
+class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
     private var seekLength = 10000 // 10 seconds, overridden once the video length is known
     private val subscriptions = CompositeSubscription()
-    private val progressRepository = App.component.getSeriesProgressRepository()
+    private val proxerRepository = App.component.getProxerRepository()
     private lateinit var playbackControlsHelper: PlaybackControlsHelper
 
     private lateinit var videoPlayer: VideoPlayer
@@ -61,6 +62,9 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
 
     private var hasAudioFocus: Boolean = false
     private var pauseTransient: Boolean = false
+
+    private var progressSpinner: View? = null
+
     private val mOnAudioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_LOSS -> {
@@ -91,7 +95,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
         mediaSession.isActive = true
 
-        videoPlayer = VideoPlayer(savedInstanceState)
+        videoPlayer = VideoPlayer(activity, savedInstanceState)
         videoPlayer.setStatusListener(PlayerListener())
     }
 
@@ -100,13 +104,14 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         Timber.d("onActivityCreated")
 
         activity.mediaController = MediaController(activity, mediaSession.sessionToken)
+        progressSpinner = activity.findViewById(R.id.player_buffer_spinner)
 
         // connect session to controls
         playbackControlsHelper = PlaybackControlsHelper(activity, this)
         mediaControllerCallback = playbackControlsHelper.createMediaControllerCallback()
         activity.mediaController.registerCallback(mediaControllerCallback)
 
-        backgroundType = PlaybackOverlayFragment.BG_LIGHT
+        backgroundType = PlaybackFragment.BG_LIGHT
         setupAdapter()
 
         initEpisode()
@@ -141,6 +146,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     override fun onStop() {
         super.onStop()
         Timber.d("onStop")
+        videoPlayer.disconnectFromUi()
         pause()
     }
 
@@ -181,7 +187,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 loadStreams()
 
                 // check if the episode is already marked as watched
-                progressRepository.getProgress(seriesExtra.id)
+                proxerRepository.getSeriesProgress(seriesExtra.id)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({ isTracked = episodeExtra.episodeNum <= it },
@@ -216,7 +222,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         updatePlaybackRow()
 
         adapter = rowsAdapter
-        onItemViewClickedListener = this
+        setOnItemViewClickedListener(this)
     }
 
     private fun loadStreams() {
@@ -264,7 +270,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     private fun setStream(stream: Stream) {
         streamAdapter.removeFailed(stream)
         streamAdapter.setCurrentStream(stream)
-        videoPlayer.initPlayer(Uri.parse(stream.streamUrl), activity, true)
+        videoPlayer.initPlayer(Uri.parse(stream.streamUrl.toString()), activity, true)
         play()
     }
 
@@ -381,7 +387,6 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         override fun playStatusChanged(isPlaying: Boolean, playbackState: Int) {
             state = when (playbackState) {
                 ExoPlayer.STATE_IDLE -> PlaybackState.STATE_NONE
-                ExoPlayer.STATE_PREPARING -> PlaybackState.STATE_CONNECTING
                 ExoPlayer.STATE_BUFFERING -> if (isPlaying)
                     PlaybackState.STATE_BUFFERING else
                     PlaybackState.STATE_PAUSED
@@ -391,6 +396,10 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 ExoPlayer.STATE_ENDED -> PlaybackState.STATE_STOPPED
                 else -> PlaybackState.STATE_NONE
             }
+
+            progressSpinner?.visibility = if (playbackState == ExoPlayer.STATE_BUFFERING && isPlaying)
+                View.VISIBLE else
+                View.INVISIBLE
 
             if (playbackState == ExoPlayer.STATE_ENDED) {
                 activity.finish()
@@ -406,7 +415,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 if (progressPercent > TRACK_PERCENT) {
                     // track episode
                     isTracked = true
-                    progressRepository.setProgress(series!!.id, episode!!.episodeNum)
+                    proxerRepository.setSeriesProgress(series!!.id, episode!!.episodeNum)
                             .subscribeOn(Schedulers.io())
                             .subscribe({ }, { it.printStackTrace() })
                 }

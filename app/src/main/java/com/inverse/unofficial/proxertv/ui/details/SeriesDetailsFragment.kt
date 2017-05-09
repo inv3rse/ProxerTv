@@ -2,57 +2,55 @@ package com.inverse.unofficial.proxertv.ui.details
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.support.v17.leanback.app.DetailsFragment
 import android.support.v17.leanback.widget.*
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.GlideDrawable
-import com.bumptech.glide.request.animation.GlideAnimation
-import com.bumptech.glide.request.target.SimpleTarget
-import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
-import com.inverse.unofficial.proxertv.model.SeriesCover
-import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
 import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
 import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
-import org.jetbrains.anko.toast
 import rx.Observable
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
 
-class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnActionClickedListener {
+/**
+ * The details view for a series.
+ */
+class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, SeriesDetailsRowPresenter.SeriesDetailsRowListener {
     private val presenterSelector = ClassPresenterSelector()
     private val contentAdapter = ArrayObjectAdapter(presenterSelector)
-    private val actionsAdapter = ArrayObjectAdapter()
     private val subscriptions = CompositeSubscription()
 
-    private val client = App.component.getProxerClient()
-    private val progressRepository = App.component.getSeriesProgressRepository()
-    private val myListRepository = App.component.getMySeriesRepository()
+    private val proxerRepository = App.component.getProxerRepository()
 
     private var episodeSubscription: Subscription? = null
     private var series: Series? = null
-    private var inList = false
     private var currentPage = 0
 
     private val episodeAdapters = arrayListOf<EpisodeAdapter>()
+    private val detailsOverviewPresenter = SeriesDetailsRowPresenter(this)
     private lateinit var seriesProgress: Observable<Int>
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setupPresenter()
-    }
+        activity.postponeEnterTransition()
+        val handler = Handler()
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+        handler.postDelayed({ activity.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
+        detailsOverviewPresenter.coverReadyListener = {
+            activity.startPostponedEnterTransition()
+            handler.removeCallbacksAndMessages(null)
+        }
+
+        setupPresenter()
         loadContent()
     }
 
@@ -71,62 +69,35 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         }
     }
 
-    override fun onActionClicked(action: Action) {
-        if (series != null) {
-            if (action.id == ACTION_ADD_REMOVE) {
-                // add or remove
-                val cover = SeriesCover(series!!.id, series!!.name)
-                if (inList) {
-                    myListRepository.removeSeries(cover.id)
-                            .subscribeOn(Schedulers.io())
-                            .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe({ },
-                                    {
-                                        toast("Failed to remove series")
-                                        it.printStackTrace()
-                                    })
-                } else {
-                    myListRepository.addSeries(cover)
-                            .subscribeOn(Schedulers.io())
-                            .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe({ },
-                                    {
-                                        toast("Failed to add series")
-                                        it.printStackTrace()
-                                    })
-                }
-
-                inList = !inList
-                // update action name
-                action.label1 = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
-                actionsAdapter.notifyArrayItemRangeChanged(0, 1)
-            } else {
-                // load selected episode page
-                val page = action.id.toInt()
-                if (page != currentPage) {
-                    loadEpisodes(series!!, page)
-                }
-            }
+    override fun onSelectListClicked(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow) {
+        series?.let {
+            fragmentManager.beginTransaction()
+                    .add(android.R.id.content, SideMenuFragment.create(it))
+                    .addToBackStack(null)
+                    .commit()
         }
     }
 
-    @Suppress("DEPRECATION")
+    override fun onPageSelected(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow, selection: PageSelection) {
+        // load selected episode page
+        if ((selection.pageNumber - 1) != currentPage) {
+            loadEpisodes(seriesRow.series, selection.pageNumber - 1)
+            seriesRow.currentPageNumber = selection.pageNumber
+        }
+    }
+
     private fun setupPresenter() {
-        val detailsOverviewPresenter = DetailsOverviewRowPresenter(DetailsDescriptionPresenter())
-        presenterSelector.addClassPresenter(DetailsOverviewRow::class.java, detailsOverviewPresenter)
+        presenterSelector.addClassPresenter(SeriesDetailsRowPresenter.SeriesDetailsRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
-        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
-        detailsOverviewPresenter.onActionClickedListener = this
         onItemViewClickedListener = this
-
         adapter = contentAdapter
     }
 
     private fun loadContent() {
         val seriesId = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
 
-        seriesProgress = progressRepository.observeProgress(seriesId).replay(1).refCount()
+        seriesProgress = proxerRepository.observeSeriesProgress(seriesId).replay(1).refCount()
 
         // update episode progress
         subscriptions.add(seriesProgress
@@ -138,48 +109,33 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                     }
                 }, { it.printStackTrace() }))
 
+        // update series list state
+        subscriptions.add(proxerRepository.observerSeriesListState(seriesId)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ seriesList ->
+                    detailsOverviewPresenter.seriesList = seriesList
+                    adapter.notifyItemRangeChanged(0, 1)
+                }))
 
         val observable = Observable.zip(
-                client.loadSeries(seriesId),
-                myListRepository.containsSeries(seriesId),
+                proxerRepository.loadSeries(seriesId),
                 seriesProgress.first(),
-                { series, inList, progress -> Triple(series, inList, progress) })
+                { series, progress -> Pair(series, progress) })
 
         subscriptions.add(
                 observable.subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe({ triple: Triple<Series?, Boolean, Int> ->
-                            val series = triple.first
-                            val nextEpisode = triple.third + 1
-                            inList = triple.second
+                        .subscribe({ (series, progress) ->
+                            val nextEpisode = progress + 1
 
                             if (series != null) {
                                 this.series = series
-                                loadEpisodes(series, ProxerClient.getTargetPageForEpisode(nextEpisode))
+                                val episodesPage = ProxerClient.getTargetPageForEpisode(nextEpisode)
+                                loadEpisodes(series, episodesPage)
 
-                                val detailsRow = DetailsOverviewRow(series)
-                                val addRemove = getString(if (inList) R.string.remove_from_list else R.string.add_to_list)
-                                actionsAdapter.add(Action(ACTION_ADD_REMOVE, addRemove))
-
-                                if (series.pages() > 1) {
-                                    for (i in 1..series.pages()) {
-                                        actionsAdapter.add(Action((i - 1).toLong(), getString(R.string.page_title, i)))
-                                    }
-                                }
-
-                                detailsRow.actionsAdapter = actionsAdapter
+                                val detailsRow = SeriesDetailsRowPresenter.SeriesDetailsRow(series, episodesPage + 1)
                                 contentAdapter.add(detailsRow)
-
-                                Glide.with(activity)
-                                        .load(ServerConfig.coverUrl(seriesId))
-                                        .centerCrop()
-                                        .into(object : SimpleTarget<GlideDrawable>(280, 392) {
-                                            override fun onResourceReady(resource: GlideDrawable, glideAnimation: GlideAnimation<in GlideDrawable>?) {
-                                                detailsRow.imageDrawable = resource
-                                                contentAdapter.notifyArrayItemRangeChanged(0, contentAdapter.size())
-                                            }
-
-                                        })
                             }
                         }, { CrashReporting.logException(it) }))
     }
@@ -190,7 +146,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
         episodeSubscription?.unsubscribe()
 
         episodeSubscription = Observable.zip(
-                client.loadEpisodesPage(series.id, page),
+                proxerRepository.loadEpisodesPage(series.id, page),
                 seriesProgress.first(),
                 { episodes, progress -> Pair(episodes, progress) })
                 .subscribeOn(Schedulers.io())
@@ -204,24 +160,20 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, OnAc
                     val episodePresenter = EpisodePresenter(series.id)
 
                     for (subType in episodesMap.keys) {
-
                         val header = HeaderItem(subType)
-                        val adapter = EpisodeAdapter(progress, episodePresenter)
 
-                        val episodes = episodesMap[subType] ?: emptyList()
-                        for (i in episodes) {
-                            adapter.add(Episode(i, subType))
-                        }
+                        val episodes = episodesMap[subType]?.map { Episode(it, subType) } ?: emptyList()
+                        val adapter = EpisodeAdapter(episodes, progress, episodePresenter)
 
                         episodeAdapters.add(adapter)
                         contentAdapter.add(ListRow(header, adapter))
-                        currentPage = page
                     }
+                    currentPage = page
 
                 }, { CrashReporting.logException(it) })
     }
 
     companion object {
-        private const val ACTION_ADD_REMOVE = -1L
+        private const val MAX_TRANSITION_DELAY = 4000L
     }
 }

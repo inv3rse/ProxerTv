@@ -76,9 +76,11 @@ class StreamAdapter : ObjectAdapter(StreamPresenter()) {
         }
     }
 
+    /**
+     * Data class that holds the information for presenting a [Stream]
+     */
     data class StreamHolder(
             val stream: Stream,
             val failed: Boolean,
-            val current: Boolean) {
-    }
+            val current: Boolean)
 }

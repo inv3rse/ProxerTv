@@ -1,27 +1,20 @@
 package com.inverse.unofficial.proxertv.base.client
 
-import com.google.gson.Gson
-import com.inverse.unofficial.proxertv.base.client.util.ApiResponseConverterFactory
-import com.inverse.unofficial.proxertv.base.client.util.ProxerStreamResolver
-import com.inverse.unofficial.proxertv.base.client.util.StreamCloudResolver
+import ApiResponses
+import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesUpdate
-import com.inverse.unofficial.proxertv.model.ServerConfig
 import loadResponse
-import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Retrofit
-import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory
-import retrofit2.converter.gson.GsonConverterFactory
+import provideTestClient
 import rx.observers.TestSubscriber
 import subscribeAssert
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class ProxerClientTest {
     lateinit var mockServer: MockWebServer
@@ -32,22 +25,7 @@ class ProxerClientTest {
         mockServer = MockWebServer()
         mockServer.start()
 
-        val httpClient = OkHttpClient.Builder().connectTimeout(180, TimeUnit.SECONDS)
-                .readTimeout(180, TimeUnit.SECONDS)
-                .build()
-        val resolvers = listOf(ProxerStreamResolver(httpClient), StreamCloudResolver(httpClient))
-        val mockServerUrl = mockServer.url("/")
-        val serverConfig = ServerConfig(mockServerUrl.scheme(), mockServerUrl.host() + ":" + mockServerUrl.port())
-        val gson = Gson()
-        val api = Retrofit.Builder()
-                .baseUrl(serverConfig.apiBaseUrl)
-                .client(httpClient)
-                .addConverterFactory(ApiResponseConverterFactory())
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .build().create(ProxerApi::class.java)
-
-        proxerClient = ProxerClient(httpClient, api, gson, resolvers, serverConfig)
+        proxerClient = provideTestClient(mockServer)
     }
 
     @After
@@ -168,5 +146,22 @@ class ProxerClientTest {
 //            assertNoErrors()
 //            print(onNextEvents)
 //        }
+    }
+
+    @Test
+    fun testApiErrorExceptionThrown() {
+        mockServer.enqueue(ApiResponses.getErrorResponse(3003, "User existiert nicht"))
+        proxerClient.userList().subscribeAssert {
+            assertError(ApiErrorException::class.java)
+            assertEquals(3003, (onErrorEvents[0] as ApiErrorException).code)
+            assertEquals("User existiert nicht", (onErrorEvents[0] as ApiErrorException).msg)
+        }
+
+        mockServer.enqueue(ApiResponses.getErrorResponse(2000, "IP von Firewall geblockt."))
+        proxerClient.loadSeries(1234).subscribeAssert {
+            assertError(ApiErrorException::class.java)
+            assertEquals(2000, (onErrorEvents[0] as ApiErrorException).code)
+            assertEquals("IP von Firewall geblockt.", (onErrorEvents[0] as ApiErrorException).msg)
+        }
     }
 }
