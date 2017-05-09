@@ -126,11 +126,12 @@ class LoginFragment : GuidedStepFragment() {
             loginSubscription?.unsubscribe()
             if (validateInput()) {
                 loginSubscription = repository.login(username, password)
+                        .flatMap { repository.syncUserList(true) }
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
                                 // on next
-                                { login: ProxerRepository.Login ->
+                                { _ ->
                                     finishGuidedStepFragments()
                                 },
                                 // on error
