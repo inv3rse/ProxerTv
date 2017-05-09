@@ -2,6 +2,7 @@ package com.inverse.unofficial.proxertv.ui.details
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.support.v17.leanback.app.DetailsFragment
 import android.support.v17.leanback.widget.*
 import com.inverse.unofficial.proxertv.base.App
@@ -40,11 +41,16 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setupPresenter()
-    }
+        activity.postponeEnterTransition()
+        val handler = Handler()
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+        handler.postDelayed({ activity.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
+        detailsOverviewPresenter.coverReadyListener = {
+            activity.startPostponedEnterTransition()
+            handler.removeCallbacksAndMessages(null)
+        }
+
+        setupPresenter()
         loadContent()
     }
 
@@ -81,18 +87,10 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
     }
 
     private fun setupPresenter() {
-//        val detailsOverviewPresenter = FullWidthDetailsOverviewRowPresenter(DetailsDescriptionPresenter())
         presenterSelector.addClassPresenter(SeriesDetailsRowPresenter.SeriesDetailsRow::class.java, detailsOverviewPresenter)
         presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
 
-//        val transitionHelper = FullWidthDetailsOverviewSharedElementHelper()
-//        transitionHelper.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
-//        detailsOverviewPresenter.setListener(transitionHelper)
-
-//        detailsOverviewPresenter.setSharedElementEnterTransition(activity, DetailsActivity.SHARED_ELEMENT)
-//        detailsOverviewPresenter.onActionClickedListener = this
         onItemViewClickedListener = this
-
         adapter = contentAdapter
     }
 
@@ -173,5 +171,9 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
                     currentPage = page
 
                 }, { CrashReporting.logException(it) })
+    }
+
+    companion object {
+        private const val MAX_TRANSITION_DELAY = 4000L
     }
 }

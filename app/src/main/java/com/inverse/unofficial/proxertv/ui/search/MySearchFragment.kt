@@ -84,7 +84,7 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
             val intent = Intent(activity, DetailsActivity::class.java)
             val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(activity,
                     (itemViewHolder.view as ImageCardView).mainImageView,
-                    DetailsActivity.SHARED_ELEMENT).toBundle()
+                    DetailsActivity.SHARED_ELEMENT_COVER).toBundle()
 
             intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
             startActivity(intent, bundle)

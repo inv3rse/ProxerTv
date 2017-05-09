@@ -13,6 +13,7 @@
         android:id="@+id/series_details_cover"
         android:layout_height="300dp"
         android:contentDescription="@string/series_cover_description"
+        android:transitionName="series_cover"
         app:layout_aspectRatio="71.4285714%"
         tools:scaleType="centerCrop"
         tools:src="@drawable/proxer_tv_banner" />

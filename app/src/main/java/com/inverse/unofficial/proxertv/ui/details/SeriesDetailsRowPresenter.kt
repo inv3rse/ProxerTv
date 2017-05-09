@@ -11,12 +11,16 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.drawable.GlideDrawable
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.details.SeriesDetailsRowPresenter.SeriesDetailsRow
 import com.inverse.unofficial.proxertv.ui.util.getStringRes
+import java.lang.Exception
 import kotlin.properties.Delegates
 
 /**
@@ -27,6 +31,7 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
 
     val pagePresenter = PageSelectionPresenter()
     var seriesList: SeriesList = SeriesList.NONE
+    var coverReadyListener: (() -> Unit)? = null
 
     init {
         headerPresenter = null
@@ -92,6 +97,16 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
             Glide.with(vh.view.context)
                     .load(ServerConfig.coverUrl(item.series.id))
                     .centerCrop()
+                    .listener(object : RequestListener<String?, GlideDrawable?> {
+                        override fun onException(e: Exception?, model: String?, target: Target<GlideDrawable?>?, isFirstResource: Boolean): Boolean {
+                            return false
+                        }
+
+                        override fun onResourceReady(resource: GlideDrawable?, model: String?, target: Target<GlideDrawable?>?, isFromMemoryCache: Boolean, isFirstResource: Boolean): Boolean {
+                            vh.view.post { coverReadyListener?.invoke() }
+                            return false
+                        }
+                    })
                     .into(vh.coverImageView)
         }
     }
