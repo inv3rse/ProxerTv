@@ -13,6 +13,6 @@ class DetailsActivity : Activity() {
 
     companion object {
         const val EXTRA_SERIES_ID = "ARG_SERIES_ID"
-        const val SHARED_ELEMENT = "SHARED_IMAGE"
+        const val SHARED_ELEMENT_COVER = "series_cover"
     }
 }

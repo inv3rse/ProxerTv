@@ -3,6 +3,7 @@ package com.inverse.unofficial.proxertv.ui.home
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
+import android.support.annotation.StringRes
 import android.support.v17.leanback.app.BrowseFragment
 import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
@@ -11,10 +12,16 @@ import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
+import com.inverse.unofficial.proxertv.model.ISeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
+import com.inverse.unofficial.proxertv.ui.login.LoginActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
 import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
+import com.inverse.unofficial.proxertv.ui.util.UserAction
+import com.inverse.unofficial.proxertv.ui.util.UserActionAdapter
+import org.jetbrains.anko.startActivity
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
@@ -22,20 +29,21 @@ import rx.subjects.PublishSubject
 import rx.subscriptions.CompositeSubscription
 import java.util.*
 
+/**
+ * Main screen of the app. Shows multiple rows of series items with only name and cover.
+ */
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
     private val coverPresenter = SeriesCoverPresenter()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-    private val myListAdapter = ArrayObjectAdapter(coverPresenter)
     private val seriesUpdateHandler = Handler()
 
     // access to ListRow and corresponding adapter based on target position
     private val rowTargetMap = mutableMapOf<ListRow, Int>()
-    private val targetRowMap = mutableMapOf<Int, ArrayObjectAdapter>()
+    private val targetRowMap = mutableMapOf<Int, ObjectAdapter>()
 
     private val subscriptions = CompositeSubscription()
-    private val progressRepository = App.component.getSeriesProgressRepository()
-    private val myListRepository = App.component.getMySeriesRepository()
-    private val client = App.component.getProxerClient()
+    private val proxerRepository = App.component.getProxerRepository()
+    private val userSettings = App.component.getUserSettings()
 
     private val updateSubject = PublishSubject.create<Int>()
     private var nextUpdate: Long? = null
@@ -52,14 +60,10 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         title = getString(R.string.app_name)
         headersState = HEADERS_HIDDEN
 
-        initEmptyRows()
         onItemViewClickedListener = this
         setOnSearchClickedListener(this)
-    }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-
+        initDefaultRows()
         loadContent()
     }
 
@@ -82,14 +86,20 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     }
 
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
-        if (item is SeriesCover) {
+        if (item is ISeriesCover) {
             val intent = Intent(activity, DetailsActivity::class.java)
             val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(activity,
                     (itemViewHolder.view as ImageCardView).mainImageView,
-                    DetailsActivity.SHARED_ELEMENT).toBundle()
+                    DetailsActivity.SHARED_ELEMENT_COVER).toBundle()
 
             intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
             startActivity(intent, bundle)
+        } else if (item is UserAction) {
+            when (item) {
+                UserAction.LOGIN -> startActivity<LoginActivity>()
+                UserAction.LOGOUT -> proxerRepository.logout().subscribeOn(Schedulers.io()).subscribe()
+                UserAction.SYNC -> proxerRepository.syncUserList(true).subscribeOn(Schedulers.io()).subscribe()
+            }
         }
     }
 
@@ -98,83 +108,124 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         startActivity(intent)
     }
 
-    private fun initEmptyRows() {
-        // we need at least one row before onStart or the BrowseFragment crashes,
-        // https://code.google.com/p/android/issues/detail?id=214795
-        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_my_list)), myListAdapter))
+    private fun initDefaultRows() {
+        val userRowAdapter = UserActionAdapter(userSettings)
+        addRow(R.string.row_account_actions, userRowAdapter, POS_ACCOUNT_ACTIONS_LIST)
+
+        subscriptions.add(userSettings.observeAccount()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        { userRowAdapter.notifyAccountChanged() },
+                        { CrashReporting.logException(it) }))
+
         adapter = rowsAdapter
     }
 
     private fun loadContent() {
-        subscriptions.add(myListRepository.observeSeriesList()
+        val userListObservable = proxerRepository.syncUserList()
+                .flatMap { proxerRepository.observeSeriesList() }
                 .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
-                    myListAdapter.clear()
-                    myListAdapter.addAll(0, it)
-                }, { throwable -> CrashReporting.logException(throwable) }))
+                .publish()
 
-        loadAndAddRow(updateSubject.flatMap {
-            loadEpisodesUpdateRow().takeUntil(updateSubject)
-        }, getString(R.string.row_updates), 1)
+        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.WATCHLIST } },
+                R.string.row_my_list, POS_USER_LIST)
 
-        loadAndAddRow(client.loadTopAccessSeries(), getString(R.string.row_top_access), 2)
-        loadAndAddRow(client.loadTopRatingSeries(), getString(R.string.row_top_rating), 3)
-        loadAndAddRow(client.loadTopRatingMovies(), getString(R.string.row_top_rating_movies), 4)
-        loadAndAddRow(client.loadAiringSeries(), getString(R.string.row_airing), 5)
+        loadAndAddRow(updateSubject.flatMap { loadEpisodesUpdateRow().takeUntil(updateSubject) },
+                R.string.row_updates, POS_UPDATES_LIST)
+
+        loadAndAddRow(proxerRepository.loadTopAccessSeries(), R.string.row_top_access, POS_TOP_ACCESS_LIST)
+        loadAndAddRow(proxerRepository.loadTopRatingSeries(), R.string.row_top_rating, POS_TOP_RATING_LIST)
+        loadAndAddRow(proxerRepository.loadTopRatingMovies(), R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST)
+        loadAndAddRow(proxerRepository.loadAiringSeries(), R.string.row_airing, POS_AIRING_LIST)
+
+        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.FINISHED } },
+                R.string.row_user_finished, 7)
+
+        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.ABORTED } },
+                R.string.row_user_aborted, 8)
+
+        subscriptions.add(userListObservable.connect())
     }
 
-    private fun loadAndAddRow(loadObservable: Observable<List<SeriesCover>>, rowName: String, position: Int) {
+    /**
+     * Adds a row to the existing rows according to targetPos.
+     */
+    private fun addRow(@StringRes headerName: Int, adapter: ObjectAdapter, targetPos: Int) {
+        val listRow = ListRow(HeaderItem(getString(headerName)), adapter)
+
+        var targetIndex = rowsAdapter.size()
+        // iterate over the existing rows to find the correct index for our targetPos
+        // (the last row might be the only one added yet)
+        for (i in 1..rowsAdapter.size()) {
+            val rowTarget = rowTargetMap[rowsAdapter.get(i - 1)] ?: 0
+            if (targetPos < rowTarget) {
+                targetIndex = i - 1
+                break
+            }
+        }
+
+        rowsAdapter.add(targetIndex, listRow)
+        rowTargetMap.put(listRow, targetPos)
+        targetRowMap.put(targetPos, adapter)
+    }
+
+    /**
+     * Removes the row for targetPos
+     */
+    private fun removeRow(targetPos: Int) {
+        rowTargetMap.filterValues { it == targetPos }.forEach { entry ->
+            rowsAdapter.remove(entry.key)
+            rowTargetMap.remove(entry.key)
+            targetRowMap.remove(entry.value)
+        }
+    }
+
+    /**
+     * Subscribes to the loadObservable and sets the row content once it emits items. If the onNext List is empty or the
+     * observable throws an error the row will be removed.
+     */
+    private fun loadAndAddRow(loadObservable: Observable<out List<ISeriesCover>>, @StringRes headerName: Int, position: Int, addFirst: Boolean = true) {
+        if (addFirst && targetRowMap[position] == null) {
+            // add the empty row first, before the content for it is loaded
+            // it is necessary to keep the selection on app start at the top of the page
+            val adapter = ArrayObjectAdapter(coverPresenter)
+            addRow(headerName, adapter, position)
+        }
+
         subscriptions.add(loadObservable
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        {
+                        { seriesList ->
                             val existingAdapter = targetRowMap[position]
-                            if (existingAdapter != null) {
-                                if (!it.isEmpty()) {
+                            if (existingAdapter != null && existingAdapter is ArrayObjectAdapter) {
+                                if (!seriesList.isEmpty()) {
                                     // update existing content
                                     existingAdapter.clear()
-                                    existingAdapter.addAll(0, it)
+                                    existingAdapter.addAll(0, seriesList)
                                 } else {
-                                    // list is empty, remove row
-                                    for (i in 1..rowsAdapter.size()) {
-                                        val row = rowsAdapter.get(i - 1)
-                                        val rowTarget = rowTargetMap[row]
-                                        if (position == rowTarget) {
-                                            rowsAdapter.remove(row)
-                                            rowTargetMap.remove(row)
-                                            targetRowMap.remove(position)
-                                            break
-                                        }
-                                    }
+                                    // list is empty, remove it
+                                    removeRow(position)
                                 }
-                            } else if (it.size > 0) {
+                            } else if (seriesList.isNotEmpty()) {
                                 val adapter = ArrayObjectAdapter(coverPresenter)
-                                adapter.addAll(0, it)
-                                val listRow = ListRow(HeaderItem(rowName), adapter)
-                                var targetIndex = rowsAdapter.size()
-                                for (i in 1..rowsAdapter.size()) {
-                                    val rowTarget = rowTargetMap[rowsAdapter.get(i - 1)] ?: 0
-                                    if (position < rowTarget) {
-                                        targetIndex = i - 1
-                                        break
-                                    }
-                                }
-                                rowsAdapter.add(targetIndex, listRow)
-                                rowTargetMap.put(listRow, position)
-                                targetRowMap.put(position, adapter)
+                                adapter.addAll(0, seriesList)
+                                addRow(headerName, adapter, position)
                             }
-                        }, { CrashReporting.logException(it) }
+                        },
+                        { error ->
+                            removeRow(position)
+                            CrashReporting.logException(error)
+                        }
                 ))
     }
 
     private fun loadEpisodesUpdateRow(): Observable<List<SeriesCover>> {
         val calendar = GregorianCalendar.getInstance()
-        calendar.add(Calendar.DAY_OF_MONTH, -3)
+        calendar.add(Calendar.DAY_OF_MONTH, -UPDATES_HISTORY)
         val lastUpdateDate = calendar.time
 
-        return client.loadUpdatesList()
+        return proxerRepository.loadUpdatesList()
                 // series list to single items
                 .flatMap { Observable.from(it) }
                 // discard anything older than 3 days
@@ -188,8 +239,8 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                 .map {
                     Observable.combineLatest(
                             Observable.just(it),
-                            progressRepository.observeProgress(it.id),
-                            myListRepository.observeSeriesList().map { myList -> myList.contains(it) },
+                            proxerRepository.observeSeriesProgress(it.id),
+                            proxerRepository.observeSeriesList().map { myList -> myList.find { s -> s.id == it.id } != null },
                             { series, progress, inList -> Triple(series, progress, inList) })
                 }
                 .toList()
@@ -199,14 +250,10 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                     return Observable.combineLatest(
                             observables,
                             fun(array: Array<out Any>): List<Triple<SeriesCover, Int, Boolean>> {
-                                val seriesList = arrayListOf<Triple<SeriesCover, Int, Boolean>>()
-                                for (element in array) {
+                                return array.map {
                                     @Suppress("UNCHECKED_CAST")
-                                    val seriesProgressPair = element as Triple<SeriesCover, Int, Boolean>
-                                    seriesList.add(seriesProgressPair)
+                                    it as Triple<SeriesCover, Int, Boolean>
                                 }
-
-                                return seriesList
                             }
                     )
                 })
@@ -217,7 +264,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                             .flatMap {
                                 Observable.zip(
                                         Observable.just(it),
-                                        client.loadEpisodesPage(it.first.id, ProxerClient.getTargetPageForEpisode(it.second + 1)),
+                                        proxerRepository.loadEpisodesPage(it.first.id, ProxerClient.getTargetPageForEpisode(it.second + 1)),
                                         { seriesProgress, episodesMap -> Triple(seriesProgress.first, seriesProgress.second, episodesMap) })
                             }
                             .filter { it.third.any { entry -> entry.value.contains(it.second + 1) } }
@@ -228,5 +275,15 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
     companion object {
         private const val SERIES_UPDATE_DELAY: Long = 30 * 60 * 1000 // 30 minutes in milliseconds
+        private const val UPDATES_HISTORY = 3 // days
+
+        private const val POS_USER_LIST = 0
+        private const val POS_UPDATES_LIST = 1
+        private const val POS_TOP_ACCESS_LIST = 2
+        private const val POS_TOP_RATING_LIST = 3
+        private const val POS_TOP_MOVIES_LIST = 4
+        private const val POS_AIRING_LIST = 5
+        private const val POS_ACCOUNT_ACTIONS_LIST = 6
+
     }
 }

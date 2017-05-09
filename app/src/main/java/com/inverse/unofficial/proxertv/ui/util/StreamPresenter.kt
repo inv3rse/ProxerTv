@@ -30,6 +30,9 @@ class StreamPresenter : Presenter() {
     override fun onUnbindViewHolder(viewHolder: ViewHolder) {
     }
 
+    /**
+     * ViewHolder for a [StreamAdapter.StreamHolder]
+     */
     internal class StreamViewHolder(view: View) : Presenter.ViewHolder(view) {
         val textView = view.findViewById(R.id.stream_label) as TextView
         val activeView: View = view.findViewById(R.id.stream_active_indicator)

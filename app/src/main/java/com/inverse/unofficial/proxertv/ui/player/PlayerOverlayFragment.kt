@@ -44,7 +44,7 @@ import timber.log.Timber
 class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListener {
     private var seekLength = 10000 // 10 seconds, overridden once the video length is known
     private val subscriptions = CompositeSubscription()
-    private val progressRepository = App.component.getSeriesProgressRepository()
+    private val proxerRepository = App.component.getProxerRepository()
     private lateinit var playbackControlsHelper: PlaybackControlsHelper
 
     private lateinit var videoPlayer: VideoPlayer
@@ -187,7 +187,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 loadStreams()
 
                 // check if the episode is already marked as watched
-                progressRepository.getProgress(seriesExtra.id)
+                proxerRepository.getSeriesProgress(seriesExtra.id)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({ isTracked = episodeExtra.episodeNum <= it },
@@ -270,7 +270,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
     private fun setStream(stream: Stream) {
         streamAdapter.removeFailed(stream)
         streamAdapter.setCurrentStream(stream)
-        videoPlayer.initPlayer(Uri.parse(stream.streamUrl), activity, true)
+        videoPlayer.initPlayer(Uri.parse(stream.streamUrl.toString()), activity, true)
         play()
     }
 
@@ -415,7 +415,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
                 if (progressPercent > TRACK_PERCENT) {
                     // track episode
                     isTracked = true
-                    progressRepository.setProgress(series!!.id, episode!!.episodeNum)
+                    proxerRepository.setSeriesProgress(series!!.id, episode!!.episodeNum)
                             .subscribeOn(Schedulers.io())
                             .subscribe({ }, { it.printStackTrace() })
                 }

@@ -6,15 +6,43 @@
     <string name="row_top_rating">Top Rated Series</string>
     <string name="row_top_rating_movies">Top Rated Movies</string>
     <string name="row_airing">Airing Series</string>
+    <string name="row_account_actions">Account</string>
+    <string name="row_user_finished">Finished Series</string>
+    <string name="row_user_aborted">Aborted Series</string>
     <string name="row_streams">Streams</string>
     <string name="page_title">Page %d</string>
     <string name="episode">Episode %d</string>
     <string name="row_search_results">Search Results</string>
-    <string name="add_to_list">Add to list</string>
-    <string name="remove_from_list">Remove from list</string>
     <string name="description_active_stream">currently active stream</string>
     <string name="dismiss_error">Dismiss</string>
     <string name="stream_error">Stream Error</string>
     <string name="no_streams_found">No supported streams found.</string>
     <string name="stream_captcha_error">Proxer.me requires a captcha input. You can do that on any device with the same ip.</string>
+    <string name="series_cover_description">series cover</string>
+
+    <!-- Series Details -->
+    <string name="series_details_list_label"><b>List:</b></string>
+    <string name="series_details_genres_label"><b>Genres:</b></string>
+    <string name="series_details_page_label">Page:</string>
+    <string name="series_list_none">None</string>
+    <string name="series_list_watchlist">Watchlist</string>
+    <string name="series_list_finished">Finished</string>
+    <string name="series_list_aborted">Aborted</string>
+
+    <!-- Login -->
+    <string name="login_title">Mit Proxer Account verbinden</string>
+    <string name="login_description">Synchronisiert Serien und Fortschritt</string>
+    <string name="login_breadcrumb">Einloggen</string>
+    <string name="login_username_title">Nutzername</string>
+    <string name="login_password_title">Passwort</string>
+    <string name="login_action_title">Login</string>
+
+    <string name="login_error_general">Login fehlgeschlagen</string>
+    <string name="login_error_username_empty">der Nutzername darf nicht leer sein</string>
+    <string name="login_error_password_empty">das Passwort darf nicht leer sein</string>
+
+    <!-- UserAction -->
+    <string name="user_action_login">Login</string>
+    <string name="user_action_sync">Sync</string>
+    <string name="user_action_logout">Logout</string>
 </resources>

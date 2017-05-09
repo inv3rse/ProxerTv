@@ -5,12 +5,16 @@ import com.franmontiel.persistentcookiejar.PersistentCookieJar
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.inverse.unofficial.proxertv.BuildConfig
 import com.inverse.unofficial.proxertv.base.client.interceptors.ApiKeyInterceptor
 import com.inverse.unofficial.proxertv.base.client.interceptors.CloudFlareInterceptor
+import com.inverse.unofficial.proxertv.base.client.interceptors.NoCacheCaptchaInterceptor
 import com.inverse.unofficial.proxertv.base.client.interceptors.ProxerCacheRewriteInterceptor
 import com.inverse.unofficial.proxertv.base.client.util.*
+import com.inverse.unofficial.proxertv.model.CommentRatings
 import com.inverse.unofficial.proxertv.model.ServerConfig
+import com.inverse.unofficial.proxertv.model.typeAdapter.CommentRatingsTypeAdapter
 import dagger.Module
 import dagger.Provides
 import okhttp3.Cache
@@ -37,7 +41,9 @@ class ClientModule {
     @Provides
     @Singleton
     fun provideGson(): Gson {
-        return Gson()
+        return GsonBuilder()
+                .registerTypeAdapter(CommentRatings::class.java, CommentRatingsTypeAdapter().nullSafe())
+                .create()
     }
 
     @Provides
@@ -46,8 +52,11 @@ class ClientModule {
     fun provideDefaultHttpClient(application: Application,
                                  serverConfig: ServerConfig): OkHttpClient {
 
+        val cookieJar = PersistentCookieJar(SetCookieCache(), SharedPrefsCookiePersistor(application))
+
         val builder = OkHttpClient.Builder()
                 .cache(Cache(File(application.cacheDir, "httpCache"), 10 * 1024 * 1024)) // 10 MiB
+                .cookieJar(cookieJar)
                 .addNetworkInterceptor(ProxerCacheRewriteInterceptor(serverConfig))
                 .addInterceptor(CloudFlareInterceptor())
                 .connectTimeout(30, TimeUnit.SECONDS)
@@ -65,21 +74,14 @@ class ClientModule {
     @Provides
     @Named("api")
     fun provideApiHttpClient(@Named("default") defaultClient: OkHttpClient): OkHttpClient {
-
         return defaultClient.newBuilder()
                 .addInterceptor(ApiKeyInterceptor(BuildConfig.PROXER_API_KEY)).build()
-
     }
 
     @Provides
     @Named("web")
-    fun provideWebHttpClient(@Named("default") defaultClient: OkHttpClient,
-                             application: Application): OkHttpClient {
-
-        val cookieJar = PersistentCookieJar(SetCookieCache(), SharedPrefsCookiePersistor(application))
-
+    fun provideWebHttpClient(@Named("default") defaultClient: OkHttpClient): OkHttpClient {
         return defaultClient.newBuilder()
-                .cookieJar(cookieJar)
                 .addInterceptor(NoCacheCaptchaInterceptor()).build()
 
     }
