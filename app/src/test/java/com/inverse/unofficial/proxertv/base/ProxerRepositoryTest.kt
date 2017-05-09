@@ -129,7 +129,7 @@ class ProxerRepositoryTest {
     }
 
     @Test
-    fun testSetProgress() {
+    fun testSetProgressLocal() {
         // no user, offline only
         userSettings.clearUser()
         whenever(seriesProgressDb.setProgress(any(), any())).thenReturn(Observable.empty())
@@ -141,6 +141,22 @@ class ProxerRepositoryTest {
                 }
 
         verify(seriesProgressDb).setProgress(eq(1234), eq(5))
+    }
+
+    @Test
+    fun testSetProgressRemoteNoEntry() {
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
+
+        // if the series is not on the users list, the progress should only be set locally
+        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.error(MySeriesDb.NoSeriesEntryException()))
+
+        repository.setSeriesProgress(1234, 5)
+                .subscribeAssert {
+                    assertNoErrors()
+                }
+
+        verify(seriesProgressDb, times(1)).setProgress(eq(1234), eq(5))
+        assertEquals(0, mockServer.requestCount)
     }
 
     @Test
@@ -173,6 +189,9 @@ class ProxerRepositoryTest {
 
         // entry does not exists, needs to be created
         whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.error(MySeriesDb.NoSeriesEntryException()))
+        // local series progress is 5, remote progress needs to be updated after entry creation
+        whenever(seriesProgressDb.getProgress(any())).thenReturn(Observable.just(5))
+
         // success create response
         mockServer.enqueue(ApiResponses.getSuccessFullResponse("COM_PROXER_SUCCESS"))
         mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_FINISHED)))
@@ -205,6 +224,9 @@ class ProxerRepositoryTest {
         val reZeroDb = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.WATCHLIST, 12345678)
         val reZeroOnline = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.FINISHED, 12345678)
 
+        // local series progress is 0
+        whenever(seriesProgressDb.getProgress(any())).thenReturn(Observable.just(0))
+
         // entry does exist, no create request necessary
         whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.just(reZeroDb))
         mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_BOOKMARKED)))
@@ -231,6 +253,8 @@ class ProxerRepositoryTest {
 
         // entry does exist, no create request necessary
         whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.just(reZeroDb))
+        // local series progress is 0
+        whenever(seriesProgressDb.getProgress(any())).thenReturn(Observable.just(0))
 
         // list request failed, not logged in
         mockServer.enqueue(ApiResponses.getErrorResponse(3004, "Der User ist nicht eingeloggt"))
@@ -261,6 +285,9 @@ class ProxerRepositoryTest {
         whenever(mySeriesDb.getSeries(any()))
                 .thenReturn(Observable.just(reZeroDb))
                 .thenReturn(Observable.error(MySeriesDb.NoSeriesEntryException()))
+
+        // local series progress is 0
+        whenever(seriesProgressDb.getProgress(any())).thenReturn(Observable.just(0))
 
         // overriding the local list is always successful
         whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))

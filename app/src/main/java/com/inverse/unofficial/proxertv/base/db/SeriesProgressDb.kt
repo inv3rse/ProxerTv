@@ -64,7 +64,7 @@ open class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
      * @param seriesId series to get the progress for
      * @return an [Observable] emitting the progress
      */
-    fun getProgress(seriesId: Int): Observable<Int> {
+    open fun getProgress(seriesId: Int): Observable<Int> {
         return dbHelper.useAsync {
             select(SeriesProgressScheme.TABLE, SeriesProgressScheme.LAST_EPISODE)
                     .where("(${SeriesProgressScheme.ID} = $seriesId)").parseOpt(IntParser)
