@@ -113,7 +113,7 @@ dependencies {
     compile "javax.annotation:javax.annotation-api:1.2" // pick up generated classes
 
     // Anko
-    def anko_version = '0.9'
+    def anko_version = '0.9.1a'
     compile "org.jetbrains.anko:anko-common:$anko_version"
     compile "org.jetbrains.anko:anko-sqlite:$anko_version"
 
