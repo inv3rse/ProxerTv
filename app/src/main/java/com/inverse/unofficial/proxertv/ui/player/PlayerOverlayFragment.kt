@@ -12,7 +12,7 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Bundle
-import android.support.v17.leanback.app.PlaybackOverlayFragment
+import android.support.v17.leanback.app.PlaybackFragment
 import android.support.v17.leanback.widget.*
 import android.view.SurfaceView
 import android.view.View
@@ -41,7 +41,7 @@ import timber.log.Timber
  * We use this fragment as an implementation detail of the PlayerActivity.
  * Therefore it is somewhat strongly tied to it.
  */
-class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListener {
+class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
     private var seekLength = 10000 // 10 seconds, overridden once the video length is known
     private val subscriptions = CompositeSubscription()
     private val proxerRepository = App.component.getProxerRepository()
@@ -111,7 +111,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         mediaControllerCallback = playbackControlsHelper.createMediaControllerCallback()
         activity.mediaController.registerCallback(mediaControllerCallback)
 
-        backgroundType = PlaybackOverlayFragment.BG_LIGHT
+        backgroundType = PlaybackFragment.BG_LIGHT
         setupAdapter()
 
         initEpisode()
@@ -222,7 +222,7 @@ class PlayerOverlayFragment : PlaybackOverlayFragment(), OnItemViewClickedListen
         updatePlaybackRow()
 
         adapter = rowsAdapter
-        onItemViewClickedListener = this
+        setOnItemViewClickedListener(this)
     }
 
     private fun loadStreams() {
