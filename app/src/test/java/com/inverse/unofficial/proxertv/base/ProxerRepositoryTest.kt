@@ -115,6 +115,8 @@ class ProxerRepositoryTest {
     @Test
     fun testLogout() {
         mockServer.enqueue(ApiResponses.getLogoutResponse())
+        whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))
+        whenever(seriesProgressDb.clearDb()).thenReturn(Observable.just(Unit))
 
         userSettings.setAccount(TEST_USER, TEST_PASSWORD)
         userSettings.setUserToken(TEST_TOKEN)

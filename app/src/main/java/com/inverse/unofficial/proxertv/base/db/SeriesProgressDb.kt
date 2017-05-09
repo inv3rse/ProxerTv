@@ -39,7 +39,7 @@ class SeriesProgressDbHelper(context: Context) : ManagedSQLiteOpenHelper(context
     }
 }
 
-open class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
+open class SeriesProgressDb(private val dbHelper: SeriesProgressDbHelper) {
     // Pair<SeriesId, Progress>
     private val changeSubject = SerializedSubject(PublishSubject.create<Pair<Int, Int>>())
 
@@ -80,5 +80,20 @@ open class SeriesProgressDb(val dbHelper: SeriesProgressDbHelper) {
         return Observable.concat(
                 getProgress(seriesId),
                 changeSubject.filter { seriesId == it.first }.map { it.second })
+    }
+
+    /**
+     * Clears the db.
+     */
+    open fun clearDb(): Observable<Unit> {
+        return dbHelper
+                // select all ids in the db
+                .useAsync { select(SeriesProgressScheme.TABLE, SeriesProgressScheme.ID).parseList(IntParser) }
+                // clear the db and notify progress change
+                .map { ids: List<Int> ->
+                    dbHelper.clearDb()
+                    ids.forEach { changeSubject.onNext(Pair(it, 0)) }
+                }
+
     }
 }

@@ -67,8 +67,11 @@ class ProxerRepository(
      * @return an [Observable] emitting true or throwing an error
      */
     fun logout(): Observable<Boolean> {
-        userSettings.clearUser()
-        return client.logout().map { true }
+        return Observable.fromCallable { userSettings.clearUser() }
+                .flatMap { mySeriesDb.overrideWithSeriesList(emptyList()) }
+                .flatMap { progressDatabase.clearDb() }
+                .flatMap { client.logout() }
+                .map { true }
     }
 
     /**
