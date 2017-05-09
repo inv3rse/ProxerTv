@@ -1,7 +1,7 @@
 package com.inverse.unofficial.proxertv.base
 
-import com.crashlytics.android.BuildConfig
 import com.crashlytics.android.Crashlytics
+import com.inverse.unofficial.proxertv.BuildConfig
 
 /**
  * Util object to log errors
