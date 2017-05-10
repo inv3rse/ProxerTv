@@ -5,7 +5,7 @@ import android.support.v17.leanback.widget.Presenter
 import android.view.ViewGroup
 import com.bumptech.glide.Glide
 
-/*
+/**
  * A CardPresenter is used to generate Views and bind Objects to them on demand.
  * It contains an Image CardView
  */
@@ -20,7 +20,7 @@ abstract class BaseCoverPresenter : Presenter() {
 
         cardView.isFocusable = true
         cardView.isFocusableInTouchMode = true
-        return Presenter.ViewHolder(cardView)
+        return CoverViewHolder(cardView)
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder) {
@@ -30,6 +30,8 @@ abstract class BaseCoverPresenter : Presenter() {
         cardView.badgeImage = null
         cardView.mainImage = null
     }
+
+    class CoverViewHolder(val cardView: ImageCardView) : Presenter.ViewHolder(cardView)
 
     companion object {
         val CARD_WIDTH = 280

@@ -19,10 +19,7 @@ import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.login.LoginActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
-import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
-import com.inverse.unofficial.proxertv.ui.util.UserAction
-import com.inverse.unofficial.proxertv.ui.util.UserActionAdapter
-import com.inverse.unofficial.proxertv.ui.util.UserActionHolder
+import com.inverse.unofficial.proxertv.ui.util.*
 import org.jetbrains.anko.startActivity
 import org.jetbrains.anko.toast
 import rx.Observable
@@ -37,7 +34,7 @@ import java.util.*
  * Main screen of the app. Shows multiple rows of series items with only name and cover.
  */
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener {
-    private val coverPresenter = SeriesCoverPresenter()
+    private val presenterSelector = CoverPresenterSelector()
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private val seriesUpdateHandler = Handler()
 
@@ -195,7 +192,8 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         if (addFirst && targetRowMap[position] == null) {
             // add the empty row first, before the content for it is loaded
             // it is necessary to keep the selection on app start at the top of the page
-            val adapter = ArrayObjectAdapter(coverPresenter)
+            val adapter = ArrayObjectAdapter(presenterSelector)
+            adapter.add(LoadingCover())
             addRow(headerName, adapter, position)
         }
 
@@ -215,7 +213,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                                     removeRow(position)
                                 }
                             } else if (seriesList.isNotEmpty()) {
-                                val adapter = ArrayObjectAdapter(coverPresenter)
+                                val adapter = ArrayObjectAdapter(presenterSelector)
                                 adapter.addAll(0, seriesList)
                                 addRow(headerName, adapter, position)
                             }

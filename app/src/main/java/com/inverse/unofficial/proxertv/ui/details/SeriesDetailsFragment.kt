@@ -20,7 +20,7 @@ import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
 
 /**
- * The details view for a series.
+ * The details cardView for a series.
  */
 class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, SeriesDetailsRowPresenter.SeriesDetailsRowListener {
     private val presenterSelector = ClassPresenterSelector()
