@@ -1,22 +1,80 @@
 package com.inverse.unofficial.proxertv.ui.util
 
+import android.support.annotation.StringRes
 import android.support.v17.leanback.widget.ObjectAdapter
-import com.inverse.unofficial.proxertv.base.UserSettings
+import android.support.v17.leanback.widget.Presenter
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import com.inverse.unofficial.proxertv.R
+
+
+/**
+ * A possible user account action.
+ */
+enum class UserAction(@StringRes val textResource: Int) {
+    LOGIN(R.string.user_action_login),
+    LOGOUT(R.string.user_action_logout),
+    SYNC(R.string.user_action_sync)
+}
+
+/**
+ * A [UserAction] with loading information
+ */
+data class UserActionHolder(
+        val userAction: UserAction,
+        val isLoading: Boolean
+)
+
+/**
+ * Presents a [UserActionHolder]
+ */
+class UserActionPresenter : Presenter() {
+
+    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return UserActionViewHolder(inflater.inflate(R.layout.view_user_action, parent, false))
+    }
+
+    override fun onBindViewHolder(viewHolder: ViewHolder, item: Any) {
+        val action = item as UserActionHolder
+        val holder = viewHolder as UserActionViewHolder
+
+        holder.textView.text = holder.textView.context.getText(action.userAction.textResource)
+        holder.progressBar.visibility = if (action.isLoading) View.VISIBLE else View.GONE
+    }
+
+    override fun onUnbindViewHolder(viewHolder: ViewHolder) {
+    }
+
+    /**
+     * ViewHolder for a UserAction
+     */
+    internal class UserActionViewHolder(view: View) : Presenter.ViewHolder(view) {
+        val textView = view.findViewById(R.id.user_action_text) as TextView
+        val progressBar: View = view.findViewById(R.id.user_action_progress)
+    }
+}
 
 /**
  * Adapter that shows a list of possible account actions (login, logout, sync)
  */
-class UserActionAdapter(private val userSettings: UserSettings) : ObjectAdapter(UserActionPresenter()) {
+class UserActionAdapter(userLoggedIn: Boolean) : ObjectAdapter(UserActionPresenter()) {
+
+    private val loadingSet = mutableSetOf<UserAction>()
 
     /**
-     * Notifies that the account has changed
+     * Defines the possible user actions
      */
-    fun notifyAccountChanged() {
-        notifyChanged()
-    }
+    var loggedIn = userLoggedIn
+        set(value) {
+            field = value
+            notifyChanged()
+        }
 
     override fun size(): Int {
-        if (userSettings.getUser() != null) {
+        if (loggedIn) {
             return ACTIONS_LOGGED_IN.size
         } else {
             return ACTIONS_LOGGED_OUT.size
@@ -24,11 +82,26 @@ class UserActionAdapter(private val userSettings: UserSettings) : ObjectAdapter(
     }
 
     override fun get(position: Int): Any {
-        if (userSettings.getUser() != null) {
-            return ACTIONS_LOGGED_IN[position]
-        } else {
-            return ACTIONS_LOGGED_OUT[position]
-        }
+        val action = if (loggedIn) ACTIONS_LOGGED_IN[position] else ACTIONS_LOGGED_OUT[position]
+        return UserActionHolder(action, loadingSet.contains(action))
+    }
+
+    /**
+     * Sets the state of an action to loading
+     * @param action the action to set to loading
+     */
+    fun addLoading(action: UserAction) {
+        loadingSet.add(action)
+        notifyChanged()
+    }
+
+    /**
+     * Removes the loading state of an action
+     * @param action the action
+     */
+    fun removeLoading(action: UserAction) {
+        loadingSet.remove(action)
+        notifyChanged()
     }
 
     companion object {

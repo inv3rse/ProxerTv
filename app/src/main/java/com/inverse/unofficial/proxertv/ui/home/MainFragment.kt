@@ -11,6 +11,7 @@ import android.view.View
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
+import com.inverse.unofficial.proxertv.base.User
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.ISeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesCover
@@ -21,8 +22,11 @@ import com.inverse.unofficial.proxertv.ui.search.SearchActivity
 import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
 import com.inverse.unofficial.proxertv.ui.util.UserAction
 import com.inverse.unofficial.proxertv.ui.util.UserActionAdapter
+import com.inverse.unofficial.proxertv.ui.util.UserActionHolder
 import org.jetbrains.anko.startActivity
+import org.jetbrains.anko.toast
 import rx.Observable
+import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
@@ -42,8 +46,10 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     private val targetRowMap = mutableMapOf<Int, ObjectAdapter>()
 
     private val subscriptions = CompositeSubscription()
+    private var syncSubscription: Subscription? = null
     private val proxerRepository = App.component.getProxerRepository()
     private val userSettings = App.component.getUserSettings()
+    private val userRowAdapter = UserActionAdapter(userSettings.getUser() != null)
 
     private val updateSubject = PublishSubject.create<Int>()
     private var nextUpdate: Long? = null
@@ -94,11 +100,13 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
 
             intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
             startActivity(intent, bundle)
-        } else if (item is UserAction) {
-            when (item) {
+        } else if (item is UserActionHolder) {
+            when (item.userAction) {
                 UserAction.LOGIN -> startActivity<LoginActivity>()
                 UserAction.LOGOUT -> proxerRepository.logout().subscribeOn(Schedulers.io()).subscribe()
-                UserAction.SYNC -> proxerRepository.syncUserList(true).subscribeOn(Schedulers.io()).subscribe()
+                UserAction.SYNC -> if (!item.isLoading) {
+                    synchronizeAccount()
+                }
             }
         }
     }
@@ -109,13 +117,12 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     }
 
     private fun initDefaultRows() {
-        val userRowAdapter = UserActionAdapter(userSettings)
         addRow(R.string.row_account_actions, userRowAdapter, POS_ACCOUNT_ACTIONS_LIST)
 
         subscriptions.add(userSettings.observeAccount()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        { userRowAdapter.notifyAccountChanged() },
+                        { user: User? -> userRowAdapter.loggedIn = user != null },
                         { CrashReporting.logException(it) }))
 
         adapter = rowsAdapter
@@ -271,6 +278,25 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                             .map { it.first }
                             .toList()
                 }
+    }
+
+    private fun synchronizeAccount() {
+        syncSubscription?.unsubscribe()
+        userRowAdapter.addLoading(UserAction.SYNC)
+        syncSubscription = proxerRepository.syncUserList(true)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        {
+                            userRowAdapter.removeLoading(UserAction.SYNC)
+                            syncSubscription = null
+                        },
+                        {
+                            userRowAdapter.removeLoading(UserAction.SYNC)
+                            syncSubscription = null
+                            toast(R.string.user_sync_failed)
+                            CrashReporting.logException(it)
+                        })
     }
 
     companion object {

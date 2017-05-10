@@ -9,6 +9,7 @@
     <string name="row_account_actions">Account</string>
     <string name="row_user_finished">Finished Series</string>
     <string name="row_user_aborted">Aborted Series</string>
+    <string name="user_sync_failed">Synchronisation fehlgeschlagen</string>
     <string name="row_streams">Streams</string>
     <string name="page_title">Page %d</string>
     <string name="episode">Episode %d</string>
