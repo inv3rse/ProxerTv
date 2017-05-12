@@ -12,7 +12,7 @@ import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.source.ExtractorMediaSource
 import com.google.android.exoplayer2.source.TrackGroupArray
-import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection
+import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
@@ -41,11 +41,12 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
 
     init {
         val bandwidthMeter = DefaultBandwidthMeter()
-        val videoTrackSelectionFactory = AdaptiveVideoTrackSelection.Factory(bandwidthMeter)
+        val videoTrackSelectionFactory = AdaptiveTrackSelection.Factory(bandwidthMeter)
         mTrackSelector = DefaultTrackSelector(videoTrackSelectionFactory)
-        val loadControl = DefaultLoadControl()
 
-        mPlayer = ExoPlayerFactory.newSimpleInstance(context, mTrackSelector, loadControl)
+        val rendererFactory = DefaultRenderersFactory(context, null)
+
+        mPlayer = ExoPlayerFactory.newSimpleInstance(rendererFactory, mTrackSelector)
         mPlayer.addListener(ExoPlayerListener())
         mPlayer.setVideoListener(VideoEventListener())
 
@@ -224,11 +225,9 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
      * Enable or disable all video renderer
      */
     private fun setVideoRendererDisabled(disabled: Boolean) {
-        for (i in 0..(mPlayer.rendererCount - 1)) {
-            if (mPlayer.getRendererType(i) == C.TRACK_TYPE_VIDEO) {
-                mTrackSelector.setRendererDisabled(i, disabled)
-            }
-        }
+        (0..(mPlayer.rendererCount - 1))
+                .filter { mPlayer.getRendererType(it) == C.TRACK_TYPE_VIDEO }
+                .forEach { mTrackSelector.setRendererDisabled(it, disabled) }
     }
 
     interface StatusListener {
@@ -242,7 +241,6 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
     }
 
     private inner class ExoPlayerListener : ExoPlayer.EventListener {
-
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             if (playWhenReady) {
                 startProgressUpdate()
@@ -254,17 +252,15 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
             mStatusListener?.videoDurationChanged(mPlayer.duration)
         }
 
-        override fun onLoadingChanged(isLoading: Boolean) {
-        }
+        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {}
 
-        override fun onPositionDiscontinuity() {
-        }
+        override fun onLoadingChanged(isLoading: Boolean) {}
 
-        override fun onTimelineChanged(timeline: Timeline?, manifest: Any?) {
-        }
+        override fun onPositionDiscontinuity() {}
 
-        override fun onTracksChanged(trackGroups: TrackGroupArray, trackSelections: TrackSelectionArray) {
-        }
+        override fun onTimelineChanged(timeline: Timeline?, manifest: Any?) {}
+
+        override fun onTracksChanged(trackGroups: TrackGroupArray, trackSelections: TrackSelectionArray) {}
 
         override fun onPlayerError(error: ExoPlaybackException) {
             mStatusListener?.onError(error)
