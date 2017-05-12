@@ -17,7 +17,8 @@ import com.inverse.unofficial.proxertv.model.ISeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
-import com.inverse.unofficial.proxertv.ui.login.LoginActivity
+import com.inverse.unofficial.proxertv.ui.home.login.LoginActivity
+import com.inverse.unofficial.proxertv.ui.home.logout.LogoutActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
 import com.inverse.unofficial.proxertv.ui.util.*
 import org.jetbrains.anko.startActivity
@@ -100,7 +101,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         } else if (item is UserActionHolder) {
             when (item.userAction) {
                 UserAction.LOGIN -> startActivity<LoginActivity>()
-                UserAction.LOGOUT -> proxerRepository.logout().subscribeOn(Schedulers.io()).subscribe()
+                UserAction.LOGOUT -> startActivity<LogoutActivity>()
                 UserAction.SYNC -> if (!item.isLoading) {
                     synchronizeAccount()
                 }

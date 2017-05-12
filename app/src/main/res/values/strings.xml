@@ -42,6 +42,13 @@
     <string name="login_error_username_empty">der Nutzername darf nicht leer sein</string>
     <string name="login_error_password_empty">das Passwort darf nicht leer sein</string>
 
+    <!-- Logout -->
+    <string name="logout_title">Abmelden?</string>
+    <string name="logout_description">Dies löscht alle lokalen Listen und Serien Fortschritt.</string>
+    <string name="logout_confirm">Abmelden</string>
+    <string name="logout_cancel">Abbrechen</string>
+    <string name="logout_error">Beim Abmelden ist ein Fehler aufgetreten</string>
+
     <!-- UserAction -->
     <string name="user_action_login">Login</string>
     <string name="user_action_sync">Sync</string>

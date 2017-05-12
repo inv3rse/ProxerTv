@@ -70,7 +70,8 @@ class ProxerRepository(
         return Observable.fromCallable { userSettings.clearUser() }
                 .flatMap { mySeriesDb.overrideWithSeriesList(emptyList()) }
                 .flatMap { progressDatabase.clearDb() }
-                .flatMap { client.logout() }
+                // we do not care if the logout call fails, clearing the local user is enough
+                .flatMap { client.logout().map { Unit }.onErrorReturn { Unit } }
                 .map { true }
     }
 
