@@ -276,6 +276,35 @@ class ProxerRepositoryTest {
     }
 
     @Test
+    fun testMoveSeriesToListOnlineAlreadyExists() {
+        userSettings.setAccount(TEST_USER, TEST_PASSWORD)
+
+        val reZero = SeriesCover(13975, "Re:Zero kara Hajimeru Isekai Seikatsu")
+        val reZeroResult = SeriesDbEntry(13975, "Re:Zero kara Hajimeru Isekai Seikatsu", SeriesList.FINISHED, 12345678)
+
+        // entry does not exist, create request necessary
+        whenever(mySeriesDb.getSeries(any())).thenReturn(Observable.error(MySeriesDb.NoSeriesEntryException()))
+        // local series progress is 0
+        whenever(seriesProgressDb.getProgress(any())).thenReturn(Observable.just(0))
+        // create request failed with already exists, should be handled as a successful create
+        mockServer.enqueue(ApiResponses.getErrorResponse(ApiErrorException.ENTRY_ALREADY_EXISTS, "COM_PROXER_ALREADY_EXIST_LIST"))
+
+        // list request success
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Abfrage erfolgreich", getListReZero(UserListSeriesEntry.STATE_USER_BOOKMARKED)))
+
+        // the comment state is bookmarked and does need to be updated
+        mockServer.enqueue(ApiResponses.getSuccessFullResponse("Erfolgreich bearbeitet!"))
+        whenever(mySeriesDb.overrideWithSeriesList(any())).thenReturn(Observable.just(Unit))
+
+        repository.moveSeriesToList(reZero, SeriesList.FINISHED).subscribeAssert {
+            assertNoErrors()
+        }
+
+        // the local db should get updated with the latest data + our changes
+        verify(mySeriesDb).overrideWithSeriesList(eq(listOf(reZeroResult)))
+    }
+
+    @Test
     fun testMoveSeriesToListOnlineChange() {
         userSettings.setAccount(TEST_USER, TEST_PASSWORD)
 

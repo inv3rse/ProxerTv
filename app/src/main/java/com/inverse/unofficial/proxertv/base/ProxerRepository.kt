@@ -129,14 +129,15 @@ class ProxerRepository(
                         client.addSeriesToWatchList(series.id)
                                 // ignore the comment already exists error.
                                 .onErrorResumeNext { error2 ->
-                                    if (error2 is ApiErrorException && error2.code != ApiErrorException.ENTRY_ALREADY_EXISTS) {
+                                    if (error2 is ApiErrorException && error2.code == ApiErrorException.ENTRY_ALREADY_EXISTS) {
                                         Observable.just(true)
                                     } else {
                                         Observable.error(error2)
                                     }
                                 }
                     }
-                    // get the users current series list
+                    // Get the users current series list. We could have comment id offline, but to change the list
+                    // we need to update the whole comment.
                     .flatMap { client.userList() }
                     // find the item we want to change
                     .map { seriesList ->
