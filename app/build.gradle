@@ -1,17 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'com.getkeepsafe.dexcount'
 apply plugin: 'io.fabric'
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.getkeepsafe.dexcount:dexcount-gradle-plugin:0.6.3'
-    }
-}
 
 // get api key from properties or environment variable
 def apiKey = ""
@@ -99,7 +88,7 @@ dependencies {
     compile "com.squareup.retrofit2:adapter-rxjava:$retrofit_version"
 
     // Kotlin Gson
-    compile 'com.github.salomonbrys.kotson:kotson:2.2.1'
+    compile 'com.github.salomonbrys.kotson:kotson:2.5.0'
 
     // BeautifulSoup
     compile 'org.jsoup:jsoup:1.9.2'
@@ -114,7 +103,7 @@ dependencies {
 
     // Dagger 2
     def dagger_version = '2.8'
-    compile "com.google.dagger:dagger:$dagger_version";
+    compile "com.google.dagger:dagger:$dagger_version"
     kapt "com.google.dagger:dagger-compiler:$dagger_version"
     compile "javax.annotation:javax.annotation-api:1.2" // pick up generated classes
 
@@ -130,11 +119,11 @@ dependencies {
     kapt "com.github.grandstaish.paperparcel:compiler:$paperparcel_version"
 
     // Timber
-    compile 'com.jakewharton.timber:timber:4.5.0'
+    compile 'com.jakewharton.timber:timber:4.5.1'
 
     // Crashlytics
     compile('com.crashlytics.sdk.android:crashlytics:2.6.8@aar') {
-        transitive = true;
+        transitive = true
     }
 
     // Testing
