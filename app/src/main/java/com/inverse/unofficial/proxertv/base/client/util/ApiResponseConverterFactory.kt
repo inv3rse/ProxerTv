@@ -80,7 +80,7 @@ annotation class FailOnError
 /**
  * Error response from the proxer api.
  */
-class ApiErrorException(val code: Int?, val msg: String?) : IOException("api error: $msg") {
+class ApiErrorException(val code: Int?, val msg: String?) : IOException("api error: $msg, code:$code") {
 
     companion object {
         const val MISSING_LOGIN_DATA = 3000
