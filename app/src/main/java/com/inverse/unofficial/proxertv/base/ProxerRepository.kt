@@ -257,25 +257,25 @@ class ProxerRepository(
      * Load the top access series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadTopAccessSeries() = client.loadTopAccessSeries()
+    fun loadTopAccessSeries(page: Int = 1) = client.loadTopAccessSeries(page)
 
     /**
      * Load the top rating series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadTopRatingSeries() = client.loadTopRatingSeries()
+    fun loadTopRatingSeries(page: Int = 1) = client.loadTopRatingSeries(page)
 
     /**
      * Load the top rating movies list.
      * @return an [Observable] emitting the movies list
      */
-    fun loadTopRatingMovies() = client.loadTopRatingMovies()
+    fun loadTopRatingMovies(page: Int = 1) = client.loadTopRatingMovies(page)
 
     /**
      * Load the top airing series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadAiringSeries() = client.loadAiringSeries()
+    fun loadAiringSeries(page: Int = 1) = client.loadAiringSeries(page)
 
     /**
      * Load the list of series updates.

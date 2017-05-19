@@ -8,9 +8,9 @@ import android.view.ViewGroup
 import com.inverse.unofficial.proxertv.R
 
 /**
- * Class that represents a loading cover
+ * Object that represents a loading cover
  */
-class LoadingCover
+object LoadingCover
 
 /**
  * Presents a [LoadingCover]

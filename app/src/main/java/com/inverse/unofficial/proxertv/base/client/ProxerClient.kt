@@ -48,32 +48,32 @@ class ProxerClient(
      * Load the top access series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadTopAccessSeries(): Observable<List<SeriesCover>> {
-        return loadSeriesList(serverConfig.topAccessListUrl)
+    fun loadTopAccessSeries(page: Int = 1): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.topAccessListUrl(page))
     }
 
     /**
      * Load the top rating series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadTopRatingSeries(): Observable<List<SeriesCover>> {
-        return loadSeriesList(serverConfig.topRatingListUrl)
+    fun loadTopRatingSeries(page: Int = 1): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.topRatingListUrl(page))
     }
 
     /**
      * Load the top rating movies list.
      * @return an [Observable] emitting the movies list
      */
-    fun loadTopRatingMovies(): Observable<List<SeriesCover>> {
-        return loadSeriesList(serverConfig.topRatingMovieListUrl)
+    fun loadTopRatingMovies(page: Int = 1): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.topRatingMovieListUrl(page))
     }
 
     /**
      * Load the top airing series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadAiringSeries(): Observable<List<SeriesCover>> {
-        return loadSeriesList(serverConfig.airingListUrl)
+    fun loadAiringSeries(page: Int = 1): Observable<List<SeriesCover>> {
+        return loadSeriesList(serverConfig.airingListUrl(page))
     }
 
     /**

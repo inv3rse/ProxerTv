@@ -18,10 +18,10 @@ class ProxerCacheRewriteInterceptor(val serverConfig: ServerConfig) : Intercepto
                 && response.isSuccessful) {
 
             val maxAge = when (request.url().toString()) {
-                serverConfig.topAccessListUrl,
-                serverConfig.topRatingListUrl,
-                serverConfig.topRatingMovieListUrl,
-                serverConfig.airingListUrl -> 14400 // 4h
+                serverConfig.topAccessListUrl(),
+                serverConfig.topRatingListUrl(),
+                serverConfig.topRatingMovieListUrl(),
+                serverConfig.airingListUrl() -> 14400 // 4h
                 else -> 1800 // 30 min
             }
 
