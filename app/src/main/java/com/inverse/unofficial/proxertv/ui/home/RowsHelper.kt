@@ -44,10 +44,10 @@ class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resour
         var targetIndex = rowsAdapter.size()
         // iterate over the existing rows to find the correct index for our targetPos
         // (the last row might be the only one added yet)
-        for (i in 1..rowsAdapter.size()) {
-            val rowTarget = rowTargetMap[rowsAdapter.get(i - 1)] ?: 0
+        for (i in 0 until rowsAdapter.size()) {
+            val rowTarget = rowTargetMap[rowsAdapter.get(i)] ?: 0
             if (targetPos < rowTarget) {
-                targetIndex = i - 1
+                targetIndex = i
                 break
             }
         }
