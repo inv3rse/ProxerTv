@@ -124,8 +124,7 @@ class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resour
     /**
      * React to item selection
      */
-    fun onItemSelected(item: Any?, rowAdapter: ArrayObjectAdapter, row: Row) {
-        val selectedIndex = rowAdapter.indexOf(item)
+    fun onItemSelected(selectedIndex: Int, rowAdapter: ArrayObjectAdapter, row: Row) {
         val targetPos = row.id.toInt()
 
         if (targetPos >= 0 && pagingEnabled[targetPos] && selectedIndex >= 0

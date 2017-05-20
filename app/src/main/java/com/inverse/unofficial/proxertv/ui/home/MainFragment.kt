@@ -46,6 +46,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     private val userRowAdapter = UserActionAdapter(userSettings.getUser() != null)
 
     private lateinit var rowsHelper: RowsHelper
+    private var currentRowItemIndex: Int = 0
 
     private val updateSubject = PublishSubject.create<Int>()
     private var nextUpdate: Long? = null
@@ -97,7 +98,8 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         if (row is ListRow) {
             val adapter = row.adapter
             if (adapter is ArrayObjectAdapter) {
-                rowsHelper.onItemSelected(item, adapter, row)
+                currentRowItemIndex = adapter.indexOf(item)
+                rowsHelper.onItemSelected(currentRowItemIndex, adapter, row)
             }
         }
     }
@@ -125,6 +127,20 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     override fun onClick(view: View) {
         val intent = Intent(activity, SearchActivity::class.java)
         startActivity(intent)
+    }
+
+    /**
+     * React to a back pressed event
+     * @return true if we handled the event
+     */
+    fun onBackPressed(): Boolean {
+        if (currentRowItemIndex > 0) {
+            val selectTask = ListRowPresenter.SelectItemViewHolderTask(0)
+            selectTask.isSmoothScroll = currentRowItemIndex < SMOOTH_SCROLL_LIMIT
+            setSelectedPosition(selectedPosition, false, selectTask)
+            return true
+        }
+        return false
     }
 
     private fun initDefaultRows() {
@@ -253,6 +269,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     companion object {
         private const val SERIES_UPDATE_DELAY: Long = 30 * 60 * 1000 // 30 minutes in milliseconds
         private const val UPDATES_HISTORY = 3 // days
+        private const val SMOOTH_SCROLL_LIMIT = 40
 
         private const val POS_USER_LIST = 0
         private const val POS_UPDATES_LIST = 1
