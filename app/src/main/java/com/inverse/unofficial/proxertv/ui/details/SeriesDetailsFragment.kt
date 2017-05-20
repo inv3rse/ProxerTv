@@ -1,5 +1,6 @@
 package com.inverse.unofficial.proxertv.ui.details
 
+import android.app.FragmentTransaction
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -72,6 +73,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
     override fun onSelectListClicked(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow) {
         series?.let {
             fragmentManager.beginTransaction()
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                     .add(android.R.id.content, SideMenuFragment.create(it))
                     .addToBackStack(null)
                     .commit()
