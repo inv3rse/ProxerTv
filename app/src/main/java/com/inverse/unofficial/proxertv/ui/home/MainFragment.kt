@@ -3,12 +3,9 @@ package com.inverse.unofficial.proxertv.ui.home
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.support.annotation.StringRes
 import android.support.v17.leanback.app.BrowseFragment
 import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
-import android.util.SparseBooleanArray
-import android.util.SparseIntArray
 import android.view.View
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
@@ -22,7 +19,10 @@ import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.home.login.LoginActivity
 import com.inverse.unofficial.proxertv.ui.home.logout.LogoutActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
-import com.inverse.unofficial.proxertv.ui.util.*
+import com.inverse.unofficial.proxertv.ui.util.CoverPresenterSelector
+import com.inverse.unofficial.proxertv.ui.util.UserAction
+import com.inverse.unofficial.proxertv.ui.util.UserActionAdapter
+import com.inverse.unofficial.proxertv.ui.util.UserActionHolder
 import org.jetbrains.anko.startActivity
 import org.jetbrains.anko.toast
 import rx.Observable
@@ -37,24 +37,15 @@ import java.util.*
  * Main screen of the app. Shows multiple rows of series items with only name and cover.
  */
 class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickListener, OnItemViewSelectedListener {
-    private val presenterSelector = CoverPresenterSelector()
-    private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private val seriesUpdateHandler = Handler()
-
-    // access to ListRow and corresponding adapter based on target position
-    private val rowTargetMap = mutableMapOf<ListRow, Int>()
-    private val targetRowMap = mutableMapOf<Int, ObjectAdapter>()
-
     private val subscriptions = CompositeSubscription()
     private var syncSubscription: Subscription? = null
+
     private val proxerRepository = App.component.getProxerRepository()
     private val userSettings = App.component.getUserSettings()
     private val userRowAdapter = UserActionAdapter(userSettings.getUser() != null)
 
-    private val pageProviders = mutableMapOf<Int, (Int) -> Observable<List<SeriesCover>>>()
-    private val pageProgress = SparseIntArray()
-    private val pagingEnabled = SparseBooleanArray()
-    private val pagingHandler = Handler()
+    private lateinit var rowsHelper: RowsHelper
 
     private val updateSubject = PublishSubject.create<Int>()
     private var nextUpdate: Long? = null
@@ -70,6 +61,10 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         super.onCreate(savedInstanceState)
         title = getString(R.string.app_name)
         headersState = HEADERS_HIDDEN
+
+        val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+        rowsHelper = RowsHelper(rowsAdapter, resources)
+        adapter = rowsAdapter
 
         onItemViewClickedListener = this
         onItemViewSelectedListener = this
@@ -95,47 +90,14 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     override fun onDestroy() {
         super.onDestroy()
         subscriptions.clear()
+        rowsHelper.cancelPendingOperations()
     }
 
     override fun onItemSelected(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
         if (row is ListRow) {
             val adapter = row.adapter
             if (adapter is ArrayObjectAdapter) {
-                val selectedIndex = adapter.indexOf(item)
-                val id = row.id.toInt()
-
-                if (selectedIndex > (adapter.size() - 4) && id >= 0 && pagingEnabled[id]) {
-                    val pageProvider = pageProviders[id]
-                    if (pageProvider != null) {
-                        pagingEnabled.put(id, false)
-                        // delay the insertion, because the RecyclerView might be in a scrolling state
-                        pagingHandler.post { adapter.add(LoadingCover) }
-
-                        val nextPage = pageProgress.get(id, 1) + 1
-
-                        subscriptions.add(pageProvider(nextPage)
-                                .subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe(
-                                        { newPageItems ->
-
-                                            if (newPageItems.isNotEmpty() && adapter.size() > 0) {
-                                                adapter.replace(adapter.size() - 1, newPageItems.first())
-                                                adapter.addAll(adapter.size(), newPageItems.subList(1, newPageItems.size))
-                                            } else {
-                                                adapter.remove(LoadingCover)
-                                                adapter.addAll(adapter.size(), newPageItems)
-                                            }
-
-                                            pageProgress.put(id, nextPage)
-                                            pagingEnabled.put(id, newPageItems.isNotEmpty())
-                                        },
-                                        { CrashReporting.logException(it) })
-                        )
-                    }
-
-                }
-
+                rowsHelper.onItemSelected(item, adapter, row)
             }
         }
     }
@@ -166,7 +128,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     }
 
     private fun initDefaultRows() {
-        addRow(R.string.row_account_actions, userRowAdapter, POS_ACCOUNT_ACTIONS_LIST)
+        rowsHelper.addRow(userRowAdapter, R.string.row_account_actions, POS_ACCOUNT_ACTIONS_LIST)
 
         subscriptions.add(userSettings.observeAccount()
                 .observeOn(AndroidSchedulers.mainThread())
@@ -174,121 +136,48 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                         { user: User? -> userRowAdapter.loggedIn = user != null },
                         { CrashReporting.logException(it) }))
 
-        adapter = rowsAdapter
     }
 
     private fun loadContent() {
+        val presenterSelector = CoverPresenterSelector()
         val userListObservable = proxerRepository.syncUserList()
                 .flatMap { proxerRepository.observeSeriesList() }
                 .subscribeOn(Schedulers.io())
                 .publish()
 
-        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.WATCHLIST } },
+        rowsHelper.addObservableRow(ArrayObjectAdapter(presenterSelector),
+                userListObservable.map { list -> list.filter { it.userList == SeriesList.WATCHLIST } },
                 R.string.row_my_list, POS_USER_LIST)
 
-        loadAndAddRow(updateSubject.flatMap { loadEpisodesUpdateRow().takeUntil(updateSubject) },
+        rowsHelper.addObservableRow(ArrayObjectAdapter(presenterSelector),
+                updateSubject.flatMap { getUpdatesRowObservable().takeUntil(updateSubject) },
                 R.string.row_updates, POS_UPDATES_LIST)
 
-        loadAndAddRow(proxerRepository.loadTopAccessSeries(), R.string.row_top_access, POS_TOP_ACCESS_LIST)
-        pagingEnabled.put(POS_TOP_ACCESS_LIST, true)
-        pageProviders.put(POS_TOP_ACCESS_LIST, { proxerRepository.loadTopAccessSeries(it) })
+        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+                { proxerRepository.loadTopAccessSeries(it) }, R.string.row_top_access, POS_TOP_ACCESS_LIST)
 
-        loadAndAddRow(proxerRepository.loadTopRatingSeries(), R.string.row_top_rating, POS_TOP_RATING_LIST)
-        pagingEnabled.put(POS_TOP_RATING_LIST, true)
-        pageProviders.put(POS_TOP_RATING_LIST, { proxerRepository.loadTopRatingSeries(it) })
+        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+                { proxerRepository.loadTopRatingSeries(it) }, R.string.row_top_rating, POS_TOP_RATING_LIST)
 
-        loadAndAddRow(proxerRepository.loadTopRatingMovies(), R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST)
-        pagingEnabled.put(POS_TOP_MOVIES_LIST, true)
-        pageProviders.put(POS_TOP_MOVIES_LIST, { proxerRepository.loadTopRatingMovies(it) })
+        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+                { proxerRepository.loadTopRatingMovies(it) }, R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST)
 
-        loadAndAddRow(proxerRepository.loadAiringSeries(), R.string.row_airing, POS_AIRING_LIST)
-        pagingEnabled.put(POS_AIRING_LIST, true)
-        pageProviders.put(POS_AIRING_LIST, { proxerRepository.loadAiringSeries(it) })
+        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+                { proxerRepository.loadAiringSeries(it) }, R.string.row_airing, POS_AIRING_LIST)
 
-        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.FINISHED } },
-                R.string.row_user_finished, 7)
+        rowsHelper.addObservableRow(ArrayObjectAdapter(presenterSelector),
+                userListObservable.map { list -> list.filter { it.userList == SeriesList.FINISHED } },
+                R.string.row_user_finished, POS_FINISHED_LIST)
 
-        loadAndAddRow(userListObservable.map { list -> list.filter { it.userList == SeriesList.ABORTED } },
-                R.string.row_user_aborted, 8)
+        rowsHelper.addObservableRow(ArrayObjectAdapter(presenterSelector),
+                userListObservable.map { list -> list.filter { it.userList == SeriesList.ABORTED } },
+                R.string.row_user_aborted, POS_ABORTED_LIST)
 
         subscriptions.add(userListObservable.connect())
     }
 
-    /**
-     * Adds a row to the existing rows according to targetPos.
-     */
-    private fun addRow(@StringRes headerName: Int, adapter: ObjectAdapter, targetPos: Int) {
-        val listRow = ListRow(targetPos.toLong(), HeaderItem(getString(headerName)), adapter)
 
-        var targetIndex = rowsAdapter.size()
-        // iterate over the existing rows to find the correct index for our targetPos
-        // (the last row might be the only one added yet)
-        for (i in 1..rowsAdapter.size()) {
-            val rowTarget = rowTargetMap[rowsAdapter.get(i - 1)] ?: 0
-            if (targetPos < rowTarget) {
-                targetIndex = i - 1
-                break
-            }
-        }
-
-        rowsAdapter.add(targetIndex, listRow)
-        rowTargetMap.put(listRow, targetPos)
-        targetRowMap.put(targetPos, adapter)
-    }
-
-    /**
-     * Removes the row for targetPos
-     */
-    private fun removeRow(targetPos: Int) {
-        rowTargetMap.filterValues { it == targetPos }.forEach { entry ->
-            rowsAdapter.remove(entry.key)
-            rowTargetMap.remove(entry.key)
-            targetRowMap.remove(entry.value)
-        }
-    }
-
-    /**
-     * Subscribes to the loadObservable and sets the row content once it emits items. If the onNext List is empty or the
-     * observable throws an error the row will be removed.
-     */
-    private fun loadAndAddRow(loadObservable: Observable<out List<ISeriesCover>>, @StringRes headerName: Int, position: Int, addFirst: Boolean = true) {
-        if (addFirst && targetRowMap[position] == null) {
-            // add the empty row first, before the content for it is loaded
-            // it is necessary to keep the selection on app start at the top of the page
-            val adapter = ArrayObjectAdapter(presenterSelector)
-            adapter.add(LoadingCover)
-            addRow(headerName, adapter, position)
-        }
-
-        subscriptions.add(loadObservable
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        { seriesList ->
-                            val existingAdapter = targetRowMap[position]
-                            if (existingAdapter != null && existingAdapter is ArrayObjectAdapter) {
-                                if (!seriesList.isEmpty()) {
-                                    // update existing content
-                                    existingAdapter.clear()
-                                    existingAdapter.addAll(0, seriesList)
-                                } else {
-                                    // list is empty, remove it
-                                    removeRow(position)
-                                }
-                            } else if (seriesList.isNotEmpty()) {
-                                val adapter = ArrayObjectAdapter(presenterSelector)
-                                adapter.addAll(0, seriesList)
-                                addRow(headerName, adapter, position)
-                            }
-                        },
-                        { error ->
-                            removeRow(position)
-                            CrashReporting.logException(error)
-                        }
-                ))
-    }
-
-    private fun loadEpisodesUpdateRow(): Observable<List<SeriesCover>> {
+    private fun getUpdatesRowObservable(): Observable<List<SeriesCover>> {
         val calendar = GregorianCalendar.getInstance()
         calendar.add(Calendar.DAY_OF_MONTH, -UPDATES_HISTORY)
         val lastUpdateDate = calendar.time
@@ -333,8 +222,9 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
                                 Observable.zip(
                                         Observable.just(it),
                                         proxerRepository.loadEpisodesPage(it.first.id, ProxerClient.getTargetPageForEpisode(it.second + 1)),
-                                        { seriesProgress, episodesMap -> Triple(seriesProgress.first, seriesProgress.second, episodesMap) })
+                                        { (seriesCover, progress), episodesMap -> Triple(seriesCover, progress, episodesMap) })
                             }
+                            // check if any episode subtype contains the next episode according to the users progress
                             .filter { it.third.any { entry -> entry.value.contains(it.second + 1) } }
                             .map { it.first }
                             .toList()
@@ -371,5 +261,7 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
         private const val POS_TOP_MOVIES_LIST = 4
         private const val POS_AIRING_LIST = 5
         private const val POS_ACCOUNT_ACTIONS_LIST = 6
+        private const val POS_FINISHED_LIST = 7
+        private const val POS_ABORTED_LIST = 8
     }
 }
