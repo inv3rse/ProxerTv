@@ -70,7 +70,8 @@ class ProxerRepository(
         return Observable.fromCallable { userSettings.clearUser() }
                 .flatMap { mySeriesDb.overrideWithSeriesList(emptyList()) }
                 .flatMap { progressDatabase.clearDb() }
-                .flatMap { client.logout() }
+                // we do not care if the logout call fails, clearing the local user is enough
+                .flatMap { client.logout().map { Unit }.onErrorReturn { Unit } }
                 .map { true }
     }
 
@@ -128,14 +129,15 @@ class ProxerRepository(
                         client.addSeriesToWatchList(series.id)
                                 // ignore the comment already exists error.
                                 .onErrorResumeNext { error2 ->
-                                    if (error2 is ApiErrorException && error2.code != ApiErrorException.ENTRY_ALREADY_EXISTS) {
+                                    if (error2 is ApiErrorException && error2.code == ApiErrorException.ENTRY_ALREADY_EXISTS) {
                                         Observable.just(true)
                                     } else {
                                         Observable.error(error2)
                                     }
                                 }
                     }
-                    // get the users current series list
+                    // Get the users current series list. We could have comment id offline, but to change the list
+                    // we need to update the whole comment.
                     .flatMap { client.userList() }
                     // find the item we want to change
                     .map { seriesList ->
@@ -255,25 +257,25 @@ class ProxerRepository(
      * Load the top access series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadTopAccessSeries() = client.loadTopAccessSeries()
+    fun loadTopAccessSeries(page: Int = 1) = client.loadTopAccessSeries(page)
 
     /**
      * Load the top rating series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadTopRatingSeries() = client.loadTopRatingSeries()
+    fun loadTopRatingSeries(page: Int = 1) = client.loadTopRatingSeries(page)
 
     /**
      * Load the top rating movies list.
      * @return an [Observable] emitting the movies list
      */
-    fun loadTopRatingMovies() = client.loadTopRatingMovies()
+    fun loadTopRatingMovies(page: Int = 1) = client.loadTopRatingMovies(page)
 
     /**
      * Load the top airing series list.
      * @return an [Observable] emitting the series list
      */
-    fun loadAiringSeries() = client.loadAiringSeries()
+    fun loadAiringSeries(page: Int = 1) = client.loadAiringSeries(page)
 
     /**
      * Load the list of series updates.

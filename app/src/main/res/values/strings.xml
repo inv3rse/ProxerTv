@@ -9,8 +9,8 @@
     <string name="row_account_actions">Account</string>
     <string name="row_user_finished">Finished Series</string>
     <string name="row_user_aborted">Aborted Series</string>
+    <string name="user_sync_failed">Synchronisation failed</string>
     <string name="row_streams">Streams</string>
-    <string name="page_title">Page %d</string>
     <string name="episode">Episode %d</string>
     <string name="row_search_results">Search Results</string>
     <string name="description_active_stream">currently active stream</string>
@@ -30,16 +30,22 @@
     <string name="series_list_aborted">Aborted</string>
 
     <!-- Login -->
-    <string name="login_title">Mit Proxer Account verbinden</string>
-    <string name="login_description">Synchronisiert Serien und Fortschritt</string>
-    <string name="login_breadcrumb">Einloggen</string>
-    <string name="login_username_title">Nutzername</string>
-    <string name="login_password_title">Passwort</string>
+    <string name="login_title">Connect with Proxer Account</string>
+    <string name="login_description">Synchronizes series and progression</string>
+    <string name="login_username_title">Username</string>
+    <string name="login_password_title">Password</string>
     <string name="login_action_title">Login</string>
 
-    <string name="login_error_general">Login fehlgeschlagen</string>
-    <string name="login_error_username_empty">der Nutzername darf nicht leer sein</string>
-    <string name="login_error_password_empty">das Passwort darf nicht leer sein</string>
+    <string name="login_error_general">Login failed</string>
+    <string name="login_error_username_empty">Username must not be empty</string>
+    <string name="login_error_password_empty">Password must not be empty</string>
+
+    <!-- Logout -->
+    <string name="logout_title">Logout?</string>
+    <string name="logout_description">This wipes all local lists and series progression.</string>
+    <string name="logout_confirm">Logout</string>
+    <string name="logout_cancel">Cancel</string>
+    <string name="logout_error">An error occurred during logout.</string>
 
     <!-- UserAction -->
     <string name="user_action_login">Login</string>

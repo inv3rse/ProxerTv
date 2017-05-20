@@ -5,11 +5,12 @@ class ServerConfig(
         val host: String = "proxer.me") {
     val baseUrl = "$schema://$host/"
     val apiBaseUrl = baseUrl + "api/v1/"
-    val topAccessListUrl = baseUrl + "anime/animeseries/clicks/all#top"
-    val topRatingListUrl = baseUrl + "anime/animeseries/rating/all#top"
-    val airingListUrl = baseUrl + "anime/airing/rating/all#top"
-    val topRatingMovieListUrl = baseUrl + "anime/movie/rating/all#top"
     val updatesListUrl = baseUrl + "anime/updates#top"
+
+    fun topAccessListUrl(page: Int = 1) = baseUrl + "anime/animeseries/clicks/all/$page#top"
+    fun topRatingListUrl(page: Int = 1) = baseUrl + "anime/animeseries/rating/all/$page#top"
+    fun airingListUrl(page: Int = 1) = baseUrl + "anime/airing/rating/all/$page#top"
+    fun topRatingMovieListUrl(page: Int = 1) = baseUrl + "anime/movie/rating/all/$page#top"
 
     fun searchUrl(query: String) = baseUrl + "search?s=search&name=$query&typ=all-anime"
     fun episodeStreamsUrl(seriesId: Int, episodeNum: Int, subType: String) = baseUrl + "watch/$seriesId/$episodeNum/$subType"

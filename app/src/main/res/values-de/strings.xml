@@ -1,0 +1,54 @@
+<resources>
+    <string name="app_name">ProxerTv Alpha</string>
+    <string name="row_my_list">Meine Liste</string>
+    <string name="row_updates">Updates</string>
+    <string name="row_top_access">Meistgesehene Serien</string>
+    <string name="row_top_rating">Bestbewertete Serien</string>
+    <string name="row_top_rating_movies">Bestbewertete Filme</string>
+    <string name="row_airing">Laufende Serien</string>
+    <string name="row_account_actions">Account</string>
+    <string name="row_user_finished">Abgeschlossene Serien</string>
+    <string name="row_user_aborted">Abgebrochene Serien</string>
+    <string name="user_sync_failed">Synchronisation fehlgeschlagen</string>
+    <string name="row_streams">Streams</string>
+    <string name="episode">Episode %d</string>
+    <string name="row_search_results">Suchergebnisse</string>
+    <string name="description_active_stream">Aktiver Stream</string>
+    <string name="dismiss_error">Zurück</string>
+    <string name="stream_error">Stream Fehler</string>
+    <string name="no_streams_found">Keine unterstützden Streams gefunden.</string>
+    <string name="stream_captcha_error">Proxer.me benötigt eine captcha Eingabe. Diese kann von jedem Gerät mit derselben IP getätigt werden.</string>
+    <string name="series_cover_description">Seriencover</string>
+
+    <!-- Series Details -->
+    <string name="series_details_list_label"><b>Liste:</b></string>
+    <string name="series_details_genres_label"><b>Genres:</b></string>
+    <string name="series_details_page_label">Seite:</string>
+    <string name="series_list_none">Keine</string>
+    <string name="series_list_watchlist">Meine Liste</string>
+    <string name="series_list_finished">Abgeschlossen</string>
+    <string name="series_list_aborted">Abgebrochen</string>
+
+    <!-- Login -->
+    <string name="login_title">Mit Proxer Account verbinden</string>
+    <string name="login_description">Synchronisiert Serien und Fortschritt</string>
+    <string name="login_username_title">Nutzername</string>
+    <string name="login_password_title">Passwort</string>
+    <string name="login_action_title">Anmelden</string>
+
+    <string name="login_error_general">Anmelden fehlgeschlagen</string>
+    <string name="login_error_username_empty">der Nutzername darf nicht leer sein</string>
+    <string name="login_error_password_empty">das Passwort darf nicht leer sein</string>
+
+    <!-- Logout -->
+    <string name="logout_title">Abmelden?</string>
+    <string name="logout_description">Dies löscht alle lokalen Listen und Serien Fortschritt.</string>
+    <string name="logout_confirm">Abmelden</string>
+    <string name="logout_cancel">Abbrechen</string>
+    <string name="logout_error">Beim Abmelden ist ein Fehler aufgetreten</string>
+
+    <!-- UserAction -->
+    <string name="user_action_login">Anmelden</string>
+    <string name="user_action_sync">Sync</string>
+    <string name="user_action_logout">Abmelden</string>
+</resources>
