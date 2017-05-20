@@ -23,8 +23,8 @@ android {
         applicationId "com.inverse.unofficial.proxertv"
         minSdkVersion 21
         targetSdkVersion 25
-        versionCode 8
-        versionName "Alpha 8"
+        versionCode 9
+        versionName "Alpha 9"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PROXER_API_KEY", apiKey)
