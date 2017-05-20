@@ -87,6 +87,23 @@ class UserActionAdapter(userLoggedIn: Boolean) : ObjectAdapter(UserActionPresent
     }
 
     /**
+     * Returns the index of the first occurrence of the specified element in the list, or -1 if the specified
+     * element is not contained in the list.
+     * @param item the item to get the index for
+     * @return the index or -1
+     */
+    fun indexOf(item: Any?): Int {
+        if (item is UserActionHolder) {
+            if (loggedIn) {
+                return ACTIONS_LOGGED_IN.indexOf(item.userAction)
+            } else {
+                return ACTIONS_LOGGED_OUT.indexOf(item.userAction)
+            }
+        }
+        return -1
+    }
+
+    /**
      * Sets the state of an action to loading
      * @param action the action to set to loading
      */

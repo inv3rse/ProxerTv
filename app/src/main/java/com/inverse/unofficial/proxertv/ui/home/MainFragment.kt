@@ -97,10 +97,17 @@ class MainFragment : BrowseFragment(), OnItemViewClickedListener, View.OnClickLi
     override fun onItemSelected(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
         if (row is ListRow) {
             val adapter = row.adapter
-            if (adapter is ArrayObjectAdapter) {
-                currentRowItemIndex = adapter.indexOf(item)
-                rowsHelper.onItemSelected(currentRowItemIndex, adapter, row)
+            when (adapter) {
+                is ArrayObjectAdapter -> {
+                    currentRowItemIndex = adapter.indexOf(item)
+                    rowsHelper.onItemSelected(currentRowItemIndex, adapter, row)
+                }
+                is UserActionAdapter -> {
+                    // different method, does not implement the collections interface
+                    currentRowItemIndex = adapter.indexOf(item)
+                }
             }
+
         }
     }
 
