@@ -62,9 +62,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Support Library
-    // old version as 25.3 introduces a bug which causes the DetailsFragments item click listener to fail
-    // https://issuetracker.google.com/issues/37488223
-    def support_library_version = '25.2.0'
+    def support_library_version = '25.4.0'
     compile "com.android.support:leanback-v17:$support_library_version"
     compile "com.android.support:percent:$support_library_version"
 
@@ -93,11 +91,8 @@ dependencies {
     // BeautifulSoup
     compile 'org.jsoup:jsoup:1.9.2'
 
-    // ExoPlayer (force support library version)
-    compile('com.google.android.exoplayer:exoplayer:r2.4.0') {
-        exclude module: 'support-compat'
-        exclude module: 'support-core-utils'
-    }
+    // ExoPlayer
+    compile('com.google.android.exoplayer:exoplayer:r2.4.0')
     compile("com.android.support:support-compat:$support_library_version")
     compile("com.android.support:support-core-utils:$support_library_version")
 
@@ -129,7 +124,7 @@ dependencies {
     // Testing
     testCompile 'junit:junit:4.12'
     testCompile "com.squareup.okhttp3:mockwebserver:$okhttp_version"
-    testCompile "com.nhaarman:mockito-kotlin:1.4.0"
+    testCompile "com.nhaarman:mockito-kotlin:1.5.0"
     androidTestCompile "com.squareup.okhttp3:mockwebserver:$okhttp_version"
     androidTestCompile('com.android.support.test:runner:0.5') {
         exclude module: 'support-annotations'
