@@ -11,7 +11,7 @@ buildscript {
     dependencies {
         // Unit test are currently not working with the 3.0.0-alpha1
         // classpath 'com.android.tools.build:gradle:3.0.0-alpha1'
-        classpath 'com.android.tools.build:gradle:3.0.0-alpha3'
+        classpath 'com.android.tools.build:gradle:3.0.0-alpha4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'io.fabric.tools:gradle:1.22.1'
 
@@ -31,15 +31,4 @@ allprojects {
 
 task clean(type: Delete) {
     delete rootProject.buildDir
-}
-
-subprojects {
-    configurations.all {
-        resolutionStrategy {
-            forcedModules = [
-                    "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version",
-                    "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-            ]
-        }
-    }
 }
