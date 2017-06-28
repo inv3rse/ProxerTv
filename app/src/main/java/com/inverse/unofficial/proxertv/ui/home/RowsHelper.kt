@@ -82,6 +82,7 @@ class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resour
                         { seriesList ->
                             val existingAdapter = targetRowMap[targetPos]
                             pageProgress.put(targetPos, 1)
+                            pagingEnabled.put(targetPos, pageProviders.contains(targetPos))
 
                             if (existingAdapter != null && existingAdapter is ArrayObjectAdapter) {
                                 if (!seriesList.isEmpty()) {
@@ -115,9 +116,7 @@ class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resour
     fun addObservablePagingRow(adapter: ArrayObjectAdapter, pageObservableFactory: (Int) -> Observable<out List<SeriesCover>>,
                                @StringRes headerName: Int, targetPos: Int) {
 
-        pagingEnabled.put(targetPos, true)
         pageProviders.put(targetPos, pageObservableFactory)
-
         addObservableRow(adapter, pageObservableFactory(DEFAULT_PAGE), headerName, targetPos)
     }
 
