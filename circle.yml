@@ -40,18 +40,17 @@ dependencies:
 
 test:
     pre:
-        - emulator -avd circleci-android24 -no-audio -no-window:
+        - emulator -avd circleci-android24 -no-window:
             background: true
             parallel: true
 
     override:
         # Run lint and unit tests
-        - ./gradlew check --no-daemon --console=plain --continue
+        - ./gradlew assembleDebug assembleDebugAndroidTest check -PdisablePreDex --no-daemon --console=plain --continue
 
         # instrumentation tests
-        - ./gradlew lint assembleDebug assembleDebugAndroidTest -PdisablePreDex --no-daemon --console=plain
         - circle-android wait-for-boot
-        - ./gradlew connectedAndroidTest -PdisablePreDex -Dorg.gradle.daemon=false --console=plain
+        - ./gradlew connectedAndroidTest -PdisablePreDex --no-daemon --console=plain
 
     post:
         # Collect the JUnit reports
@@ -65,3 +64,6 @@ test:
         - mkdir -p $CIRCLE_TEST_REPORTS/reports/lint
         - find app/build/reports -name "lint*.html" -exec cp {} $CIRCLE_TEST_REPORTS/reports/lint/ \;
         - find app/build/reports -name "lint*.xml" -exec cp {} $CIRCLE_TEST_REPORTS/reports/lint/ \;
+
+        # Copy apk to artifacts
+        cp -r app/build/outputs/apk $CIRCLE_ARTIFACTS
