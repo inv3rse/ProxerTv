@@ -66,4 +66,4 @@ test:
         - find app/build/reports -name "lint*.xml" -exec cp {} $CIRCLE_TEST_REPORTS/reports/lint/ \;
 
         # Copy apk to artifacts
-        cp -r app/build/outputs/apk $CIRCLE_ARTIFACTS
+        - cp -r app/build/outputs/apk $CIRCLE_ARTIFACTS
