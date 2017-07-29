@@ -39,18 +39,18 @@ dependencies:
         - /home/ubuntu/.gradle/wrapper/
 
 test:
-    pre:
-        - emulator -avd circleci-android24 -no-window:
-            background: true
-            parallel: true
+#    pre:
+#        - emulator -avd circleci-android24 -no-window:
+#            background: true
+#            parallel: true
 
     override:
         # Run lint and unit tests
         - ./gradlew assembleDebug assembleDebugAndroidTest check -PdisablePreDex --no-daemon --console=plain --continue
 
         # instrumentation tests
-        - circle-android wait-for-boot
-        - ./gradlew connectedAndroidTest -PdisablePreDex --no-daemon --console=plain
+#        - circle-android wait-for-boot
+#        - ./gradlew connectedAndroidTest -PdisablePreDex --no-daemon --console=plain
 
     post:
         # Collect the JUnit reports
@@ -58,7 +58,7 @@ test:
         - find app/build/test-results/ -name "*.xml" -exec cp {} $CIRCLE_TEST_REPORTS/reports/junit/ \;
 
         # Collect Instrumentation test results
-        - cp -r app/build/outputs/androidTest-results/* $CIRCLE_TEST_REPORTS/reports/instrumentation/
+#        - cp -r app/build/outputs/androidTest-results/* $CIRCLE_TEST_REPORTS/reports/instrumentation/
 
         # Collect the Android Lint reports
         - mkdir -p $CIRCLE_TEST_REPORTS/reports/lint
