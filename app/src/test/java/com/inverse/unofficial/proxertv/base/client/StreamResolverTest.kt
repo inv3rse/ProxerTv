@@ -74,7 +74,7 @@ class StreamResolverTest {
 
         resolver.resolveStream("http://www.mp4upload.com/embed-sg71lpccevaa.html").subscribeAssert {
             assertNoErrors()
-            assertValue(Stream("http://www3.mp4upload.com:182/d/r2x6slkxz3b4quuo7cuasnixcbsyy35dhfyqah3373sqmk7xv74zrw4k/video.mp4", ""))
+            assertValue(Stream("https://www8.mp4upload.com:282/d/rwxscwlez3b4quuow6uqyn2hjmb5azf3hrqo3m6zynig2eufu5u3astf/video.mp4", ""))
         }
     }
 
@@ -83,15 +83,15 @@ class StreamResolverTest {
         mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/dailyMotionResponse.html")))
         val resolver = DailyMotionStreamResolver(httpClient, Gson())
 
-        assertTrue((resolver.appliesToUrl("http://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")))
-        assertTrue(resolver.appliesToUrl("https://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
+        assertTrue((resolver.appliesToUrl("http://www.dailymotion.com/embed/video/x5tqens")))
+        assertTrue(resolver.appliesToUrl("https://www.dailymotion.com/embed/video/x5tqens"))
 
-        resolver.resolveStream("http://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")
+        resolver.resolveStream("http://www.dailymotion.com/embed/video/x5tqens")
                 .subscribeAssert {
                     assertNoErrors()
                     assertValues(
-                            Stream("http://www.dailymotion.com/cdn/H264-1280x720/video/x431e80.mp4?auth=1465835647-2688-s9uh39e0-30c112e85600d8f9baaf5bcd11646584", ""),
-                            Stream("http://www.dailymotion.com/cdn/H264-848x480/video/x431e80.mp4?auth=1465835647-2688-zfps31pm-ce51a3286f757207b093282289f24d88", ""))
+                            Stream("http://www.dailymotion.com/cdn/H264-1280x720/video/x5tqens.mp4?auth=1501533278-2688-ysrzfgvg-81963c69aacf70e54cc2fa56f209af40", ""),
+                            Stream("http://www.dailymotion.com/cdn/H264-848x480/video/x5tqens.mp4?auth=1501533278-2688-r8o5lwqa-ab206b484b0ab0de4c77255027008251", ""))
                 }
     }
 
