@@ -91,7 +91,7 @@ class StreamCloudResolver(val httpClient: OkHttpClient) : StreamResolver {
 
 class Mp4UploadStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
     private val name = "Mp4Upload"
-    private val regex = Regex("\"file\": \"(.+)\"")
+    private val regex = Regex("\\|([a-z0-9]+)\\|([a-z0-9]+)\\|[a-z0-9]+\\|([a-z0-9]+)\\|src\\|.+\\|quot\\|\\|([a-zA-Z0-9]+)\\|(\\d+)\\|")
 
     override fun appliesToUrl(url: HttpUrl): Boolean {
         return url.host().contains("mp4upload.com")
@@ -106,7 +106,16 @@ class Mp4UploadStreamResolver(val httpClient: OkHttpClient) : StreamResolver {
                     val content = body.string()
                     body.close()
 
-                    val streamUrl = regex.find(content)?.groupValues?.get(1)
+                    val streamUrl = regex.find(content)?.groupValues?.let { group ->
+                        val fileExtension = group[1]
+                        val sub = group[2]
+                        val filename = group[3]
+                        val id = group[4]
+                        val port = group[5]
+
+                        "https://$sub.mp4upload.com:$port/d/$id/$filename.$fileExtension"
+                    }
+
                     if (streamUrl != null) {
                         return Observable.just(Stream(streamUrl, name))
                     } else {
