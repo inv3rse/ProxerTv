@@ -83,15 +83,15 @@ class StreamResolverTest {
         mockServer.enqueue(MockResponse().setBody(loadResponse("StreamResolverTest/dailyMotionResponse.html")))
         val resolver = DailyMotionStreamResolver(httpClient, Gson())
 
-        assertTrue((resolver.appliesToUrl("http://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")))
-        assertTrue(resolver.appliesToUrl("https://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa"))
+        assertTrue((resolver.appliesToUrl("http://www.dailymotion.com/embed/video/x5tqens")))
+        assertTrue(resolver.appliesToUrl("https://www.dailymotion.com/embed/video/x5tqens"))
 
-        resolver.resolveStream("http://www.dailymotion.com/embed/video/k12rpohEbcvbCfgIfPa")
+        resolver.resolveStream("http://www.dailymotion.com/embed/video/x5tqens")
                 .subscribeAssert {
                     assertNoErrors()
                     assertValues(
-                            Stream("http://www.dailymotion.com/cdn/H264-1280x720/video/x431e80.mp4?auth=1465835647-2688-s9uh39e0-30c112e85600d8f9baaf5bcd11646584", ""),
-                            Stream("http://www.dailymotion.com/cdn/H264-848x480/video/x431e80.mp4?auth=1465835647-2688-zfps31pm-ce51a3286f757207b093282289f24d88", ""))
+                            Stream("http://www.dailymotion.com/cdn/H264-1280x720/video/x5tqens.mp4?auth=1501533278-2688-ysrzfgvg-81963c69aacf70e54cc2fa56f209af40", ""),
+                            Stream("http://www.dailymotion.com/cdn/H264-848x480/video/x5tqens.mp4?auth=1501533278-2688-r8o5lwqa-ab206b484b0ab0de4c77255027008251", ""))
                 }
     }
 
