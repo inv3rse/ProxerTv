@@ -23,8 +23,8 @@ android {
         applicationId "com.inverse.unofficial.proxertv"
         minSdkVersion 21
         targetSdkVersion 25
-        versionCode 9
-        versionName "Alpha 9"
+        versionCode 11
+        versionName "Alpha 11"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PROXER_API_KEY", apiKey)
@@ -47,6 +47,11 @@ android {
 
     lintOptions {
         lintConfig file("lint.xml")
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
     }
 }
 
