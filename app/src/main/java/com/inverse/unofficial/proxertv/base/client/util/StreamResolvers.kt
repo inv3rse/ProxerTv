@@ -157,7 +157,7 @@ class DailyMotionStreamResolver(val httpClient: OkHttpClient, val gson: Gson) : 
                         for (quality in sortedQualities.take(2)) {
                             val streamOptions = qualityMap[quality.toString()] ?: emptyList()
                             val stream = streamOptions
-                                    .first { it.getOrDefault("type", "").startsWith("video") }
+                                    .first { it["type"]?.startsWith("video") ?: false }
 
                             val streamUrl = stream["url"]
                             if (streamUrl != null) {
