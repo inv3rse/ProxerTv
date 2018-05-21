@@ -74,7 +74,7 @@ class StreamResolverTest {
 
         resolver.resolveStream("http://www.mp4upload.com/embed-sg71lpccevaa.html").subscribeAssert {
             assertNoErrors()
-            assertValue(Stream("https://www8.mp4upload.com:282/d/rwxscwlez3b4quuow6uqyn2hjmb5azf3hrqo3m6zynig2eufu5u3astf/video.mp4", ""))
+            assertValue(Stream("https://www2.mp4upload.com:282/d/rgxzcgtmz3b4quuofwvbwksoi244w36p4ot4zdpu3sak6gbf5myfbrny/video.mp4", ""))
         }
     }
 
