@@ -19,9 +19,9 @@ class CloudFlareInterceptor : Interceptor {
 
         val response = chain.proceed(request)
 
-        if (response.code() == 503 && "cloudflare-nginx" == response.header("Server")) {
-
-            val body = response.body().string()
+        val responseBody = response.body()
+        if (response.code() == 503 && "cloudflare-nginx" == response.header("Server") && responseBody != null) {
+            val body = responseBody.string()
 
             val operationPattern = Regex("setTimeout\\(function\\(\\)\\{\\s+(var s,t,o,p,b,r,e,a,k,i,n,g,f.+?\\r?\\n[\\s\\S]+?a\\.value =.+?)\\r?\\n")
             val passPattern = Regex("name=\"pass\" value=\"(.+?)\"")

@@ -4,7 +4,7 @@ import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.interceptors.containsCaptcha
-import com.inverse.unofficial.proxertv.base.client.util.CallObservable
+import com.inverse.unofficial.proxertv.base.client.util.BodyCallObservable
 import com.inverse.unofficial.proxertv.base.client.util.StreamResolver
 import com.inverse.unofficial.proxertv.model.*
 import okhttp3.Cookie
@@ -21,15 +21,15 @@ import java.util.*
  * Client for proxer.me that combines the usage of the official api and web parsing.
  */
 class ProxerClient(
-        val httpClient: OkHttpClient,
-        val api: ProxerApi,
-        val gson: Gson,
-        val streamResolvers: List<StreamResolver>,
-        val serverConfig: ServerConfig) : ProxerApi by api {
+        private val httpClient: OkHttpClient,
+        private val api: ProxerApi,
+        private val gson: Gson,
+        private val streamResolvers: List<StreamResolver>,
+        private val serverConfig: ServerConfig) : ProxerApi by api {
 
     init {
         // set adult content cookie
-        val url = HttpUrl.parse(serverConfig.baseUrl)
+        val url = HttpUrl.parse(serverConfig.baseUrl) ?: throw IllegalArgumentException("invalid base url")
         val adultCookie = Cookie.Builder().hostOnlyDomain(url.host()).path("/").name("adult")
                 .value("1").build()
         httpClient.cookieJar().saveFromResponse(url, listOf(adultCookie))
@@ -83,9 +83,8 @@ class ProxerClient(
     fun loadUpdatesList(): Observable<List<SeriesUpdate>> {
         val request = Request.Builder().get().url(serverConfig.updatesListUrl).build()
 
-        return CallObservable(httpClient.newCall(request))
-                .map(fun(response): List<SeriesUpdate> {
-                    val body = response.body()
+        return BodyCallObservable(httpClient.newCall(request))
+                .map(fun(body): List<SeriesUpdate> {
                     val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
                     body.close()
 
@@ -163,15 +162,15 @@ class ProxerClient(
     fun loadEpisodeStreams(seriesId: Int, episode: Int, subType: String): Observable<Stream> {
         val request = Request.Builder().get().url(serverConfig.episodeStreamsUrl(seriesId, episode, subType)).build()
 
-        return CallObservable(httpClient.newCall(request))
-                .flatMap(fun(response): Observable<Stream> {
-                    val content = response.body().string()
+        return BodyCallObservable(httpClient.newCall(request))
+                .flatMap(fun(body): Observable<Stream> {
+                    val content = body.string()
                     if (containsCaptcha(content)) {
                         throw SeriesCaptchaException()
                     }
 
                     val unresolvedStreams = arrayListOf<Stream>()
-                    val regex = Regex("<script type=\"text/javascript\">\n\n.*var streams = (\\[.*\\])")
+                    val regex = Regex("<script type=\"text/javascript\">\n\n.*var streams = (\\[.*])")
                     val findResult = regex.find(content)
                     if (findResult != null) {
                         val json = findResult.groups[1]?.value
@@ -200,8 +199,10 @@ class ProxerClient(
                 .flatMap(fun(unresolvedStream): Observable<Stream> {
 
                     val resolveObservables = streamResolvers
+                            .asSequence()
                             .filter { it.appliesToUrl(unresolvedStream.streamUrl) }
                             .map { it.resolveStream(unresolvedStream.streamUrl) }
+                            .toList()
 
                     return Observable.mergeDelayError(resolveObservables)
                 })
@@ -210,9 +211,8 @@ class ProxerClient(
     private fun loadSeriesList(url: String): Observable<List<SeriesCover>> {
         val request = Request.Builder().get().url(url).build()
 
-        return CallObservable(httpClient.newCall(request))
-                .map(fun(response): List<SeriesCover> {
-                    val body = response.body()
+        return BodyCallObservable(httpClient.newCall(request))
+                .map(fun(body): List<SeriesCover> {
                     val soup = Jsoup.parse(body.byteStream(), "UTF-8", serverConfig.baseUrl)
                     body.close()
 

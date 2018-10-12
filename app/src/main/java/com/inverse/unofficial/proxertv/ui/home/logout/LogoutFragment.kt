@@ -1,9 +1,9 @@
 package com.inverse.unofficial.proxertv.ui.home.logout
 
 import android.os.Bundle
-import android.support.v17.leanback.app.GuidedStepFragment
-import android.support.v17.leanback.widget.GuidanceStylist
-import android.support.v17.leanback.widget.GuidedAction
+import androidx.leanback.app.GuidedStepSupportFragment
+import androidx.leanback.widget.GuidanceStylist
+import androidx.leanback.widget.GuidedAction
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
@@ -14,7 +14,7 @@ import rx.schedulers.Schedulers
 /**
  * Fragment handling the user logout
  */
-class LogoutFragment : GuidedStepFragment() {
+class LogoutFragment : GuidedStepSupportFragment() {
 
     private val repository = App.component.getProxerRepository()
     private var logoutPending = false
@@ -49,16 +49,18 @@ class LogoutFragment : GuidedStepFragment() {
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(
                                     // on success
-                                    { finishGuidedStepFragments() },
+                                    {
+                                        finishGuidedStepSupportFragments()
+                                    },
                                     // on error
                                     {
                                         CrashReporting.logException(it)
-                                        toast(R.string.logout_error)
+                                        requireContext().toast(R.string.logout_error)
                                         logoutPending = false
                                     })
                 }
             }
-            CANCEL_ID -> finishGuidedStepFragments()
+            CANCEL_ID -> finishGuidedStepSupportFragments()
         }
     }
 

@@ -10,6 +10,8 @@ import com.inverse.unofficial.proxertv.base.db.StorageModule
 import dagger.Component
 import dagger.Module
 import dagger.Provides
+import okhttp3.OkHttpClient
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -40,9 +42,11 @@ class BaseModule(val application: Application) {
 }
 
 @Singleton
-@Component(modules = arrayOf(BaseModule::class, ClientModule::class, StorageModule::class))
+@Component(modules = [BaseModule::class, ClientModule::class, StorageModule::class])
 interface BaseComponent {
     fun getUserSettings(): UserSettings
     fun getProxerClient(): ProxerClient
     fun getProxerRepository(): ProxerRepository
+    @Named(ClientModule.CLIENT_GLIDE)
+    fun getGlideHttpClient(): OkHttpClient
 }

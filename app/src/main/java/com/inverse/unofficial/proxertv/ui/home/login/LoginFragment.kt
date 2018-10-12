@@ -1,11 +1,11 @@
 package com.inverse.unofficial.proxertv.ui.home.login
 
 import android.os.Bundle
-import android.support.v17.leanback.app.GuidedStepFragment
-import android.support.v17.leanback.widget.GuidanceStylist
-import android.support.v17.leanback.widget.GuidedAction
+import androidx.leanback.widget.GuidanceStylist
+import androidx.leanback.widget.GuidedAction
 import android.text.InputType
 import android.widget.Toast
+import androidx.leanback.app.GuidedStepSupportFragment
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
@@ -18,7 +18,7 @@ import rx.schedulers.Schedulers
 /**
  * Fragment handling the user login.
  */
-class LoginFragment : GuidedStepFragment() {
+class LoginFragment : GuidedStepSupportFragment() {
 
     private lateinit var repository: ProxerRepository
     private var loginSubscription: Subscription? = null
@@ -132,7 +132,7 @@ class LoginFragment : GuidedStepFragment() {
                         .subscribe(
                                 // on next
                                 { _ ->
-                                    finishGuidedStepFragments()
+                                    finishGuidedStepSupportFragments()
                                 },
                                 // on error
                                 { error ->

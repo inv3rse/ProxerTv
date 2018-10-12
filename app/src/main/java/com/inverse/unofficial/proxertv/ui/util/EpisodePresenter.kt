@@ -1,10 +1,9 @@
 package com.inverse.unofficial.proxertv.ui.util
 
-import com.bumptech.glide.Glide
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.ServerConfig
 
-class EpisodePresenter(seriesId: Int) : BaseCoverPresenter() {
+class EpisodePresenter(glide: GlideRequests, seriesId: Int) : BaseCoverPresenter(glide) {
     private val coverUrl = ServerConfig.coverUrl(seriesId)
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any) {
@@ -19,9 +18,9 @@ class EpisodePresenter(seriesId: Int) : BaseCoverPresenter() {
             viewHolder.cardView.badgeImage = context.getDrawable(R.drawable.ic_watched)
         }
 
-        Glide.with(context)
-                .load(coverUrl)
-                .centerCrop()
-                .into(viewHolder.cardView.mainImageView)
+        glide.load(coverUrl)
+            .centerCrop()
+            .into(viewHolder.cardView.mainImageView)
     }
+
 }

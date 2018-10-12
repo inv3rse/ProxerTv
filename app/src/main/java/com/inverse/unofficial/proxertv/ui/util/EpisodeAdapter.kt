@@ -1,6 +1,6 @@
 package com.inverse.unofficial.proxertv.ui.util
 
-import android.support.v17.leanback.widget.ObjectAdapter
+import androidx.leanback.widget.ObjectAdapter
 import com.inverse.unofficial.proxertv.model.Episode
 
 class EpisodeAdapter(

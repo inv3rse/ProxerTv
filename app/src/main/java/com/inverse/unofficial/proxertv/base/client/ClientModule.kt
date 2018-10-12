@@ -30,16 +30,23 @@ import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
-class ClientModule {
+object ClientModule {
+
+    private const val CLIENT_DEFAULT = "default"
+    private const val CLIENT_API = "api"
+    private const val CLIENT_WEB = "web"
+    const val CLIENT_GLIDE = "glide"
 
     @Provides
     @Singleton
+    @JvmStatic
     fun provideServerConfig(): ServerConfig {
         return ServerConfig()
     }
 
     @Provides
     @Singleton
+    @JvmStatic
     fun provideGson(): Gson {
         return GsonBuilder()
                 .registerTypeAdapter(CommentRatings::class.java, CommentRatingsTypeAdapter().nullSafe())
@@ -47,8 +54,21 @@ class ClientModule {
     }
 
     @Provides
+    @Named(CLIENT_GLIDE)
+    @JvmStatic
+    fun provideGlideHttpClient(application: Application): OkHttpClient {
+        val cookieJar = PersistentCookieJar(SetCookieCache(), SharedPrefsCookiePersistor(application))
+
+        return OkHttpClient.Builder()
+                .cookieJar(cookieJar)
+                .addInterceptor(CloudFlareInterceptor())
+                .build()
+    }
+
+    @Provides
     @Singleton
-    @Named("default")
+    @Named(CLIENT_DEFAULT)
+    @JvmStatic
     fun provideDefaultHttpClient(application: Application,
                                  serverConfig: ServerConfig): OkHttpClient {
 
@@ -72,22 +92,25 @@ class ClientModule {
     }
 
     @Provides
-    @Named("api")
-    fun provideApiHttpClient(@Named("default") defaultClient: OkHttpClient): OkHttpClient {
+    @Named(CLIENT_API)
+    @JvmStatic
+    fun provideApiHttpClient(@Named(CLIENT_DEFAULT) defaultClient: OkHttpClient): OkHttpClient {
         return defaultClient.newBuilder()
                 .addInterceptor(ApiKeyInterceptor(BuildConfig.PROXER_API_KEY)).build()
     }
 
     @Provides
-    @Named("web")
-    fun provideWebHttpClient(@Named("default") defaultClient: OkHttpClient): OkHttpClient {
+    @Named(CLIENT_WEB)
+    @JvmStatic
+    fun provideWebHttpClient(@Named(CLIENT_DEFAULT) defaultClient: OkHttpClient): OkHttpClient {
         return defaultClient.newBuilder()
                 .addInterceptor(NoCacheCaptchaInterceptor()).build()
 
     }
 
     @Provides
-    fun provideProxerApi(@Named("api") httpClient: OkHttpClient,
+    @JvmStatic
+    fun provideProxerApi(@Named(CLIENT_API) httpClient: OkHttpClient,
                          gson: Gson,
                          serverConfig: ServerConfig): ProxerApi {
 
@@ -113,7 +136,8 @@ class ClientModule {
 
     @Provides
     @Singleton
-    fun provideProxerClient(@Named("web") httpClient: OkHttpClient,
+    @JvmStatic
+    fun provideProxerClient(@Named(CLIENT_WEB) httpClient: OkHttpClient,
                             api: ProxerApi,
                             gson: Gson,
                             serverConfig: ServerConfig): ProxerClient {

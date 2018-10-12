@@ -1,32 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.percent.PercentRelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="300dp"
-    android:layout_marginBottom="40dp"
-    android:layout_marginEnd="40dp"
     android:layout_marginStart="40dp"
+    android:layout_marginEnd="40dp"
+    android:layout_marginBottom="40dp"
     android:background="@color/lb_default_brand_color">
 
     <ImageView
         android:id="@+id/series_details_cover"
+        android:layout_width="0dp"
         android:layout_height="300dp"
         android:contentDescription="@string/series_cover_description"
         android:transitionName="series_cover"
-        app:layout_aspectRatio="71.4285714%"
+        app:layout_constraintDimensionRatio="0.714285714"
+        app:layout_constraintStart_toStartOf="parent"
         tools:scaleType="centerCrop"
         tools:src="@drawable/proxer_tv_banner" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_marginBottom="5dp"
-        android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="5dp"
-        android:layout_toEndOf="@id/series_details_cover"
-        android:orientation="vertical">
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="5dp"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/series_details_cover"
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -48,8 +52,8 @@
                 android:layout_marginStart="5dp"
                 android:focusable="true"
                 android:focusableInTouchMode="true"
-                android:minHeight="0dp"
                 android:minWidth="0dp"
+                android:minHeight="0dp"
                 tools:text="none" />
 
         </LinearLayout>
@@ -116,7 +120,7 @@
                 android:text="@string/series_details_page_label"
                 android:textSize="17sp" />
 
-            <android.support.v17.leanback.widget.HorizontalGridView
+            <androidx.leanback.widget.HorizontalGridView
                 android:id="@+id/series_detail_pages"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -130,4 +134,4 @@
 
     </LinearLayout>
 
-</android.support.percent.PercentRelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

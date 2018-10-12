@@ -1,7 +1,7 @@
 package com.inverse.unofficial.proxertv.ui.details
 
-import android.support.v17.leanback.widget.ObjectAdapter
-import android.support.v17.leanback.widget.Presenter
+import androidx.leanback.widget.ObjectAdapter
+import androidx.leanback.widget.Presenter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

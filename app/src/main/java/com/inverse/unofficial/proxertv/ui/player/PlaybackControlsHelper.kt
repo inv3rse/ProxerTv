@@ -1,12 +1,14 @@
 package com.inverse.unofficial.proxertv.ui.player
 
 import android.annotation.SuppressLint
+import android.app.PictureInPictureParams
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.PlaybackState
-import android.support.v17.leanback.widget.*
+import androidx.leanback.widget.*
 import timber.log.Timber
+import kotlin.math.max
 
 /**
  * Helper class for creating and managing the player controls
@@ -17,7 +19,8 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
     private val fastForwardAction = PlaybackControlsRow.FastForwardAction(context)
     private val pictureInPictureAction = PlaybackControlsRow.PictureInPictureAction(context)
 
-    private var transportControls = overlayFragment.activity.mediaController.transportControls
+    private val transportControls: MediaController.TransportControls
+        get() = overlayFragment.requireActivity().mediaController.transportControls
 
     private var metaData: MediaMetadata? = null
     private var playbackState: PlaybackState? = null
@@ -67,7 +70,10 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
                 playPauseAction.id -> if (isMediaPlaying()) pause() else play()
                 rewindAction.id -> rewind()
                 fastForwardAction.id -> fastForward()
-                pictureInPictureAction.id -> overlayFragment.activity.enterPictureInPictureMode()
+                pictureInPictureAction.id -> {
+                    overlayFragment.requireActivity()
+                            .enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+                }
                 else -> return false
             }
         }
@@ -75,20 +81,19 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
     }
 
     private fun updateProgress() {
-        controlsRow.currentTime = playbackState?.position?.toInt() ?: 0
-        controlsRow.bufferedProgress = playbackState?.bufferedPosition?.toInt() ?: 0
+        controlsRow.currentPosition = playbackState?.position ?: 0
+        controlsRow.bufferedPosition = playbackState?.bufferedPosition ?: 0
     }
 
     private fun isMediaPlaying(): Boolean {
-        if (playbackState != null) {
-            val state = playbackState!!.state
-            return (state == PlaybackState.STATE_BUFFERING) or
-                    (state == PlaybackState.STATE_CONNECTING) or
-                    (state == PlaybackState.STATE_PLAYING) or
-                    (state == PlaybackState.STATE_SKIPPING_TO_PREVIOUS) or
-                    (state == PlaybackState.STATE_SKIPPING_TO_NEXT)
+        return when (playbackState?.state) {
+            PlaybackState.STATE_BUFFERING,
+            PlaybackState.STATE_CONNECTING,
+            PlaybackState.STATE_PLAYING,
+            PlaybackState.STATE_SKIPPING_TO_PREVIOUS,
+            PlaybackState.STATE_SKIPPING_TO_NEXT -> true
+            else -> false
         }
-        return false
     }
 
     private fun notifyItemChanged(adapter: ArrayObjectAdapter, item: Any) {
@@ -103,8 +108,8 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
             // Update your UI to reflect the new state. Do not change media playback here.
             playbackState = state
             updateProgress()
-            val index = if (isMediaPlaying()) PlaybackControlsRow.PlayPauseAction.PAUSE else
-                PlaybackControlsRow.PlayPauseAction.PLAY
+            val index = if (isMediaPlaying()) PlaybackControlsRow.PlayPauseAction.INDEX_PAUSE else
+                PlaybackControlsRow.PlayPauseAction.INDEX_PAUSE
             if (playPauseAction.index != index) {
                 playPauseAction.index = index
                 notifyItemChanged(actionsAdapter, playPauseAction)
@@ -114,7 +119,8 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             if (metadata != null) {
                 this@PlaybackControlsHelper.metaData = metadata
-                controlsRow.totalTime = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION).toInt()
+                val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+                controlsRow.duration = max(duration, 0)
                 overlayFragment.updatePlaybackRow()
             }
         }

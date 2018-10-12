@@ -3,16 +3,16 @@ package com.inverse.unofficial.proxertv.ui.util
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import androidx.leanback.app.ErrorSupportFragment
 import com.inverse.unofficial.proxertv.R
-import org.jetbrains.anko.withArguments
 
-class ErrorFragment : android.support.v17.leanback.app.ErrorFragment(), View.OnClickListener {
+class ErrorFragment : ErrorSupportFragment(), View.OnClickListener {
     var dismissListener: ErrorDismissListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = arguments.getString(KEY_TITLE)
-        message = arguments.getString(KEY_MSG)
+        title = arguments?.getString(KEY_TITLE)
+        message = arguments?.getString(KEY_MSG)
         setDefaultBackground(false)
 
         buttonText = getString(R.string.dismiss_error)
@@ -21,7 +21,7 @@ class ErrorFragment : android.support.v17.leanback.app.ErrorFragment(), View.OnC
 
     override fun onAttach(context: Context?) {
         super.onAttach(context)
-        val drawableId = android.support.v17.leanback.R.drawable.lb_ic_sad_cloud
+        val drawableId = androidx.leanback.R.drawable.lb_ic_sad_cloud
         imageDrawable = resources.getDrawable(drawableId, context?.theme)
     }
 
@@ -38,9 +38,13 @@ class ErrorFragment : android.support.v17.leanback.app.ErrorFragment(), View.OnC
         private const val KEY_MSG = "KEY_MSG"
 
         fun newInstance(title: String, message: String): ErrorFragment {
-            return ErrorFragment().withArguments(
-                    KEY_TITLE to title,
-                    KEY_MSG to message)
+            val arguments = Bundle()
+            arguments.putString(KEY_TITLE, title)
+            arguments.putString(KEY_MSG, message)
+
+            val fragment = ErrorFragment()
+            fragment.arguments = arguments
+            return fragment
         }
     }
 }

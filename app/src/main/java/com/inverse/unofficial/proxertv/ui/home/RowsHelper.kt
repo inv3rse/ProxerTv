@@ -2,8 +2,8 @@ package com.inverse.unofficial.proxertv.ui.home
 
 import android.content.res.Resources
 import android.os.Handler
-import android.support.annotation.StringRes
-import android.support.v17.leanback.widget.*
+import androidx.annotation.StringRes
+import androidx.leanback.widget.*
 import android.util.SparseBooleanArray
 import android.util.SparseIntArray
 import com.inverse.unofficial.proxertv.base.CrashReporting
@@ -53,8 +53,8 @@ class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resour
         }
 
         rowsAdapter.add(targetIndex, listRow)
-        rowTargetMap.put(listRow, targetPos)
-        targetRowMap.put(targetPos, adapter)
+        rowTargetMap[listRow] = targetPos
+        targetRowMap[targetPos] = adapter
     }
 
     /**
@@ -116,7 +116,7 @@ class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resour
     fun addObservablePagingRow(adapter: ArrayObjectAdapter, pageObservableFactory: (Int) -> Observable<out List<SeriesCover>>,
                                @StringRes headerName: Int, targetPos: Int) {
 
-        pageProviders.put(targetPos, pageObservableFactory)
+        pageProviders[targetPos] = pageObservableFactory
         addObservableRow(adapter, pageObservableFactory(DEFAULT_PAGE), headerName, targetPos)
     }
 

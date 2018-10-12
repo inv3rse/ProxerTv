@@ -1,10 +1,10 @@
 package com.inverse.unofficial.proxertv.ui.player
 
-import android.support.v17.leanback.R
-import android.support.v17.leanback.widget.Action
-import android.support.v17.leanback.widget.ControlButtonPresenterSelector
-import android.support.v17.leanback.widget.PlaybackControlsRow
-import android.support.v17.leanback.widget.Presenter
+import androidx.leanback.R
+import androidx.leanback.widget.Action
+import androidx.leanback.widget.ControlButtonPresenterSelector
+import androidx.leanback.widget.PlaybackControlsRow
+import androidx.leanback.widget.Presenter
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View

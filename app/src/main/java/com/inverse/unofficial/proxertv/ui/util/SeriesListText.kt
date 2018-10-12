@@ -1,6 +1,6 @@
 package com.inverse.unofficial.proxertv.ui.util
 
-import android.support.annotation.StringRes
+import androidx.annotation.StringRes
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.SeriesList
 

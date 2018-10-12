@@ -5,6 +5,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -12,13 +14,15 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Bundle
-import android.support.v17.leanback.app.PlaybackFragment
-import android.support.v17.leanback.widget.*
 import android.view.SurfaceView
 import android.view.View
+import androidx.leanback.app.PlaybackSupportFragment
+import androidx.leanback.widget.*
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.animation.GlideAnimation
-import com.bumptech.glide.request.target.SimpleTarget
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
@@ -41,7 +45,7 @@ import timber.log.Timber
  * We use this fragment as an implementation detail of the PlayerActivity.
  * Therefore it is somewhat strongly tied to it.
  */
-class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
+class PlayerOverlayFragment : PlaybackSupportFragment(), OnItemViewClickedListener {
     private var seekLength = 10000 // 10 seconds, overridden once the video length is known
     private val subscriptions = CompositeSubscription()
     private val proxerRepository = App.component.getProxerRepository()
@@ -65,6 +69,7 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
 
     private var progressSpinner: View? = null
 
+    private var audioFocusRequest: AudioFocusRequest? = null
     private val mOnAudioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_LOSS -> {
@@ -87,12 +92,12 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
         super.onCreate(savedInstanceState)
         Timber.d("onCreate")
 
+        val activity = requireActivity()
         audioManager = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         // create a MediaSession
         mediaSession = MediaSession(activity, "ProxerTv")
         mediaSession.setCallback(MediaSessionCallback())
-        mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
         mediaSession.isActive = true
 
         videoPlayer = VideoPlayer(activity, savedInstanceState)
@@ -103,6 +108,7 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
         super.onActivityCreated(savedInstanceState)
         Timber.d("onActivityCreated")
 
+        val activity = requireActivity()
         activity.mediaController = MediaController(activity, mediaSession.sessionToken)
         progressSpinner = activity.findViewById(R.id.player_buffer_spinner)
 
@@ -111,7 +117,7 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
         mediaControllerCallback = playbackControlsHelper.createMediaControllerCallback()
         activity.mediaController.registerCallback(mediaControllerCallback)
 
-        backgroundType = PlaybackFragment.BG_LIGHT
+        backgroundType = PlaybackSupportFragment.BG_LIGHT
         setupAdapter()
 
         initEpisode()
@@ -121,8 +127,8 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
         super.onResume()
         Timber.d("onResume")
 
-        val surfaceView = activity.findViewById(R.id.player_surface_view) as SurfaceView
-        val aspectFrame = activity.findViewById(R.id.player_ratio_frame) as AspectRatioFrameLayout
+        val surfaceView = requireActivity().findViewById(R.id.player_surface_view) as SurfaceView
+        val aspectFrame = requireActivity().findViewById(R.id.player_ratio_frame) as AspectRatioFrameLayout
 
         videoPlayer.connectToUi(aspectFrame, surfaceView)
     }
@@ -131,6 +137,7 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
     override fun onPause() {
         super.onPause()
         Timber.d("onPause")
+        val activity = requireActivity()
         if (videoPlayer.isPlaying) {
             val isVisibleBehind = activity.requestVisibleBehind(true)
             val isInPictureInPictureMode = PlayerActivity.supportsPictureInPicture(activity) &&
@@ -153,14 +160,19 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("onDestroy")
-        activity.mediaController.unregisterCallback(mediaControllerCallback)
+        activity?.mediaController?.unregisterCallback(mediaControllerCallback)
         videoPlayer.destroy()
         abandonAudioFocus()
         mediaSession.release()
         subscriptions.clear()
     }
 
-    override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
+    override fun onItemClicked(
+        itemViewHolder: Presenter.ViewHolder?,
+        item: Any?,
+        rowViewHolder: RowPresenter.ViewHolder?,
+        row: Row?
+    ) {
         when (item) {
             is StreamAdapter.StreamHolder -> setStream(item.stream)
         }
@@ -170,7 +182,7 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
      * Initializes episode based on intent extras
      */
     fun initEpisode() {
-        val extras = activity.intent.extras
+        val extras = requireActivity().intent.extras
         val episodeExtra = extras.getParcelable<Episode>(PlayerActivity.EXTRA_EPISODE)
         val seriesExtra = extras.getParcelable<Series>(PlayerActivity.EXTRA_SERIES)
         if ((episodeExtra != null) and (seriesExtra != null)) {
@@ -188,14 +200,14 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
 
                 // check if the episode is already marked as watched
                 proxerRepository.getSeriesProgress(seriesExtra.id)
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe({ isTracked = episodeExtra.episodeNum <= it },
-                                { CrashReporting.logException(it) })
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe({ isTracked = episodeExtra.episodeNum <= it },
+                        { CrashReporting.logException(it) })
             }
         } else {
             Timber.d("missing extras, finishing!")
-            activity.finish()
+            requireActivity().finish()
         }
     }
 
@@ -230,21 +242,22 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
         streamAdapter.clear()
 
         subscriptions.add(client.loadEpisodeStreams(series!!.id, episode!!.episodeNum, episode!!.languageType)
-                .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ stream ->
-                    // add the stream to the adapter first
-                    streamAdapter.addStream(stream)
-                    if (streamAdapter.getCurrentStream() == null) {
-                        setStream(stream)
-                    }
-                }, { throwable ->
-                    if (throwable is ProxerClient.SeriesCaptchaException) {
-                        showErrorFragment(getString(R.string.stream_captcha_error))
-                    } else {
-                        CrashReporting.logException(throwable)
-                        checkValidStreamsFound()
-                    }
-                }, { checkValidStreamsFound() }))
+            .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+            .subscribe({ stream ->
+                // add the stream to the adapter first
+                streamAdapter.addStream(stream)
+                if (streamAdapter.getCurrentStream() == null) {
+                    setStream(stream)
+                }
+            }, { throwable ->
+                if (throwable is ProxerClient.SeriesCaptchaException) {
+                    showErrorFragment(getString(R.string.stream_captcha_error))
+                } else {
+                    CrashReporting.logException(throwable)
+                    checkValidStreamsFound()
+                }
+            }, { checkValidStreamsFound() })
+        )
     }
 
     private fun checkValidStreamsFound() {
@@ -257,20 +270,20 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
         val errorFragment = ErrorFragment.newInstance(getString(R.string.stream_error), message)
         errorFragment.dismissListener = object : ErrorFragment.ErrorDismissListener {
             override fun onDismiss() {
-                activity.finish()
+                activity?.finish()
             }
         }
 
-        fragmentManager.beginTransaction()
-                .detach(this) // the error fragment would sometimes not keep the focus
-                .add(R.id.player_root_frame, errorFragment)
-                .commit()
+        requireFragmentManager().beginTransaction()
+            .detach(this) // the error fragment would sometimes not keep the focus
+            .add(R.id.player_root_frame, errorFragment)
+            .commit()
     }
 
     private fun setStream(stream: Stream) {
         streamAdapter.removeFailed(stream)
         streamAdapter.setCurrentStream(stream)
-        videoPlayer.initPlayer(Uri.parse(stream.streamUrl.toString()), activity, true)
+        videoPlayer.initPlayer(Uri.parse(stream.streamUrl.toString()), requireContext(), true)
         play()
     }
 
@@ -289,28 +302,62 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
     private fun initMediaMetadata() {
         val episodeText = getString(R.string.episode, episode!!.episodeNum)
         metadataBuilder = MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, series!!.name)
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, episodeText)
-                .putString(MediaMetadata.METADATA_KEY_TITLE, series!!.name)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, episodeText)
-                .putLong(MediaMetadata.METADATA_KEY_DURATION, 0L)
+            .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, series!!.name)
+            .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, episodeText)
+            .putString(MediaMetadata.METADATA_KEY_TITLE, series!!.name)
+            .putString(MediaMetadata.METADATA_KEY_ARTIST, episodeText)
+            .putLong(MediaMetadata.METADATA_KEY_DURATION, 0L)
 
-        Glide.with(this).load(ServerConfig.coverUrl(series!!.id)).asBitmap().into(object : SimpleTarget<Bitmap>() {
-            override fun onResourceReady(bitmap: Bitmap?, glideAnimation: GlideAnimation<in Bitmap>?) {
-                metadataBuilder.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap)
-                mediaSession.setMetadata(metadataBuilder.build())
-            }
-        })
+        Glide.with(this)
+            .asBitmap()
+            .load(ServerConfig.coverUrl(series!!.id))
+            .listener(object : RequestListener<Bitmap?> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Bitmap?>?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: Bitmap?,
+                    model: Any?,
+                    target: Target<Bitmap?>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    if (resource != null) {
+                        metadataBuilder.putBitmap(MediaMetadata.METADATA_KEY_ART, resource)
+                        mediaSession.setMetadata(metadataBuilder.build())
+                    }
+
+                    return false
+                }
+            })
+            .submit()
     }
 
     private fun requestAudioFocus() {
         if (hasAudioFocus) {
             return
         }
-        val result = audioManager.requestAudioFocus(mOnAudioFocusChangeListener,
-                AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
+
+        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                    .build()
+            )
+            .setOnAudioFocusChangeListener(mOnAudioFocusChangeListener)
+            .build()
+
+        val result = audioManager.requestAudioFocus(focusRequest)
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             hasAudioFocus = true
+            audioFocusRequest = focusRequest
         } else {
             pause()
         }
@@ -318,21 +365,24 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
 
     private fun abandonAudioFocus() {
         hasAudioFocus = false
-        audioManager.abandonAudioFocus(mOnAudioFocusChangeListener)
+        audioFocusRequest?.let {
+            audioManager.abandonAudioFocusRequest(it)
+        }
+        audioFocusRequest = null
     }
 
     private fun setPlaybackState(state: Int) {
         val playbackState = PlaybackState.Builder()
-                .setState(state, videoPlayer.position, 1F)
-                .setBufferedPosition(videoPlayer.bufferedPosition)
-                .setActions(getStateActions(state))
-                .build()
+            .setState(state, videoPlayer.position, 1F)
+            .setBufferedPosition(videoPlayer.bufferedPosition)
+            .setActions(getStateActions(state))
+            .build()
 
         mediaSession.setPlaybackState(playbackState)
     }
 
     private fun setPendingIntent() {
-        val intent = Intent(activity.intent)
+        val intent = Intent(requireActivity().intent)
         intent.putExtra(PlayerActivity.EXTRA_EPISODE, episode)
 
         val pi = PendingIntent.getActivity(activity, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
@@ -402,7 +452,7 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
                 View.INVISIBLE
 
             if (playbackState == ExoPlayer.STATE_ENDED) {
-                activity.finish()
+                activity?.finish()
             } else {
                 setPlaybackState(state)
             }
@@ -416,8 +466,8 @@ class PlayerOverlayFragment : PlaybackFragment(), OnItemViewClickedListener {
                     // track episode
                     isTracked = true
                     proxerRepository.setSeriesProgress(series!!.id, episode!!.episodeNum)
-                            .subscribeOn(Schedulers.io())
-                            .subscribe({ }, { it.printStackTrace() })
+                        .subscribeOn(Schedulers.io())
+                        .subscribe({ }, { it.printStackTrace() })
                 }
             }
         }

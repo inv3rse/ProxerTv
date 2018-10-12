@@ -1,20 +1,20 @@
 package com.inverse.unofficial.proxertv.ui.player
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.support.v4.os.BuildCompat
+import androidx.fragment.app.FragmentActivity
 import com.inverse.unofficial.proxertv.R
 
-class PlayerActivity : Activity() {
+class PlayerActivity : FragmentActivity() {
     private lateinit var overlayFragment: PlayerOverlayFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
-        overlayFragment = fragmentManager.findFragmentById(R.id.playback_controls_fragment) as PlayerOverlayFragment
+        overlayFragment = supportFragmentManager.findFragmentById(R.id.playback_controls_fragment) as PlayerOverlayFragment
     }
 
     override fun onVisibleBehindCanceled() {
@@ -33,7 +33,7 @@ class PlayerActivity : Activity() {
         const val EXTRA_SERIES = "EXTRA_SERIES"
 
         fun supportsPictureInPicture(context: Context): Boolean {
-            return BuildCompat.isAtLeastN() && context.packageManager.hasSystemFeature(
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && context.packageManager.hasSystemFeature(
                     PackageManager.FEATURE_PICTURE_IN_PICTURE)
         }
     }

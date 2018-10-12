@@ -1,11 +1,11 @@
 package com.inverse.unofficial.proxertv.ui.details
 
-import android.app.FragmentTransaction
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.support.v17.leanback.app.DetailsFragment
-import android.support.v17.leanback.widget.*
+import androidx.fragment.app.FragmentTransaction
+import androidx.leanback.app.DetailsSupportFragment
+import androidx.leanback.widget.*
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
@@ -14,6 +14,7 @@ import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
 import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
 import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
+import com.inverse.unofficial.proxertv.ui.util.GlideApp
 import rx.Observable
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
@@ -23,7 +24,7 @@ import rx.subscriptions.CompositeSubscription
 /**
  * The details cardView for a series.
  */
-class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, SeriesDetailsRowPresenter.SeriesDetailsRowListener {
+class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListener, SeriesDetailsRowPresenter.SeriesDetailsRowListener {
     private val presenterSelector = ClassPresenterSelector()
     private val contentAdapter = ArrayObjectAdapter(presenterSelector)
     private val subscriptions = CompositeSubscription()
@@ -35,16 +36,18 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
     private var currentPage = 0
 
     private val episodeAdapters = arrayListOf<EpisodeAdapter>()
-    private val detailsOverviewPresenter = SeriesDetailsRowPresenter(this)
+    private lateinit var detailsOverviewPresenter: SeriesDetailsRowPresenter
     private lateinit var seriesProgress: Observable<Int>
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        detailsOverviewPresenter = SeriesDetailsRowPresenter(GlideApp.with(this), this)
 
+        val activity = requireActivity()
         activity.postponeEnterTransition()
-        val handler = Handler()
 
+        val handler = Handler()
         handler.postDelayed({ activity.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
         detailsOverviewPresenter.coverReadyListener = {
             activity.startPostponedEnterTransition()
@@ -66,13 +69,13 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
             val intent = Intent(activity, PlayerActivity::class.java)
             intent.putExtra(PlayerActivity.EXTRA_EPISODE, item.episode)
             intent.putExtra(PlayerActivity.EXTRA_SERIES, series)
-            activity.startActivity(intent)
+            startActivity(intent)
         }
     }
 
     override fun onSelectListClicked(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow) {
         series?.let {
-            fragmentManager.beginTransaction()
+            requireFragmentManager().beginTransaction()
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                     .add(android.R.id.content, SideMenuFragment.create(it))
                     .addToBackStack(null)
@@ -97,7 +100,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
     }
 
     private fun loadContent() {
-        val seriesId = activity.intent.extras.getInt(DetailsActivity.EXTRA_SERIES_ID)
+        val seriesId = activity?.intent?.extras?.getInt(DetailsActivity.EXTRA_SERIES_ID) ?: 0
 
         seriesProgress = proxerRepository.observeSeriesProgress(seriesId).replay(1).refCount()
 
@@ -115,15 +118,15 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
         subscriptions.add(proxerRepository.observerSeriesListState(seriesId)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ seriesList ->
+                .subscribe { seriesList ->
                     detailsOverviewPresenter.seriesList = seriesList
                     adapter.notifyItemRangeChanged(0, 1)
-                }))
+                })
 
         val observable = Observable.zip(
                 proxerRepository.loadSeries(seriesId),
-                seriesProgress.first(),
-                { series, progress -> Pair(series, progress) })
+                seriesProgress.first()
+        ) { series, progress -> Pair(series, progress) }
 
         subscriptions.add(
                 observable.subscribeOn(Schedulers.io())
@@ -147,10 +150,11 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
         contentAdapter.removeItems(1, contentAdapter.size() - 1)
         episodeSubscription?.unsubscribe()
 
-        episodeSubscription = Observable.zip(
-                proxerRepository.loadEpisodesPage(series.id, page),
-                seriesProgress.first(),
-                { episodes, progress -> Pair(episodes, progress) })
+        episodeSubscription = Observable
+                .zip(
+                        proxerRepository.loadEpisodesPage(series.id, page),
+                        seriesProgress.first()
+                ) { episodes, progress -> Pair(episodes, progress) }
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(fun(episodesProgress: Pair<Map<String, List<Int>>, Int>) {
@@ -159,7 +163,7 @@ class SeriesDetailsFragment : DetailsFragment(), OnItemViewClickedListener, Seri
                     episodeAdapters.clear()
 
                     val (episodesMap, progress) = episodesProgress
-                    val episodePresenter = EpisodePresenter(series.id)
+                    val episodePresenter = EpisodePresenter(GlideApp.with(this), series.id)
 
                     for (subType in episodesMap.keys) {
                         val header = HeaderItem(subType)

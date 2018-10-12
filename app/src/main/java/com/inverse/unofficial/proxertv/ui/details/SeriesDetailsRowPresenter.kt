@@ -1,45 +1,47 @@
 package com.inverse.unofficial.proxertv.ui.details
 
-import android.support.v17.leanback.widget.ArrayObjectAdapter
-import android.support.v17.leanback.widget.HorizontalGridView
-import android.support.v17.leanback.widget.ItemBridgeAdapter
-import android.support.v17.leanback.widget.RowPresenter
+import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.HorizontalGridView
+import androidx.leanback.widget.ItemBridgeAdapter
+import androidx.leanback.widget.RowPresenter
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.GlideDrawable
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.details.SeriesDetailsRowPresenter.SeriesDetailsRow
+import com.inverse.unofficial.proxertv.ui.util.GlideRequests
 import com.inverse.unofficial.proxertv.ui.util.getStringRes
-import java.lang.Exception
 import kotlin.properties.Delegates
 
 /**
  * Presenter for a [SeriesDetailsRow]. The layout is based on the
  * [android.support.v17.leanback.widget.DetailsOverviewRowPresenter].
  */
-class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetailsRowListener?) : RowPresenter() {
+class SeriesDetailsRowPresenter(
+    private val glide: GlideRequests,
+    private val selectSeriesDetailsRowListener: SeriesDetailsRowListener
+) : RowPresenter() {
 
-    val pagePresenter = PageSelectionPresenter()
+    private val pagePresenter = PageSelectionPresenter()
     var seriesList: SeriesList = SeriesList.NONE
     var coverReadyListener: (() -> Unit)? = null
 
     init {
         headerPresenter = null
         selectEffectEnabled = false
-    }
-
-    override fun dispatchItemSelectedListener(vh: ViewHolder?, selected: Boolean) {
-        super.dispatchItemSelectedListener(vh, selected)
     }
 
     override fun createRowViewHolder(parent: ViewGroup): ViewHolder {
@@ -58,7 +60,7 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
             vh.descriptionTextView.text = item.series.description
             vh.genresTextView.text = item.series.genres
             vh.selectListButton.setText(seriesList.getStringRes())
-            vh.selectListButton.setOnClickListener { selectSeriesDetailsRowListener?.onSelectListClicked(item) }
+            vh.selectListButton.setOnClickListener { selectSeriesDetailsRowListener.onSelectListClicked(item) }
 
             if (item.series.pages() > 1) {
                 vh.pagesView.visibility = View.VISIBLE
@@ -71,9 +73,9 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
                 bridgeAdapter.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
                     override fun onBind(viewHolder: ItemBridgeAdapter.ViewHolder) {
                         super.onBind(viewHolder)
-                        viewHolder.presenter.setOnClickListener(
-                                viewHolder.viewHolder,
-                                { selectSeriesDetailsRowListener?.onPageSelected(item, (viewHolder.item as PageSelection)) })
+                        viewHolder.presenter.setOnClickListener(viewHolder.viewHolder) {
+                            selectSeriesDetailsRowListener.onPageSelected(item, (viewHolder.item as PageSelection))
+                        }
                     }
 
                     override fun onUnbind(viewHolder: ItemBridgeAdapter.ViewHolder) {
@@ -95,25 +97,36 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
             }
 
             Glide.with(vh.view.context)
-                    .load(ServerConfig.coverUrl(item.series.id))
-                    .centerCrop()
-                    .listener(object : RequestListener<String?, GlideDrawable?> {
-                        override fun onException(e: Exception?, model: String?, target: Target<GlideDrawable?>?, isFirstResource: Boolean): Boolean {
-                            return false
-                        }
+                .load(ServerConfig.coverUrl(item.series.id))
+                .apply(RequestOptions().centerCrop())
+                .listener(object : RequestListener<Drawable?> {
+                    override fun onLoadFailed(
+                        e: GlideException?,
+                        model: Any?,
+                        target: Target<Drawable?>?,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        return false
+                    }
 
-                        override fun onResourceReady(resource: GlideDrawable?, model: String?, target: Target<GlideDrawable?>?, isFromMemoryCache: Boolean, isFirstResource: Boolean): Boolean {
-                            vh.view.post { coverReadyListener?.invoke() }
-                            return false
-                        }
-                    })
-                    .into(vh.coverImageView)
+                    override fun onResourceReady(
+                        resource: Drawable?,
+                        model: Any?,
+                        target: Target<Drawable?>?,
+                        dataSource: DataSource?,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        vh.view.post { coverReadyListener?.invoke() }
+                        return false
+                    }
+                })
+                .into(vh.coverImageView)
         }
     }
 
     override fun onUnbindRowViewHolder(vh: ViewHolder) {
         vh as DetailsViewHolder
-        Glide.clear(vh.coverImageView)
+        glide.clear(vh.coverImageView)
         // remove the page selection change listener if it exists
         vh.pageSelectionChangeListener?.let { vh.item?.removePageSelectionChangeListener(it) }
         vh.pageSelectionChangeListener = null
@@ -123,21 +136,22 @@ class SeriesDetailsRowPresenter(var selectSeriesDetailsRowListener: SeriesDetail
 
     private fun createPageSelectionList(numPages: Int, currentPage: Int): List<PageSelection> {
         return IntProgression
-                .fromClosedRange(1, numPages, 1)
-                .map { PageSelection(it, it == currentPage) }
+            .fromClosedRange(1, numPages, 1)
+            .map { PageSelection(it, it == currentPage) }
     }
 
     /**
      * Presentable series details row
      */
     class SeriesDetailsRow(
-            val series: Series,
-            selectedPageNumber: Int = 1) {
+        val series: Series,
+        selectedPageNumber: Int = 1
+    ) {
 
         private val listeners = mutableSetOf<(Int) -> Unit>()
 
         var currentPageNumber: Int
-                by Delegates.observable(selectedPageNumber, { _, _, new -> listeners.forEach { it(new) } })
+                by Delegates.observable(selectedPageNumber) { _, _, new -> listeners.forEach { it(new) } }
 
         fun addPageSelectionChangeListener(listener: (Int) -> Unit): (Int) -> Unit {
             listeners.add(listener)

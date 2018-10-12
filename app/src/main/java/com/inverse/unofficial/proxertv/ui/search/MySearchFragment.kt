@@ -4,20 +4,21 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
-import android.support.v17.leanback.app.SearchFragment
-import android.support.v17.leanback.widget.*
-import android.support.v4.app.ActivityOptionsCompat
+import androidx.core.app.ActivityOptionsCompat
+import androidx.leanback.app.SearchSupportFragment
+import androidx.leanback.widget.*
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
+import com.inverse.unofficial.proxertv.ui.util.GlideApp
 import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
 
-class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, OnItemViewClickedListener {
+class MySearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider, OnItemViewClickedListener {
     private val client = App.component.getProxerClient()
     private val subscriptions = CompositeSubscription()
     private lateinit var rowsAdapter: ArrayObjectAdapter
@@ -40,7 +41,7 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
 
     private fun setupResultAdapter() {
         rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-        resultsAdapter = ArrayObjectAdapter(SeriesCoverPresenter())
+        resultsAdapter = ArrayObjectAdapter(SeriesCoverPresenter(GlideApp.with(this)))
 
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_search_results)), resultsAdapter))
     }
@@ -82,7 +83,7 @@ class MySearchFragment : SearchFragment(), SearchFragment.SearchResultProvider, 
     override fun onItemClicked(itemViewHolder: Presenter.ViewHolder, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
         if (item is SeriesCover) {
             val intent = Intent(activity, DetailsActivity::class.java)
-            val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(activity,
+            val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(requireActivity(),
                     (itemViewHolder.view as ImageCardView).mainImageView,
                     DetailsActivity.SHARED_ELEMENT_COVER).toBundle()
 

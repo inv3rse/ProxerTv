@@ -1,19 +1,19 @@
 package com.inverse.unofficial.proxertv.ui.home
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import androidx.fragment.app.FragmentActivity
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
 
-class MainActivity : Activity() {
+class MainActivity : FragmentActivity() {
 
     private lateinit var mainFragment: MainFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        mainFragment = fragmentManager.findFragmentById(R.id.main_browse_fragment) as MainFragment
+        mainFragment = supportFragmentManager.findFragmentById(R.id.main_browse_fragment) as MainFragment
     }
 
     override fun onBackPressed() {

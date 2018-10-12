@@ -17,21 +17,25 @@ class NoCacheCaptchaInterceptor : Interceptor {
         val request = chain.request()
         val response = chain.proceed(request)
 
-        if (request.url().toString().contains("proxer.me/watch") && response.cacheResponse() != null) {
+        val responseBody = response.body()
+        if (request.url().toString().contains("proxer.me/watch")
+                && response.cacheResponse() != null
+                && responseBody != null) {
+
             // We have to check the response body.
             // Because we can only read it once, the original response can not be returned
-            val mediaType = response.body().contentType()
-            val htmlBody = response.body().string()
+            val mediaType = responseBody.contentType()
+            val htmlBody = responseBody.string()
 
-            if (containsCaptcha(htmlBody)) {
+            return if (containsCaptcha(htmlBody)) {
                 val noCacheRequest = request.newBuilder()
                         .cacheControl(CacheControl.FORCE_NETWORK)
                         .build()
 
-                return chain.proceed(noCacheRequest)
+                chain.proceed(noCacheRequest)
             } else {
                 val newBody = ResponseBody.create(mediaType, htmlBody)
-                return response.newBuilder().body(newBody).build()
+                response.newBuilder().body(newBody).build()
             }
         } else {
             return response

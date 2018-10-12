@@ -6,7 +6,8 @@ data class Stream(
         val streamUrl: HttpUrl,
         val providerName: String) {
 
-    constructor(streamUrl: String, providerName: String) : this(HttpUrl.parse(streamUrl), providerName)
+    constructor(streamUrl: String, providerName: String) : this(HttpUrl.parse(streamUrl)
+            ?: throw InvalidStreamUrlException(), providerName)
 
     override fun equals(other: Any?): Boolean {
         return other is Stream && streamUrl == other.streamUrl
@@ -15,4 +16,6 @@ data class Stream(
     override fun hashCode(): Int {
         return streamUrl.hashCode()
     }
+
+    class InvalidStreamUrlException : Exception()
 }
