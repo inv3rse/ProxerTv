@@ -11,24 +11,20 @@ import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.leanback.widget.HorizontalGridView
 import androidx.leanback.widget.ItemBridgeAdapter
 import androidx.leanback.widget.RowPresenter
-import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.inverse.unofficial.proxertv.R
-import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.model.ServerConfig
-import com.inverse.unofficial.proxertv.ui.details.SeriesDetailsRowPresenter.SeriesDetailsRow
 import com.inverse.unofficial.proxertv.ui.util.GlideRequests
 import com.inverse.unofficial.proxertv.ui.util.getStringRes
-import kotlin.properties.Delegates
 
 /**
- * Presenter for a [SeriesDetailsRow]. The layout is based on the
- * [android.support.v17.leanback.widget.DetailsOverviewRowPresenter].
+ * Presenter for a [DetailsData]. The layout is based on the
+ * old android.support.v17.leanback.widget.DetailsOverviewRowPresenter
  */
 class SeriesDetailsRowPresenter(
     private val glide: GlideRequests,
@@ -52,21 +48,59 @@ class SeriesDetailsRowPresenter(
     override fun onBindRowViewHolder(vh: ViewHolder, item: Any?) {
         super.onBindRowViewHolder(vh, item)
 
-        if (item is SeriesDetailsRow) {
-            vh as DetailsViewHolder
-            // store the item to unbind the page change listener later
-            vh.item = item
-            vh.titleTextView.text = item.series.name
-            vh.descriptionTextView.text = item.series.description
-            vh.genresTextView.text = item.series.genres
-            vh.selectListButton.setText(seriesList.getStringRes())
-            vh.selectListButton.setOnClickListener { selectSeriesDetailsRowListener.onSelectListClicked(item) }
+        item as DetailsData
+        vh as DetailsViewHolder
+
+        vh.bind(item)
+    }
+
+
+    private fun createPageSelectionList(numPages: Int, currentPage: Int): List<PageSelection> {
+        return IntProgression
+            .fromClosedRange(0, numPages, 1)
+            .map { PageSelection(it + 1, it == currentPage) }
+    }
+
+
+    /**
+     * Interface for page selection click events
+     */
+    interface SeriesDetailsRowListener {
+        fun onSelectListClicked(seriesRow: DetailsData)
+        fun onPageSelected(seriesRow: DetailsData, selection: PageSelection)
+    }
+
+    /**
+     * ViewHolder for the series details row
+     */
+    private inner class DetailsViewHolder(view: View) : RowPresenter.ViewHolder(view) {
+        private val coverImageView = view.findViewById(R.id.series_details_cover) as ImageView
+        private val titleTextView = view.findViewById(R.id.series_detail_title) as TextView
+        private val descriptionTextView = view.findViewById(R.id.series_detail_description) as TextView
+        private val genresTextView = view.findViewById(R.id.series_details_genres) as TextView
+        private val pagesView: View = view.findViewById(R.id.series_detail_pages_view)
+        private val pagesGridView = view.findViewById(R.id.series_detail_pages) as HorizontalGridView
+        private val selectListButton = view.findViewById(R.id.series_details_select_list_button) as Button
+
+        private var item: DetailsData? = null
+
+        /**
+         * Bind the given item
+         */
+        fun bind(item: DetailsData) {
+            this.item = item
+
+            titleTextView.text = item.series.name
+            descriptionTextView.text = item.series.description
+            genresTextView.text = item.series.genres
+            selectListButton.setText(seriesList.getStringRes())
+            selectListButton.setOnClickListener { selectSeriesDetailsRowListener.onSelectListClicked(item) }
 
             if (item.series.pages() > 1) {
-                vh.pagesView.visibility = View.VISIBLE
+                pagesView.visibility = View.VISIBLE
 
                 val pagesAdapter = ArrayObjectAdapter(pagePresenter)
-                pagesAdapter.addAll(0, createPageSelectionList(item.series.pages(), item.currentPageNumber))
+                pagesAdapter.addAll(0, createPageSelectionList(item.series.pages(), item.currentPage))
 
                 val bridgeAdapter = ItemBridgeAdapter(pagesAdapter)
 
@@ -84,19 +118,12 @@ class SeriesDetailsRowPresenter(
                     }
                 })
 
-                vh.pagesGridView.adapter = bridgeAdapter
-
-                // react to item page selection change
-                vh.pageSelectionChangeListener = item.addPageSelectionChangeListener {
-                    vh.pagesGridView.itemAnimator = null // disable the change animation
-                    pagesAdapter.clear()
-                    pagesAdapter.addAll(0, createPageSelectionList(item.series.pages(), it))
-                }
+                pagesGridView.adapter = bridgeAdapter
             } else {
-                vh.pagesView.visibility = View.INVISIBLE
+                pagesView.visibility = View.INVISIBLE
             }
 
-            Glide.with(vh.view.context)
+            glide
                 .load(ServerConfig.coverUrl(item.series.id))
                 .apply(RequestOptions().centerCrop())
                 .listener(object : RequestListener<Drawable?> {
@@ -116,74 +143,11 @@ class SeriesDetailsRowPresenter(
                         dataSource: DataSource?,
                         isFirstResource: Boolean
                     ): Boolean {
-                        vh.view.post { coverReadyListener?.invoke() }
+                        view.post { coverReadyListener?.invoke() }
                         return false
                     }
                 })
-                .into(vh.coverImageView)
+                .into(coverImageView)
         }
-    }
-
-    override fun onUnbindRowViewHolder(vh: ViewHolder) {
-        vh as DetailsViewHolder
-        glide.clear(vh.coverImageView)
-        // remove the page selection change listener if it exists
-        vh.pageSelectionChangeListener?.let { vh.item?.removePageSelectionChangeListener(it) }
-        vh.pageSelectionChangeListener = null
-        vh.item = null
-        super.onUnbindRowViewHolder(vh)
-    }
-
-    private fun createPageSelectionList(numPages: Int, currentPage: Int): List<PageSelection> {
-        return IntProgression
-            .fromClosedRange(1, numPages, 1)
-            .map { PageSelection(it, it == currentPage) }
-    }
-
-    /**
-     * Presentable series details row
-     */
-    class SeriesDetailsRow(
-        val series: Series,
-        selectedPageNumber: Int = 1
-    ) {
-
-        private val listeners = mutableSetOf<(Int) -> Unit>()
-
-        var currentPageNumber: Int
-                by Delegates.observable(selectedPageNumber) { _, _, new -> listeners.forEach { it(new) } }
-
-        fun addPageSelectionChangeListener(listener: (Int) -> Unit): (Int) -> Unit {
-            listeners.add(listener)
-            return listener
-        }
-
-        fun removePageSelectionChangeListener(listener: (Int) -> Unit) {
-            listeners.remove(listener)
-        }
-    }
-
-    /**
-     * Interface for page selection click events
-     */
-    interface SeriesDetailsRowListener {
-        fun onSelectListClicked(seriesRow: SeriesDetailsRow)
-        fun onPageSelected(seriesRow: SeriesDetailsRow, selection: PageSelection)
-    }
-
-    /**
-     * ViewHolder for the series details row
-     */
-    private class DetailsViewHolder(view: View) : RowPresenter.ViewHolder(view) {
-        val coverImageView = view.findViewById(R.id.series_details_cover) as ImageView
-        val titleTextView = view.findViewById(R.id.series_detail_title) as TextView
-        val descriptionTextView = view.findViewById(R.id.series_detail_description) as TextView
-        val genresTextView = view.findViewById(R.id.series_details_genres) as TextView
-        val pagesView: View = view.findViewById(R.id.series_detail_pages_view)
-        val pagesGridView = view.findViewById(R.id.series_detail_pages) as HorizontalGridView
-        val selectListButton = view.findViewById(R.id.series_details_select_list_button) as Button
-
-        var item: SeriesDetailsRow? = null
-        var pageSelectionChangeListener: ((Int) -> Unit)? = null
     }
 }

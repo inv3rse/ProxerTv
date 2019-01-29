@@ -2,70 +2,97 @@ package com.inverse.unofficial.proxertv.ui.details
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
+import android.view.View
 import androidx.fragment.app.FragmentTransaction
 import androidx.leanback.app.DetailsSupportFragment
 import androidx.leanback.widget.*
+import androidx.lifecycle.Observer
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.CrashReporting
-import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
-import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
 import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
 import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
 import com.inverse.unofficial.proxertv.ui.util.GlideApp
-import rx.Observable
-import rx.Subscription
-import rx.android.schedulers.AndroidSchedulers
-import rx.schedulers.Schedulers
-import rx.subscriptions.CompositeSubscription
+import com.inverse.unofficial.proxertv.ui.util.SuccessState
+import com.inverse.unofficial.proxertv.ui.util.extensions.provideViewModel
 
 /**
  * The details cardView for a series.
  */
-class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListener, SeriesDetailsRowPresenter.SeriesDetailsRowListener {
-    private val presenterSelector = ClassPresenterSelector()
-    private val contentAdapter = ArrayObjectAdapter(presenterSelector)
-    private val subscriptions = CompositeSubscription()
+class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListener,
+    SeriesDetailsRowPresenter.SeriesDetailsRowListener {
 
-    private val proxerRepository = App.component.getProxerRepository()
+    private lateinit var detailsAdapter: DetailsAdapter
+    private lateinit var episodePresenter: EpisodePresenter
 
-    private var episodeSubscription: Subscription? = null
-    private var series: Series? = null
-    private var currentPage = 0
-
-    private val episodeAdapters = arrayListOf<EpisodeAdapter>()
-    private lateinit var detailsOverviewPresenter: SeriesDetailsRowPresenter
-    private lateinit var seriesProgress: Observable<Int>
-
+    private lateinit var model: DetailsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        detailsOverviewPresenter = SeriesDetailsRowPresenter(GlideApp.with(this), this)
+//        detailsOverviewPresenter = SeriesDetailsRowPresenter(GlideApp.with(this), this)
 
         val activity = requireActivity()
-        activity.postponeEnterTransition()
+//        activity.postponeEnterTransition()
+//
+//        val handler = Handler()
+//        handler.postDelayed({ activity.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
+//        detailsOverviewPresenter.coverReadyListener = {
+//            activity.startPostponedEnterTransition()
+//            handler.removeCallbacksAndMessages(null)
+//        }
 
-        val handler = Handler()
-        handler.postDelayed({ activity.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
-        detailsOverviewPresenter.coverReadyListener = {
-            activity.startPostponedEnterTransition()
-            handler.removeCallbacksAndMessages(null)
-        }
+//        setupPresenter()
+//        loadContent()
 
-        setupPresenter()
-        loadContent()
+        val seriesId = activity.intent?.extras?.getInt(DetailsActivity.EXTRA_SERIES_ID)
+            ?: throw IllegalArgumentException("seriesId must be set")
+
+        val glide = GlideApp.with(this)
+        detailsAdapter = DetailsAdapter(glide, this)
+        adapter = detailsAdapter
+        episodePresenter = EpisodePresenter(glide, seriesId)
+        onItemViewClickedListener = this
+
+        model = provideViewModel(this) { App.component.getDetailsViewModel() }
+        model.init(seriesId)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        subscriptions.clear()
-        episodeSubscription?.unsubscribe()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        model.detailState.observe(viewLifecycleOwner, Observer {
+            when (it) {
+                is SuccessState -> {
+                    detailsAdapter.seriesDetails = it.data
+                }
+            }
+        })
+
+        model.episodesState.observe(viewLifecycleOwner, Observer {
+            when (it) {
+                is SuccessState -> {
+                    detailsAdapter.episodes = it.data.map { category ->
+                        val header = HeaderItem(category.title)
+
+                        val episodes = category.episodes.map { num -> Episode(num, category.title) }
+                        val adapter = EpisodeAdapter(episodes, category.progress, episodePresenter)
+
+                        ListRow(header, adapter)
+                    }
+                }
+            }
+        })
     }
 
-    override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
-        if (item is EpisodeAdapter.EpisodeHolder) {
+    override fun onItemClicked(
+        itemViewHolder: Presenter.ViewHolder?,
+        item: Any?,
+        rowViewHolder: RowPresenter.ViewHolder?,
+        row: Row?
+    ) {
+        val series = (model.detailState.value as? SuccessState)?.data?.series
+
+        if (series != null && item is EpisodeAdapter.EpisodeHolder) {
             val intent = Intent(activity, PlayerActivity::class.java)
             intent.putExtra(PlayerActivity.EXTRA_EPISODE, item.episode)
             intent.putExtra(PlayerActivity.EXTRA_SERIES, series)
@@ -73,110 +100,20 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
         }
     }
 
-    override fun onSelectListClicked(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow) {
-        series?.let {
-            requireFragmentManager().beginTransaction()
-                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
-                    .add(android.R.id.content, SideMenuFragment.create(it))
-                    .addToBackStack(null)
-                    .commit()
-        }
+    override fun onSelectListClicked(seriesRow: DetailsData) {
+        requireFragmentManager().beginTransaction()
+            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+            .add(android.R.id.content, SideMenuFragment.create(seriesRow.series))
+            .addToBackStack(null)
+            .commit()
     }
 
-    override fun onPageSelected(seriesRow: SeriesDetailsRowPresenter.SeriesDetailsRow, selection: PageSelection) {
+    override fun onPageSelected(seriesRow: DetailsData, selection: PageSelection) {
         // load selected episode page
-        if ((selection.pageNumber - 1) != currentPage) {
-            loadEpisodes(seriesRow.series, selection.pageNumber - 1)
-            seriesRow.currentPageNumber = selection.pageNumber
+        val page = selection.pageNumber - 1
+        if (page != seriesRow.currentPage) {
+            model.selectPage(page)
         }
-    }
-
-    private fun setupPresenter() {
-        presenterSelector.addClassPresenter(SeriesDetailsRowPresenter.SeriesDetailsRow::class.java, detailsOverviewPresenter)
-        presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
-
-        onItemViewClickedListener = this
-        adapter = contentAdapter
-    }
-
-    private fun loadContent() {
-        val seriesId = activity?.intent?.extras?.getInt(DetailsActivity.EXTRA_SERIES_ID) ?: 0
-
-        seriesProgress = proxerRepository.observeSeriesProgress(seriesId).replay(1).refCount()
-
-        // update episode progress
-        subscriptions.add(seriesProgress
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
-                    for (adapter in episodeAdapters) {
-                        adapter.progress = it
-                    }
-                }, { it.printStackTrace() }))
-
-        // update series list state
-        subscriptions.add(proxerRepository.observerSeriesListState(seriesId)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { seriesList ->
-                    detailsOverviewPresenter.seriesList = seriesList
-                    adapter.notifyItemRangeChanged(0, 1)
-                })
-
-        val observable = Observable.zip(
-                proxerRepository.loadSeries(seriesId),
-                seriesProgress.first()
-        ) { series, progress -> Pair(series, progress) }
-
-        subscriptions.add(
-                observable.subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe({ (series, progress) ->
-                            val nextEpisode = progress + 1
-
-                            if (series != null) {
-                                this.series = series
-                                val episodesPage = ProxerClient.getTargetPageForEpisode(nextEpisode)
-                                loadEpisodes(series, episodesPage)
-
-                                val detailsRow = SeriesDetailsRowPresenter.SeriesDetailsRow(series, episodesPage + 1)
-                                contentAdapter.add(detailsRow)
-                            }
-                        }, { CrashReporting.logException(it) }))
-    }
-
-    private fun loadEpisodes(series: Series, page: Int) {
-        // remove old episode list
-        contentAdapter.removeItems(1, contentAdapter.size() - 1)
-        episodeSubscription?.unsubscribe()
-
-        episodeSubscription = Observable
-                .zip(
-                        proxerRepository.loadEpisodesPage(series.id, page),
-                        seriesProgress.first()
-                ) { episodes, progress -> Pair(episodes, progress) }
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(fun(episodesProgress: Pair<Map<String, List<Int>>, Int>) {
-                    // remove old episodes (if the action is not triggered by calling the function)
-                    contentAdapter.removeItems(1, contentAdapter.size() - 1)
-                    episodeAdapters.clear()
-
-                    val (episodesMap, progress) = episodesProgress
-                    val episodePresenter = EpisodePresenter(GlideApp.with(this), series.id)
-
-                    for (subType in episodesMap.keys) {
-                        val header = HeaderItem(subType)
-
-                        val episodes = episodesMap[subType]?.map { Episode(it, subType) } ?: emptyList()
-                        val adapter = EpisodeAdapter(episodes, progress, episodePresenter)
-
-                        episodeAdapters.add(adapter)
-                        contentAdapter.add(ListRow(header, adapter))
-                    }
-                    currentPage = page
-
-                }, { CrashReporting.logException(it) })
     }
 
     companion object {

@@ -7,6 +7,7 @@ import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
 import com.inverse.unofficial.proxertv.base.db.StorageModule
+import com.inverse.unofficial.proxertv.ui.details.DetailsViewModel
 import dagger.Component
 import dagger.Module
 import dagger.Provides
@@ -32,10 +33,11 @@ class BaseModule(val application: Application) {
     @Provides
     @Singleton
     fun provideProxerRepository(
-            client: ProxerClient,
-            mySeriesDb: MySeriesDb,
-            progressDb: SeriesProgressDb,
-            userSettings: UserSettings): ProxerRepository {
+        client: ProxerClient,
+        mySeriesDb: MySeriesDb,
+        progressDb: SeriesProgressDb,
+        userSettings: UserSettings
+    ): ProxerRepository {
 
         return ProxerRepository(client, mySeriesDb, progressDb, userSettings)
     }
@@ -49,4 +51,6 @@ interface BaseComponent {
     fun getProxerRepository(): ProxerRepository
     @Named(ClientModule.CLIENT_GLIDE)
     fun getGlideHttpClient(): OkHttpClient
+
+    fun getDetailsViewModel(): DetailsViewModel
 }

@@ -133,14 +133,14 @@ class ProxerClient(
      */
     fun loadEpisodesPage(seriesId: Int, page: Int): Observable<Map<String, List<Int>>> {
         return api.entryEpisodes(seriesId, page, EPISODES_PER_PAGE)
-                .map(fun(episodesData): Map<String, List<Int>> {
-                    val episodeMap = hashMapOf<String, ArrayList<Int>>()
+                .map { episodesData ->
+                    val episodeMap = hashMapOf<String, MutableList<Int>>()
                     for ((episodeNum, languageType) in episodesData.episodes) {
-                        episodeMap.getOrPut(languageType, { arrayListOf<Int>() }).add(episodeNum)
+                        episodeMap.getOrPut(languageType) { mutableListOf() }.add(episodeNum)
                     }
 
-                    return episodeMap
-                })
+                    episodeMap
+                }
     }
 
     /**
