@@ -4,8 +4,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.inverse.unofficial.proxertv.base.ProxerRepository
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
-import com.inverse.unofficial.proxertv.model.Series
-import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.ui.util.ErrorState
 import com.inverse.unofficial.proxertv.ui.util.LoadContentErrorState
 import com.inverse.unofficial.proxertv.ui.util.LoadingState

@@ -2,6 +2,7 @@ package com.inverse.unofficial.proxertv.ui.details
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.view.View
 import androidx.fragment.app.FragmentTransaction
 import androidx.leanback.app.DetailsSupportFragment
@@ -10,14 +11,11 @@ import androidx.lifecycle.Observer
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
-import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
-import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
-import com.inverse.unofficial.proxertv.ui.util.GlideApp
-import com.inverse.unofficial.proxertv.ui.util.SuccessState
+import com.inverse.unofficial.proxertv.ui.util.*
 import com.inverse.unofficial.proxertv.ui.util.extensions.provideViewModel
 
 /**
- * The details cardView for a series.
+ * The details view for a series.
  */
 class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListener,
     SeriesDetailsRowPresenter.SeriesDetailsRowListener {
@@ -29,28 +27,29 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        detailsOverviewPresenter = SeriesDetailsRowPresenter(GlideApp.with(this), this)
 
-        val activity = requireActivity()
-//        activity.postponeEnterTransition()
-//
-//        val handler = Handler()
-//        handler.postDelayed({ activity.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
-//        detailsOverviewPresenter.coverReadyListener = {
-//            activity.startPostponedEnterTransition()
-//            handler.removeCallbacksAndMessages(null)
-//        }
+        requireActivity().postponeEnterTransition()
+        val handler = Handler()
+        handler.postDelayed({ activity?.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
 
-//        setupPresenter()
-//        loadContent()
-
-        val seriesId = activity.intent?.extras?.getInt(DetailsActivity.EXTRA_SERIES_ID)
+        val seriesId = activity?.intent?.extras?.getInt(DetailsActivity.EXTRA_SERIES_ID)
             ?: throw IllegalArgumentException("seriesId must be set")
 
         val glide = GlideApp.with(this)
-        detailsAdapter = DetailsAdapter(glide, this)
-        adapter = detailsAdapter
+        detailsAdapter = DetailsAdapter(glide, this, object : CoverLoadListener {
+            override fun onCoverLoadFailed() {
+                activity?.startPostponedEnterTransition()
+                handler.removeCallbacksAndMessages(null)
+            }
+
+            override fun onCoverLoadSuccess() {
+                activity?.startPostponedEnterTransition()
+                handler.removeCallbacksAndMessages(null)
+            }
+        })
+
         episodePresenter = EpisodePresenter(glide, seriesId)
+        adapter = detailsAdapter
         onItemViewClickedListener = this
 
         model = provideViewModel(this) { App.component.getDetailsViewModel() }
@@ -64,6 +63,9 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
             when (it) {
                 is SuccessState -> {
                     detailsAdapter.seriesDetails = it.data
+                }
+                is ErrorState -> {
+                    requireActivity().startPostponedEnterTransition()
                 }
             }
         })

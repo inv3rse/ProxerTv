@@ -11,8 +11,19 @@ import com.inverse.unofficial.proxertv.ui.util.GlideRequests
  */
 class DetailsAdapter(
     glide: GlideRequests,
-    selectSeriesDetailsRowListener: SeriesDetailsRowPresenter.SeriesDetailsRowListener
+    selectSeriesDetailsRowListener: SeriesDetailsRowPresenter.SeriesDetailsRowListener,
+    coverLoadListener: CoverLoadListener
 ) : ObjectAdapter() {
+
+    init {
+        val presenterSelector = ClassPresenterSelector()
+        presenterSelector.addClassPresenter(
+            DetailsData::class.java,
+            SeriesDetailsRowPresenter(glide, selectSeriesDetailsRowListener, coverLoadListener)
+        )
+        presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
+        setPresenterSelector(presenterSelector)
+    }
 
     var seriesDetails: DetailsData? = null
         set(value) {
@@ -47,18 +58,6 @@ class DetailsAdapter(
                 notifyItemRangeInserted(start, value.size)
             }
         }
-
-    private val detailsOverviewPresenter = SeriesDetailsRowPresenter(glide, selectSeriesDetailsRowListener)
-
-    init {
-        val presenterSelector = ClassPresenterSelector()
-        presenterSelector.addClassPresenter(
-            DetailsData::class.java,
-            detailsOverviewPresenter
-        )
-        presenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
-        setPresenterSelector(presenterSelector)
-    }
 
     override fun size(): Int {
         return (if (seriesDetails != null) 1 else 0) + episodes.size

@@ -14,6 +14,8 @@ class SeriesCoverPresenter(glide: GlideRequests) : BaseCoverPresenter(glide) {
 
         viewHolder.cardView.titleText = series.name
         viewHolder.cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT)
+
+        TransitionHelper.setCoverTransitionName(viewHolder.cardView.mainImageView, series.id)
         glide.load(ServerConfig.coverUrl(series.id))
             .centerCrop()
             .into(viewHolder.cardView.mainImageView)

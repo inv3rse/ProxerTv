@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.view.View
-import androidx.core.app.ActivityOptionsCompat
 import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.*
 import com.inverse.unofficial.proxertv.R
@@ -120,15 +119,11 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
         row: Row?
     ) {
         if (item is ISeriesCover) {
-            val intent = Intent(activity, DetailsActivity::class.java)
-            val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                requireActivity(),
-                (itemViewHolder.view as ImageCardView).mainImageView,
-                DetailsActivity.SHARED_ELEMENT_COVER
-            ).toBundle()
+            val coverView = (itemViewHolder.view as ImageCardView).mainImageView
+            val (intent, options) = DetailsActivity.createIntentWithOptions(requireActivity(), item.id, coverView)
 
-            intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
-            startActivity(intent, bundle)
+            startActivity(intent, options.toBundle())
+
         } else if (item is UserActionHolder) {
             when (item.userAction) {
                 UserAction.LOGIN -> startActivity(LoginActivity.createIntent(requireContext()))

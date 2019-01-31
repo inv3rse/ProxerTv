@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
-import androidx.core.app.ActivityOptionsCompat
 import androidx.leanback.app.SearchSupportFragment
 import androidx.leanback.widget.*
 import com.inverse.unofficial.proxertv.R
@@ -67,12 +66,13 @@ class MySearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchRe
         subscriptions.clear()
 
         if (query.isNotBlank()) {
-            subscriptions.add(client.searchSeries(query)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ resultList ->
-                    resultsAdapter.addAll(0, resultList)
-                }, { Timber.e(it) })
+            subscriptions.add(
+                client.searchSeries(query)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe({ resultList ->
+                        resultsAdapter.addAll(0, resultList)
+                    }, { Timber.e(it) })
             )
         }
         return true
@@ -89,15 +89,10 @@ class MySearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchRe
         row: Row?
     ) {
         if (item is SeriesCover) {
-            val intent = Intent(activity, DetailsActivity::class.java)
-            val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                requireActivity(),
-                (itemViewHolder.view as ImageCardView).mainImageView,
-                DetailsActivity.SHARED_ELEMENT_COVER
-            ).toBundle()
+            val coverView = (itemViewHolder.view as ImageCardView).mainImageView
+            val (intent, options) = DetailsActivity.createIntentWithOptions(requireActivity(), item.id, coverView)
 
-            intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
-            startActivity(intent, bundle)
+            startActivity(intent, options.toBundle())
         }
     }
 

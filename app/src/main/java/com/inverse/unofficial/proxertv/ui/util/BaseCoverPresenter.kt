@@ -1,9 +1,8 @@
 package com.inverse.unofficial.proxertv.ui.util
 
+import android.view.ViewGroup
 import androidx.leanback.widget.ImageCardView
 import androidx.leanback.widget.Presenter
-import android.view.ViewGroup
-import com.bumptech.glide.Glide
 
 /**
  * A CardPresenter is used to generate Views and bind Objects to them on demand.
@@ -12,11 +11,7 @@ import com.bumptech.glide.Glide
 abstract class BaseCoverPresenter(protected val glide: GlideRequests) : Presenter() {
 
     override fun onCreateViewHolder(parent: ViewGroup): Presenter.ViewHolder {
-        val cardView = object : ImageCardView(parent.context) {
-            override fun setSelected(selected: Boolean) {
-                super.setSelected(selected)
-            }
-        }
+        val cardView = ImageCardView(parent.context)
 
         cardView.isFocusable = true
         cardView.isFocusableInTouchMode = true

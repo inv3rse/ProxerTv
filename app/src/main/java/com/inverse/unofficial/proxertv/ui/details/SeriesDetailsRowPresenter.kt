@@ -1,6 +1,5 @@
 package com.inverse.unofficial.proxertv.ui.details
 
-import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,15 +10,29 @@ import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.leanback.widget.HorizontalGridView
 import androidx.leanback.widget.ItemBridgeAdapter
 import androidx.leanback.widget.RowPresenter
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.Target
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.util.GlideRequests
+import com.inverse.unofficial.proxertv.ui.util.TransitionHelper
+import com.inverse.unofficial.proxertv.ui.util.extensions.simpleListener
 import com.inverse.unofficial.proxertv.ui.util.getStringRes
+
+/**
+ * Listener for the cover image
+ */
+interface CoverLoadListener {
+
+    /**
+     * Failed to load the cover
+     */
+    fun onCoverLoadFailed()
+
+    /**
+     * The cover has been loaded successfully
+     */
+    fun onCoverLoadSuccess()
+}
 
 /**
  * Presenter for a [DetailsData]. The layout is based on the
@@ -27,11 +40,11 @@ import com.inverse.unofficial.proxertv.ui.util.getStringRes
  */
 class SeriesDetailsRowPresenter(
     private val glide: GlideRequests,
-    private val selectSeriesDetailsRowListener: SeriesDetailsRowListener
+    private val selectSeriesDetailsRowListener: SeriesDetailsRowListener,
+    private val coverLoadListener: CoverLoadListener
 ) : RowPresenter() {
 
     private val pagePresenter = PageSelectionPresenter()
-    var coverReadyListener: (() -> Unit)? = null
 
     init {
         headerPresenter = null
@@ -117,30 +130,18 @@ class SeriesDetailsRowPresenter(
                 pagesView.visibility = View.INVISIBLE
             }
 
+            TransitionHelper.setCoverTransitionName(coverImageView, item.series.id)
             glide
                 .load(ServerConfig.coverUrl(item.series.id))
                 .apply(RequestOptions().centerCrop())
-                .listener(object : RequestListener<Drawable?> {
-                    override fun onLoadFailed(
-                        e: GlideException?,
-                        model: Any?,
-                        target: Target<Drawable?>?,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        return false
+                .simpleListener(
+                    onLoadFailed = {
+                        coverLoadListener.onCoverLoadFailed()
+                    },
+                    onResourceReady = {
+                        coverLoadListener.onCoverLoadSuccess()
                     }
-
-                    override fun onResourceReady(
-                        resource: Drawable?,
-                        model: Any?,
-                        target: Target<Drawable?>?,
-                        dataSource: DataSource?,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        view.post { coverReadyListener?.invoke() }
-                        return false
-                    }
-                })
+                )
                 .into(coverImageView)
         }
 
