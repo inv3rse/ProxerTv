@@ -9,7 +9,6 @@ import androidx.leanback.app.SearchSupportFragment
 import androidx.leanback.widget.*
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.util.GlideApp
@@ -17,8 +16,10 @@ import com.inverse.unofficial.proxertv.ui.util.SeriesCoverPresenter
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
+import timber.log.Timber
 
-class MySearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider, OnItemViewClickedListener {
+class MySearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider,
+    OnItemViewClickedListener {
     private val client = App.component.getProxerClient()
     private val subscriptions = CompositeSubscription()
     private lateinit var rowsAdapter: ArrayObjectAdapter
@@ -67,11 +68,12 @@ class MySearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchRe
 
         if (query.isNotBlank()) {
             subscriptions.add(client.searchSeries(query)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe({ resultList ->
-                        resultsAdapter.addAll(0, resultList)
-                    }, { CrashReporting.logException(it) }))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ resultList ->
+                    resultsAdapter.addAll(0, resultList)
+                }, { Timber.e(it) })
+            )
         }
         return true
     }
@@ -80,12 +82,19 @@ class MySearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchRe
         return rowsAdapter
     }
 
-    override fun onItemClicked(itemViewHolder: Presenter.ViewHolder, item: Any?, rowViewHolder: RowPresenter.ViewHolder?, row: Row?) {
+    override fun onItemClicked(
+        itemViewHolder: Presenter.ViewHolder,
+        item: Any?,
+        rowViewHolder: RowPresenter.ViewHolder?,
+        row: Row?
+    ) {
         if (item is SeriesCover) {
             val intent = Intent(activity, DetailsActivity::class.java)
-            val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(requireActivity(),
-                    (itemViewHolder.view as ImageCardView).mainImageView,
-                    DetailsActivity.SHARED_ELEMENT_COVER).toBundle()
+            val bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                requireActivity(),
+                (itemViewHolder.view as ImageCardView).mainImageView,
+                DetailsActivity.SHARED_ELEMENT_COVER
+            ).toBundle()
 
             intent.putExtra(DetailsActivity.EXTRA_SERIES_ID, item.id)
             startActivity(intent, bundle)

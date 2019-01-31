@@ -28,7 +28,6 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
@@ -203,7 +202,7 @@ class PlayerOverlayFragment : PlaybackSupportFragment(), OnItemViewClickedListen
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({ isTracked = episodeExtra.episodeNum <= it },
-                        { CrashReporting.logException(it) })
+                        { Timber.e(it) })
             }
         } else {
             Timber.d("missing extras, finishing!")
@@ -241,22 +240,23 @@ class PlayerOverlayFragment : PlaybackSupportFragment(), OnItemViewClickedListen
         val client = App.component.getProxerClient()
         streamAdapter.clear()
 
-        subscriptions.add(client.loadEpisodeStreams(series!!.id, episode!!.episodeNum, episode!!.languageType)
-            .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
-            .subscribe({ stream ->
-                // add the stream to the adapter first
-                streamAdapter.addStream(stream)
-                if (streamAdapter.getCurrentStream() == null) {
-                    setStream(stream)
-                }
-            }, { throwable ->
-                if (throwable is ProxerClient.SeriesCaptchaException) {
-                    showErrorFragment(getString(R.string.stream_captcha_error))
-                } else {
-                    CrashReporting.logException(throwable)
-                    checkValidStreamsFound()
-                }
-            }, { checkValidStreamsFound() })
+        subscriptions.add(
+            client.loadEpisodeStreams(series!!.id, episode!!.episodeNum, episode!!.languageType)
+                .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ stream ->
+                    // add the stream to the adapter first
+                    streamAdapter.addStream(stream)
+                    if (streamAdapter.getCurrentStream() == null) {
+                        setStream(stream)
+                    }
+                }, { throwable ->
+                    if (throwable is ProxerClient.SeriesCaptchaException) {
+                        showErrorFragment(getString(R.string.stream_captcha_error))
+                    } else {
+                        Timber.e(throwable)
+                        checkValidStreamsFound()
+                    }
+                }, { checkValidStreamsFound() })
         )
     }
 

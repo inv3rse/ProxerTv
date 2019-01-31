@@ -9,7 +9,7 @@ import com.inverse.unofficial.proxertv.model.SeriesDbEntry
 import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.model.UserListSeriesEntry
 import rx.Observable
-import java.util.*
+import timber.log.Timber
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -17,10 +17,11 @@ import java.util.concurrent.atomic.AtomicLong
  * Handles the login and synchronizes the local db with online data.
  */
 class ProxerRepository(
-        private val client: ProxerClient,
-        private val mySeriesDb: MySeriesDb,
-        private val progressDatabase: SeriesProgressDb,
-        private val userSettings: UserSettings) {
+    private val client: ProxerClient,
+    private val mySeriesDb: MySeriesDb,
+    private val progressDatabase: SeriesProgressDb,
+    private val userSettings: UserSettings
+) {
 
     private var lastSync: AtomicLong = AtomicLong(0L)
 
@@ -34,31 +35,32 @@ class ProxerRepository(
     fun login(username: String, password: String): Observable<Login> {
 
         return client.login(username, password)
-                .map { Login(username, password, it.token) }
-                // handle the already signed in error as a successful login
-                .onErrorResumeNext { error ->
-                    if (error is ApiErrorException && ApiErrorException.USER_ALREADY_SIGNED_IN == error.code)
-                        Observable.just(Login(username, password, userSettings.getUserToken())) else
-                        Observable.error(error)
-                }
-                // logout if an other user was signed in and try again
-                .compose(retryAfter<Login>(MAX_LOGIN_RETRY_COUNT, { errorCount: Int, error: Throwable ->
-                    if (errorCount < MAX_LOGIN_RETRY_COUNT && error is ApiErrorException
-                            && ApiErrorException.OTHER_USER_ALREADY_SIGNED_IN == error.code) {
+            .map { Login(username, password, it.token) }
+            // handle the already signed in error as a successful login
+            .onErrorResumeNext { error ->
+                if (error is ApiErrorException && ApiErrorException.USER_ALREADY_SIGNED_IN == error.code)
+                    Observable.just(Login(username, password, userSettings.getUserToken())) else
+                    Observable.error(error)
+            }
+            // logout if an other user was signed in and try again
+            .compose(retryAfter<Login>(MAX_LOGIN_RETRY_COUNT) { errorCount: Int, error: Throwable ->
+                if (errorCount < MAX_LOGIN_RETRY_COUNT && error is ApiErrorException
+                    && ApiErrorException.OTHER_USER_ALREADY_SIGNED_IN == error.code
+                ) {
 
-                        // retry after logout
-                        client.logout()
-                    } else {
-                        // abort with the original error
-                        Observable.error<Login>(error)
-                    }
-                }))
-                // save the login data (the backing SharedPreferences are thread safe)
-                .doOnNext { (user, pass, token) ->
-                    userSettings.setAccount(user, pass)
-                    userSettings.setUserToken(token)
-                    invalidateLocalList()
+                    // retry after logout
+                    client.logout()
+                } else {
+                    // abort with the original error
+                    Observable.error<Login>(error)
                 }
+            })
+            // save the login data (the backing SharedPreferences are thread safe)
+            .doOnNext { (user, pass, token) ->
+                userSettings.setAccount(user, pass)
+                userSettings.setUserToken(token)
+                invalidateLocalList()
+            }
     }
 
     /**
@@ -68,11 +70,11 @@ class ProxerRepository(
      */
     fun logout(): Observable<Boolean> {
         return Observable.fromCallable { userSettings.clearUser() }
-                .flatMap { mySeriesDb.overrideWithSeriesList(emptyList()) }
-                .flatMap { progressDatabase.clearDb() }
-                // we do not care if the logout call fails, clearing the local user is enough
-                .flatMap { client.logout().map { Unit }.onErrorReturn { Unit } }
-                .map { true }
+            .flatMap { mySeriesDb.overrideWithSeriesList(emptyList()) }
+            .flatMap { progressDatabase.clearDb() }
+            // we do not care if the logout call fails, clearing the local user is enough
+            .flatMap { client.logout().map { Unit }.onErrorReturn { Unit } }
+            .map { true }
     }
 
     /**
@@ -88,15 +90,15 @@ class ProxerRepository(
         if (user != null && (forceSync || System.currentTimeMillis() > (lastSync.get() + LIST_SYNC_DELAY))) {
 
             return client.userList()
-                    // retry after login if if we are not logged in anymore
-                    .compose(retryAfterLogin<List<UserListSeriesEntry>>())
-                    // write entries to db
-                    .flatMap { setUserSeriesList(it) }
-                    // not successful on error
-                    .onErrorReturn { error ->
-                        CrashReporting.logException(error)
-                        false
-                    }
+                // retry after login if if we are not logged in anymore
+                .compose(retryAfterLogin<List<UserListSeriesEntry>>())
+                // write entries to db
+                .flatMap { setUserSeriesList(it) }
+                // not successful on error
+                .onErrorReturn { error ->
+                    Timber.e(error)
+                    false
+                }
         }
 
         // no sync has happened
@@ -118,74 +120,75 @@ class ProxerRepository(
             // check if the series is already on a list and has a comment id
             // defer to check again after retryAfterSync
             val updateObservable = Observable.defer { mySeriesDb.getSeries(series.id) }
-                    // the series must have a comment id
-                    .filter { it.cid != SeriesDbEntry.NO_COMMENT_ID }
-                    // throw an error if there is no item
-                    .first()
-                    // we do not care about the type, only check if there was an error
-                    .cast(Any::class.java)
-                    // no comment id found -> create a comment for the series
-                    .onErrorResumeNext { _ ->
-                        client.addSeriesToWatchList(series.id)
-                                // ignore the comment already exists error.
-                                .onErrorResumeNext { error2 ->
-                                    if (error2 is ApiErrorException && error2.code == ApiErrorException.ENTRY_ALREADY_EXISTS) {
-                                        Observable.just(true)
-                                    } else {
-                                        Observable.error(error2)
-                                    }
-                                }
-                    }
-                    // Get the users current series list. We could have comment id offline, but to change the list
-                    // we need to update the whole comment.
-                    .flatMap { client.userList() }
-                    // find the item we want to change
-                    .map { seriesList ->
-                        val entry = seriesList.find { series.id == it.id } ?: throw OutOfSyncException(seriesList)
-                        Pair(entry, seriesList)
-                    }
-                    .zipWith(progressDatabase.getProgress(series.id), {
-                        (seriesEntry, seriesList), localProgress ->
-                        Triple(seriesEntry, seriesList, localProgress)
-                    })
-                    // update the list state if necessary
-                    .flatMap { (seriesEntry, seriesList, localProgress) ->
-                        if (SeriesList.fromApiState(seriesEntry.commentState) != list || localProgress > seriesEntry.episode) {
-
-                            val entry = seriesEntry.copy(
-                                    commentState = SeriesList.toApiState(list),
-                                    episode = Math.max(seriesEntry.episode, localProgress))
-
-                            val data = entry.commentRating
-                            val comment = mapOf(
-                                    "state" to entry.commentState,
-                                    "episode" to entry.episode,
-                                    "rating" to entry.rating,
-                                    "comment" to entry.comment,
-                                    "misc[genre]" to data?.ratingGenre,
-                                    "misc[story]" to data?.ratingStory,
-                                    "misc[animation]" to data?.ratingAnimation,
-                                    "misc[characters]" to data?.ratingCharacters,
-                                    "misc[music]" to data?.ratingMusic)
-                                    .filterValues { it != null }
-                                    .mapValues { it.value.toString() }
-
-                            // update the entry list to reflect the state updating the comment
-                            val updatedEntryList = mutableListOf(entry)
-                            updatedEntryList.addAll(seriesList.filter { it.id != entry.id })
-
-                            client.setComment(entry.cid, comment)
-                                    .flatMap { setUserSeriesList(updatedEntryList) }
-                                    .map { Unit }
-                        } else {
-                            // no change necessary, use the data to synchronize the local db
-                            setUserSeriesList(seriesList).map { Unit }
+                // the series must have a comment id
+                .filter { it.cid != SeriesDbEntry.NO_COMMENT_ID }
+                // throw an error if there is no item
+                .first()
+                // we do not care about the type, only check if there was an error
+                .cast(Any::class.java)
+                // no comment id found -> create a comment for the series
+                .onErrorResumeNext {
+                    client.addSeriesToWatchList(series.id)
+                        // ignore the comment already exists error.
+                        .onErrorResumeNext { error2 ->
+                            if (error2 is ApiErrorException && error2.code == ApiErrorException.ENTRY_ALREADY_EXISTS) {
+                                Observable.just(true)
+                            } else {
+                                Observable.error(error2)
+                            }
                         }
+                }
+                // Get the users current series list. We could have comment id offline, but to change the list
+                // we need to update the whole comment.
+                .flatMap { client.userList() }
+                // find the item we want to change
+                .map { seriesList ->
+                    val entry = seriesList.find { series.id == it.id } ?: throw OutOfSyncException(seriesList)
+                    Pair(entry, seriesList)
+                }
+                .zipWith(progressDatabase.getProgress(series.id)) { (seriesEntry, seriesList), localProgress ->
+                    Triple(seriesEntry, seriesList, localProgress)
+                }
+                // update the list state if necessary
+                .flatMap { (seriesEntry, seriesList, localProgress) ->
+                    if (SeriesList.fromApiState(seriesEntry.commentState) != list || localProgress > seriesEntry.episode) {
+
+                        val entry = seriesEntry.copy(
+                            commentState = SeriesList.toApiState(list),
+                            episode = Math.max(seriesEntry.episode, localProgress)
+                        )
+
+                        val data = entry.commentRating
+                        val comment = mapOf(
+                            "state" to entry.commentState,
+                            "episode" to entry.episode,
+                            "rating" to entry.rating,
+                            "comment" to entry.comment,
+                            "misc[genre]" to data?.ratingGenre,
+                            "misc[story]" to data?.ratingStory,
+                            "misc[animation]" to data?.ratingAnimation,
+                            "misc[characters]" to data?.ratingCharacters,
+                            "misc[music]" to data?.ratingMusic
+                        )
+                            .filterValues { it != null }
+                            .mapValues { it.value.toString() }
+
+                        // update the entry list to reflect the state updating the comment
+                        val updatedEntryList = mutableListOf(entry)
+                        updatedEntryList.addAll(seriesList.filter { it.id != entry.id })
+
+                        client.setComment(entry.cid, comment)
+                            .flatMap { setUserSeriesList(updatedEntryList) }
+                            .map { Unit }
+                    } else {
+                        // no change necessary, use the data to synchronize the local db
+                        setUserSeriesList(seriesList).map { Unit }
                     }
+                }
 
             return updateObservable
-                    .compose(retryAfterLogin<Unit>())
-                    .compose(retryAfterSync<Unit>())
+                .compose(retryAfterLogin<Unit>())
+                .compose(retryAfterSync<Unit>())
 
         } else {
             // local only, add the series without a comment id
@@ -203,16 +206,16 @@ class ProxerRepository(
         if (userSettings.getUser() != null) {
             // get the users comment id for the series
             return mySeriesDb.getSeries(seriesId)
-                    .flatMap { client.deleteComment(it.cid) }
-                    .flatMap { mySeriesDb.removeSeries(seriesId) }
-                    // no error if the series is not on the list
-                    .onErrorResumeNext { error ->
-                        if (error is MySeriesDb.NoSeriesEntryException) {
-                            Observable.empty()
-                        } else {
-                            Observable.error(error)
-                        }
+                .flatMap { client.deleteComment(it.cid) }
+                .flatMap { mySeriesDb.removeSeries(seriesId) }
+                // no error if the series is not on the list
+                .onErrorResumeNext { error ->
+                    if (error is MySeriesDb.NoSeriesEntryException) {
+                        Observable.empty()
+                    } else {
+                        Observable.error(error)
                     }
+                }
         }
 
         return mySeriesDb.removeSeries(seriesId)
@@ -236,18 +239,18 @@ class ProxerRepository(
     fun setSeriesProgress(seriesId: Int, progress: Int): Observable<Unit> {
         if (userSettings.getUser() != null) {
             return mySeriesDb.getSeries(seriesId)
-                    .map { it.cid }
-                    .onErrorReturn { SeriesDbEntry.NO_COMMENT_ID }
-                    // only if the series is on a list can we update its remote progress
-                    .flatMap { commentId ->
-                        if (commentId != SeriesDbEntry.NO_COMMENT_ID) {
-                            client.setCommentState(commentId, progress)
-                                    .compose(retryAfterLogin())
-                        } else {
-                            Observable.just(false)
-                        }
+                .map { it.cid }
+                .onErrorReturn { SeriesDbEntry.NO_COMMENT_ID }
+                // only if the series is on a list can we update its remote progress
+                .flatMap { commentId ->
+                    if (commentId != SeriesDbEntry.NO_COMMENT_ID) {
+                        client.setCommentState(commentId, progress)
+                            .compose(retryAfterLogin())
+                    } else {
+                        Observable.just(false)
                     }
-                    .flatMap { progressDatabase.setProgress(seriesId, progress) }
+                }
+                .flatMap { progressDatabase.setProgress(seriesId, progress) }
         }
 
         return progressDatabase.setProgress(seriesId, progress)
@@ -322,9 +325,9 @@ class ProxerRepository(
      * Data class that holds the login information.
      */
     data class Login(
-            val username: String,
-            val password: String,
-            val token: String?
+        val username: String,
+        val password: String,
+        val token: String?
     )
 
     /**
@@ -332,20 +335,20 @@ class ProxerRepository(
      */
     private fun setUserSeriesList(seriesEntries: List<UserListSeriesEntry>): Observable<Boolean> {
         val listUpdate = Observable.from(seriesEntries)
-                // map to db entries
-                .map { SeriesDbEntry(it.id, it.name, SeriesList.fromApiState(it.commentState), it.cid) }
-                .toList()
-                // write to db
-                .flatMap { seriesList -> mySeriesDb.overrideWithSeriesList(seriesList) }
+            // map to db entries
+            .map { SeriesDbEntry(it.id, it.name, SeriesList.fromApiState(it.commentState), it.cid) }
+            .toList()
+            // write to db
+            .flatMap { seriesList -> mySeriesDb.overrideWithSeriesList(seriesList) }
 
         val progressUpdate = Observable.from(seriesEntries)
-                .flatMap { progressDatabase.setProgress(it.id, it.episode) }
-                .toList()
+            .flatMap { progressDatabase.setProgress(it.id, it.episode) }
+            .toList()
 
-        return Observable.zip(listUpdate, progressUpdate, { _, _ ->
+        return Observable.zip(listUpdate, progressUpdate) { _, _ ->
             lastSync.set(System.currentTimeMillis())
             true
-        })
+        }
     }
 
     /**
@@ -360,12 +363,13 @@ class ProxerRepository(
      * [ApiErrorException.USER_NOT_LOGGED_IN]
      */
     private fun <T> retryAfterLogin(): Observable.Transformer<T, T> {
-        return retryAfter(MAX_LOGIN_RETRY_COUNT, { errorCount: Int, error: Throwable ->
+        return retryAfter(MAX_LOGIN_RETRY_COUNT) { errorCount: Int, error: Throwable ->
             val user = userSettings.getUser()
             if (errorCount < MAX_LOGIN_RETRY_COUNT
-                    && error is ApiErrorException
-                    && ApiErrorException.USER_NOT_LOGGED_IN.contains(error.code)
-                    && user != null) {
+                && error is ApiErrorException
+                && ApiErrorException.USER_NOT_LOGGED_IN.contains(error.code)
+                && user != null
+            ) {
 
                 // retry again after login
                 login(user.username, user.password)
@@ -373,14 +377,14 @@ class ProxerRepository(
                 // abort with the original error
                 Observable.error(error)
             }
-        })
+        }
     }
 
     /**
      * Get a [Observable.Transformer] that handles a [OutOfSyncException] by updating the local state an trying again.
      */
     private fun <T> retryAfterSync(): Observable.Transformer<T, T> {
-        return retryAfter(MAX_SYNC_RETRY_COUNT, { errorCount: Int, error: Throwable ->
+        return retryAfter(MAX_SYNC_RETRY_COUNT) { errorCount: Int, error: Throwable ->
             if (errorCount < MAX_SYNC_RETRY_COUNT && error is OutOfSyncException) {
                 // retry again after sync
                 setUserSeriesList(error.remoteList)
@@ -388,7 +392,7 @@ class ProxerRepository(
                 // abort with the original error
                 Observable.error(error)
             }
-        })
+        }
     }
 
     /**
@@ -398,14 +402,17 @@ class ProxerRepository(
      *      If the Observable emits onNext we retry
      *      onError or onCompleted get passed to the subscriber directly
      */
-    private fun <T> retryAfter(maxCount: Int, checkFun: (count: Int, error: Throwable) -> Observable<*>): Observable.Transformer<T, T> {
-        return Observable.Transformer<T, T> { observable ->
+    private fun <T> retryAfter(
+        maxCount: Int,
+        checkFun: (count: Int, error: Throwable) -> Observable<*>
+    ): Observable.Transformer<T, T> {
+        return Observable.Transformer { observable ->
             observable.retryWhen { notificationObservable: Observable<out Throwable> ->
                 notificationObservable
-                        // zip with retry counter
-                        .zipWith(Observable.range(0, maxCount + 1), { error, count -> Pair(error, count) })
-                        // let the checkFun decide if we retry
-                        .flatMap { (error, count) -> checkFun(count, error) }
+                    // zip with retry counter
+                    .zipWith(Observable.range(0, maxCount + 1)) { error, count -> Pair(error, count) }
+                    // let the checkFun decide if we retry
+                    .flatMap { (error, count) -> checkFun(count, error) }
             }
         }
     }

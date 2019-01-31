@@ -6,10 +6,10 @@ import androidx.leanback.widget.GuidanceStylist
 import androidx.leanback.widget.GuidedAction
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.CrashReporting
 import org.jetbrains.anko.toast
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import timber.log.Timber
 
 /**
  * Fragment handling the user logout
@@ -28,15 +28,19 @@ class LogoutFragment : GuidedStepSupportFragment() {
     }
 
     override fun onCreateActions(actions: MutableList<GuidedAction>, savedInstanceState: Bundle?) {
-        actions.add(GuidedAction.Builder(activity)
+        actions.add(
+            GuidedAction.Builder(activity)
                 .id(LOGOUT_ID)
                 .title(R.string.logout_confirm)
-                .build())
+                .build()
+        )
 
-        actions.add(GuidedAction.Builder(activity)
+        actions.add(
+            GuidedAction.Builder(activity)
                 .id(CANCEL_ID)
                 .title(R.string.logout_cancel)
-                .build())
+                .build()
+        )
     }
 
     override fun onGuidedActionClicked(action: GuidedAction) {
@@ -45,19 +49,19 @@ class LogoutFragment : GuidedStepSupportFragment() {
                 if (!logoutPending) {
                     logoutPending = true
                     repository.logout()
-                            .subscribeOn(Schedulers.io())
-                            .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe(
-                                    // on success
-                                    {
-                                        finishGuidedStepSupportFragments()
-                                    },
-                                    // on error
-                                    {
-                                        CrashReporting.logException(it)
-                                        requireContext().toast(R.string.logout_error)
-                                        logoutPending = false
-                                    })
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                            // on success
+                            {
+                                finishGuidedStepSupportFragments()
+                            },
+                            // on error
+                            {
+                                Timber.e(it)
+                                requireContext().toast(R.string.logout_error)
+                                logoutPending = false
+                            })
                 }
             }
             CANCEL_ID -> finishGuidedStepSupportFragments()

@@ -10,12 +10,12 @@ import androidx.leanback.widget.ItemBridgeAdapter
 import androidx.leanback.widget.VerticalGridView
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.SeriesList
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import timber.log.Timber
 
 /**
  * Fragment to show a right side option list. The let side is transparent to keep the focus from getting lost.
@@ -54,18 +54,18 @@ class SideMenuFragment : Fragment(), SeriesListSelectionListener {
         series = arguments?.getParcelable(ARG_SERIES) ?: throw IllegalArgumentException()
 
         listStateSubscription = repository.observerSeriesListState(series.id)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { state: SeriesList ->
-                    optionsAdapter.currentState = state
-                    optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
-                }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { state: SeriesList ->
+                optionsAdapter.currentState = state
+                optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
+            }
     }
 
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View {
         return inflater.inflate(R.layout.fragment_side_menu, container, false)
     }
@@ -103,16 +103,16 @@ class SideMenuFragment : Fragment(), SeriesListSelectionListener {
             optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
 
             updateSubscription = repository.moveSeriesToList(series, seriesList)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe({
-                        optionsAdapter.loadingList = null
-                        optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
-                    }, {
-                        CrashReporting.logException(it)
-                        optionsAdapter.loadingList = null
-                        optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
-                    })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({
+                    optionsAdapter.loadingList = null
+                    optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
+                }, {
+                    Timber.e(it)
+                    optionsAdapter.loadingList = null
+                    optionsAdapter.notifyItemRangeChanged(0, optionsAdapter.size())
+                })
         }
     }
 }

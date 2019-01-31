@@ -9,7 +9,6 @@ import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.*
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.User
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.ISeriesCover
@@ -27,6 +26,7 @@ import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
 import rx.subscriptions.CompositeSubscription
+import timber.log.Timber
 import java.util.*
 
 /**
@@ -167,7 +167,7 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                     { user: User? -> userRowAdapter.loggedIn = user != null },
-                    { CrashReporting.logException(it) })
+                    { Timber.e(it) })
         )
 
     }
@@ -191,19 +191,23 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
             R.string.row_updates, POS_UPDATES_LIST
         )
 
-        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+        rowsHelper.addObservablePagingRow(
+            ArrayObjectAdapter(presenterSelector),
             { proxerRepository.loadTopAccessSeries(it) }, R.string.row_top_access, POS_TOP_ACCESS_LIST
         )
 
-        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+        rowsHelper.addObservablePagingRow(
+            ArrayObjectAdapter(presenterSelector),
             { proxerRepository.loadTopRatingSeries(it) }, R.string.row_top_rating, POS_TOP_RATING_LIST
         )
 
-        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+        rowsHelper.addObservablePagingRow(
+            ArrayObjectAdapter(presenterSelector),
             { proxerRepository.loadTopRatingMovies(it) }, R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST
         )
 
-        rowsHelper.addObservablePagingRow(ArrayObjectAdapter(presenterSelector),
+        rowsHelper.addObservablePagingRow(
+            ArrayObjectAdapter(presenterSelector),
             { proxerRepository.loadAiringSeries(it) }, R.string.row_airing, POS_AIRING_LIST
         )
 
@@ -295,7 +299,7 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
                     userRowAdapter.removeLoading(UserAction.SYNC)
                     syncSubscription = null
                     requireContext().toast(R.string.user_sync_failed)
-                    CrashReporting.logException(it)
+                    Timber.e(it)
                 })
     }
 

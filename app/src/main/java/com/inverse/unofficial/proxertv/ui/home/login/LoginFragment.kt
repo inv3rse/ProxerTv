@@ -1,19 +1,19 @@
 package com.inverse.unofficial.proxertv.ui.home.login
 
 import android.os.Bundle
-import androidx.leanback.widget.GuidanceStylist
-import androidx.leanback.widget.GuidedAction
 import android.text.InputType
 import android.widget.Toast
 import androidx.leanback.app.GuidedStepSupportFragment
+import androidx.leanback.widget.GuidanceStylist
+import androidx.leanback.widget.GuidedAction
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.base.CrashReporting
 import com.inverse.unofficial.proxertv.base.ProxerRepository
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import timber.log.Timber
 
 /**
  * Fragment handling the user login.
@@ -59,27 +59,33 @@ class LoginFragment : GuidedStepSupportFragment() {
      * @param savedInstanceState The saved instance state from onCreate.
      */
     override fun onCreateActions(actions: MutableList<GuidedAction>, savedInstanceState: Bundle?) {
-        actions.add(GuidedAction.Builder(activity)
+        actions.add(
+            GuidedAction.Builder(activity)
                 .id(USERNAME_ID)
                 .editable(true)
                 .inputType(InputType.TYPE_CLASS_TEXT)
                 .editInputType(InputType.TYPE_CLASS_TEXT)
                 .description(getString(R.string.login_username_title))
-                .build())
+                .build()
+        )
 
-        actions.add(GuidedAction.Builder(activity)
+        actions.add(
+            GuidedAction.Builder(activity)
                 .id(PASSWORD_ID)
                 .editable(true)
                 .inputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
                 .editInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
                 .description(getString(R.string.login_password_title))
-                .build())
+                .build()
+        )
 
-        actions.add(GuidedAction.Builder(activity)
+        actions.add(
+            GuidedAction.Builder(activity)
                 .id(LOGIN_ID)
                 .title(getString(R.string.login_action_title))
                 .hasNext(true)
-                .build())
+                .build()
+        )
     }
 
     /**
@@ -126,24 +132,24 @@ class LoginFragment : GuidedStepSupportFragment() {
             loginSubscription?.unsubscribe()
             if (validateInput()) {
                 loginSubscription = repository.login(username, password)
-                        .flatMap { repository.syncUserList(true) }
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                                // on next
-                                { _ ->
-                                    finishGuidedStepSupportFragments()
-                                },
-                                // on error
-                                { error ->
-                                    if (error is ApiErrorException) {
-                                        showErrorMsg(error.msg ?: getString(R.string.login_error_general))
-                                    } else {
-                                        CrashReporting.logException(error)
-                                        showErrorMsg(getString(R.string.login_error_general))
-                                    }
-                                }
-                        )
+                    .flatMap { repository.syncUserList(true) }
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                        // on next
+                        {
+                            finishGuidedStepSupportFragments()
+                        },
+                        // on error
+                        { error ->
+                            if (error is ApiErrorException) {
+                                showErrorMsg(error.msg ?: getString(R.string.login_error_general))
+                            } else {
+                                Timber.e(error)
+                                showErrorMsg(getString(R.string.login_error_general))
+                            }
+                        }
+                    )
             }
         }
     }
