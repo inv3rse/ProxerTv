@@ -5,8 +5,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -18,6 +16,9 @@ import android.view.SurfaceView
 import android.view.View
 import androidx.leanback.app.PlaybackSupportFragment
 import androidx.leanback.widget.*
+import androidx.media.AudioAttributesCompat
+import androidx.media.AudioFocusRequestCompat
+import androidx.media.AudioManagerCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -68,7 +69,7 @@ class PlayerOverlayFragment : PlaybackSupportFragment(), OnItemViewClickedListen
 
     private var progressSpinner: View? = null
 
-    private var audioFocusRequest: AudioFocusRequest? = null
+    private var audioFocusRequest: AudioFocusRequestCompat? = null
     private val mOnAudioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_LOSS -> {
@@ -344,17 +345,18 @@ class PlayerOverlayFragment : PlaybackSupportFragment(), OnItemViewClickedListen
             return
         }
 
-        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+        val focusRequest = AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                AudioAttributesCompat.Builder()
+                    .setUsage(AudioAttributesCompat.USAGE_MEDIA)
+                    .setContentType(AudioAttributesCompat.CONTENT_TYPE_MOVIE)
                     .build()
             )
             .setOnAudioFocusChangeListener(mOnAudioFocusChangeListener)
             .build()
 
-        val result = audioManager.requestAudioFocus(focusRequest)
+
+        val result = AudioManagerCompat.requestAudioFocus(audioManager, focusRequest)
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             hasAudioFocus = true
             audioFocusRequest = focusRequest
@@ -366,7 +368,7 @@ class PlayerOverlayFragment : PlaybackSupportFragment(), OnItemViewClickedListen
     private fun abandonAudioFocus() {
         hasAudioFocus = false
         audioFocusRequest?.let {
-            audioManager.abandonAudioFocusRequest(it)
+            AudioManagerCompat.abandonAudioFocusRequest(audioManager, it)
         }
         audioFocusRequest = null
     }
