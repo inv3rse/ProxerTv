@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import com.inverse.unofficial.proxertv.R
 
+/**
+ * Details page for a series
+ */
 class DetailsActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

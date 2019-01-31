@@ -17,7 +17,6 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.inverse.unofficial.proxertv.R
-import com.inverse.unofficial.proxertv.model.SeriesList
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.ui.util.GlideRequests
 import com.inverse.unofficial.proxertv.ui.util.getStringRes
@@ -32,7 +31,6 @@ class SeriesDetailsRowPresenter(
 ) : RowPresenter() {
 
     private val pagePresenter = PageSelectionPresenter()
-    var seriesList: SeriesList = SeriesList.NONE
     var coverReadyListener: (() -> Unit)? = null
 
     init {
@@ -54,14 +52,6 @@ class SeriesDetailsRowPresenter(
         vh.bind(item)
     }
 
-
-    private fun createPageSelectionList(numPages: Int, currentPage: Int): List<PageSelection> {
-        return IntProgression
-            .fromClosedRange(0, numPages, 1)
-            .map { PageSelection(it + 1, it == currentPage) }
-    }
-
-
     /**
      * Interface for page selection click events
      */
@@ -74,15 +64,39 @@ class SeriesDetailsRowPresenter(
      * ViewHolder for the series details row
      */
     private inner class DetailsViewHolder(view: View) : RowPresenter.ViewHolder(view) {
-        private val coverImageView = view.findViewById(R.id.series_details_cover) as ImageView
-        private val titleTextView = view.findViewById(R.id.series_detail_title) as TextView
-        private val descriptionTextView = view.findViewById(R.id.series_detail_description) as TextView
-        private val genresTextView = view.findViewById(R.id.series_details_genres) as TextView
+        private val coverImageView: ImageView = view.findViewById(R.id.series_details_cover)
+        private val titleTextView: TextView = view.findViewById(R.id.series_detail_title)
+        private val descriptionTextView: TextView = view.findViewById(R.id.series_detail_description)
+        private val genresTextView: TextView = view.findViewById(R.id.series_details_genres)
         private val pagesView: View = view.findViewById(R.id.series_detail_pages_view)
-        private val pagesGridView = view.findViewById(R.id.series_detail_pages) as HorizontalGridView
-        private val selectListButton = view.findViewById(R.id.series_details_select_list_button) as Button
+        private val pagesGridView: HorizontalGridView = view.findViewById(R.id.series_detail_pages)
+        private val selectListButton: Button = view.findViewById(R.id.series_details_select_list_button)
+
+        private val pagesAdapter = ArrayObjectAdapter(pagePresenter)
+        private val bridgeAdapter = ItemBridgeAdapter(pagesAdapter)
 
         private var item: DetailsData? = null
+
+        init {
+            bridgeAdapter.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
+                override fun onBind(viewHolder: ItemBridgeAdapter.ViewHolder) {
+                    super.onBind(viewHolder)
+                    viewHolder.presenter.setOnClickListener(viewHolder.viewHolder) {
+                        item?.let {
+                            val selection = viewHolder.item as PageSelection
+                            selectSeriesDetailsRowListener.onPageSelected(it, selection)
+                        }
+                    }
+                }
+
+                override fun onUnbind(viewHolder: ItemBridgeAdapter.ViewHolder) {
+                    super.onUnbind(viewHolder)
+                    viewHolder.presenter.setOnClickListener(viewHolder.viewHolder, null)
+                }
+            })
+
+            pagesGridView.adapter = bridgeAdapter
+        }
 
         /**
          * Bind the given item
@@ -93,32 +107,12 @@ class SeriesDetailsRowPresenter(
             titleTextView.text = item.series.name
             descriptionTextView.text = item.series.description
             genresTextView.text = item.series.genres
-            selectListButton.setText(seriesList.getStringRes())
+            selectListButton.setText(item.seriesList.getStringRes())
             selectListButton.setOnClickListener { selectSeriesDetailsRowListener.onSelectListClicked(item) }
 
             if (item.series.pages() > 1) {
+                pagesAdapter.setItems(createPageSelectionList(item.series.pages(), item.currentPage), null)
                 pagesView.visibility = View.VISIBLE
-
-                val pagesAdapter = ArrayObjectAdapter(pagePresenter)
-                pagesAdapter.addAll(0, createPageSelectionList(item.series.pages(), item.currentPage))
-
-                val bridgeAdapter = ItemBridgeAdapter(pagesAdapter)
-
-                bridgeAdapter.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
-                    override fun onBind(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                        super.onBind(viewHolder)
-                        viewHolder.presenter.setOnClickListener(viewHolder.viewHolder) {
-                            selectSeriesDetailsRowListener.onPageSelected(item, (viewHolder.item as PageSelection))
-                        }
-                    }
-
-                    override fun onUnbind(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                        super.onUnbind(viewHolder)
-                        viewHolder.presenter.setOnClickListener(viewHolder.viewHolder, null)
-                    }
-                })
-
-                pagesGridView.adapter = bridgeAdapter
             } else {
                 pagesView.visibility = View.INVISIBLE
             }
@@ -148,6 +142,12 @@ class SeriesDetailsRowPresenter(
                     }
                 })
                 .into(coverImageView)
+        }
+
+        private fun createPageSelectionList(numPages: Int, currentPage: Int): List<PageSelection> {
+            return IntProgression
+                .fromClosedRange(0, numPages, 1)
+                .map { PageSelection(it + 1, it == currentPage) }
         }
     }
 }

@@ -21,19 +21,6 @@ import io.reactivex.subjects.BehaviorSubject
 import timber.log.Timber
 import javax.inject.Inject
 
-data class DetailsData(
-    val series: Series,
-    val seriesList: SeriesList,
-    val userProgress: Int,
-    val currentPage: Int
-)
-
-data class EpisodeCategory(
-    val title: String,
-    val episodes: List<Int>,
-    val progress: Int
-)
-
 /**
  * ViewModel for the [SeriesDetailsFragment]
  */
@@ -80,7 +67,7 @@ class DetailsViewModel @Inject constructor(
                 proxerRepository.observerSeriesListState(seriesId).toV2(),
                 progressObservable,
                 pageSubject
-            ) { series, list, progress, page -> DetailsData(series, list, progress, page) }
+            ) { series, list, progress, page -> DetailsData(series, list, progress, currentPage(page, progress)) }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeBy(
@@ -101,11 +88,7 @@ class DetailsViewModel @Inject constructor(
                 pageSubject.observeOn(Schedulers.io())
             )
             .flatMap { (progress, page) ->
-                val loadPage = if (page == -1) {
-                    ProxerClient.getTargetPageForEpisode(progress + 1)
-                } else {
-                    page
-                }
+                val loadPage = currentPage(page, progress)
 
                 Observables.combineLatest(
                     proxerRepository.loadEpisodesPage(seriesId, loadPage).toV2(),
@@ -130,6 +113,14 @@ class DetailsViewModel @Inject constructor(
 
 
         progressObservable.connect().addTo(disposables)
+    }
+
+    private fun currentPage(page: Int, progress: Int): Int {
+        return if (page == -1) {
+            ProxerClient.getTargetPageForEpisode(progress + 1)
+        } else {
+            page
+        }
     }
 
     /**

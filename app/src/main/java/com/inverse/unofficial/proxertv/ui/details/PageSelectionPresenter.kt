@@ -34,6 +34,6 @@ class PageSelectionPresenter : Presenter() {
     override fun onUnbindViewHolder(viewHolder: ViewHolder?) {}
 
     private class ActionViewHolder(view: View) : ViewHolder(view) {
-        val button = view.findViewById(R.id.action_button) as Button
+        val button: Button = view.findViewById(R.id.action_button)
     }
 }
