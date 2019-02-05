@@ -109,7 +109,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
             playbackState = state
             updateProgress()
             val index = if (isMediaPlaying()) PlaybackControlsRow.PlayPauseAction.INDEX_PAUSE else
-                PlaybackControlsRow.PlayPauseAction.INDEX_PAUSE
+                PlaybackControlsRow.PlayPauseAction.INDEX_PLAY
             if (playPauseAction.index != index) {
                 playPauseAction.index = index
                 notifyItemChanged(actionsAdapter, playPauseAction)

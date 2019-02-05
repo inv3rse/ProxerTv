@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'io.fabric'
 
@@ -56,9 +57,21 @@ android {
     }
 }
 
+androidExtensions {
+    experimental = true
+}
+
 // keep generated classes
 kapt {
     generateStubs = true
+}
+
+// androidx.media:media:1.1.0-alpha01 tries to pull core:1.1.0-alpha04 which does not mix well with the stable versions.
+// Because we only use androidx.media for the AudioFocusRequestCompat it should be fine.
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.core:core:1.0.1'
+    }
 }
 
 dependencies {
@@ -80,10 +93,10 @@ dependencies {
     testImplementation "androidx.arch.core:core-testing:$lifecycle_version"
 
     // Support Library
-    implementation('androidx.core:core:1.0.0')
+    implementation 'androidx.core:core:1.0.1'
     implementation 'androidx.leanback:leanback:1.0.0'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.media:media:1.1.0-alpha01'
+    implementation('androidx.media:media:1.1.0-alpha01')
 
     // constraint layout
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'

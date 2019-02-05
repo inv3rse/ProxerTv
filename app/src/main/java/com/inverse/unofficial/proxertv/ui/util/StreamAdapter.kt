@@ -7,10 +7,9 @@ import com.inverse.unofficial.proxertv.model.Stream
  * Custom Adapter that handles Streams and their selection/failed state
  */
 class StreamAdapter : ObjectAdapter(StreamPresenter()) {
-    private val streams = arrayListOf<Stream>()
-    private val failedStreams = arrayListOf<Stream>()
+    private val streams = mutableListOf<Stream>()
+    private val failedStreams = mutableListOf<Stream>()
     private var currentStream: Stream? = null
-
 
     override fun get(position: Int): StreamHolder? {
         val stream = streams[position]
@@ -21,33 +20,32 @@ class StreamAdapter : ObjectAdapter(StreamPresenter()) {
         return streams.size
     }
 
-    fun addStream(stream: Stream) {
-        if (!streams.contains(stream)) {
-            streams.add(stream)
-            notifyItemRangeInserted(streams.size - 1, 1)
-        }
+    fun setStreams(streams: List<Stream>) {
+        this.streams.clear()
+        this.streams.addAll(streams)
+        notifyChanged()
     }
 
     fun addFailed(stream: Stream) {
-        ifExistent(stream, { index ->
+        ifExistent(stream) { index ->
             failedStreams.add(stream)
             notifyItemRangeChanged(index, 1)
-        })
+        }
     }
 
     fun removeFailed(stream: Stream) {
-        ifExistent(stream, { index ->
+        ifExistent(stream) { index ->
             if (failedStreams.remove(stream)) {
                 if (currentStream == stream) {
                     currentStream = null
                 }
                 notifyItemRangeChanged(index, 1)
             }
-        })
+        }
     }
 
     fun setCurrentStream(stream: Stream) {
-        ifExistent(stream, { newIndex ->
+        ifExistent(stream) { newIndex ->
             val oldIndex = if (currentStream != null) streams.indexOf(currentStream!!) else null
             currentStream = stream
 
@@ -55,7 +53,7 @@ class StreamAdapter : ObjectAdapter(StreamPresenter()) {
                 notifyItemRangeChanged(oldIndex, 1)
             }
             notifyItemRangeChanged(newIndex, 1)
-        })
+        }
     }
 
     fun getCurrentStream(): Stream? {

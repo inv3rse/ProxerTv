@@ -1,6 +1,5 @@
 package com.inverse.unofficial.proxertv.ui.details
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.view.View
@@ -95,9 +94,7 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
         val series = (model.detailState.value as? SuccessState)?.data?.series
 
         if (series != null && item is EpisodeAdapter.EpisodeHolder) {
-            val intent = Intent(activity, PlayerActivity::class.java)
-            intent.putExtra(PlayerActivity.EXTRA_EPISODE, item.episode)
-            intent.putExtra(PlayerActivity.EXTRA_SERIES, series)
+            val intent = PlayerActivity.createIntent(requireContext(), series, item.episode)
             startActivity(intent)
         }
     }

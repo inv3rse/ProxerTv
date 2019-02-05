@@ -164,13 +164,13 @@ class ProxerClient(
         val request = Request.Builder().get().url(serverConfig.episodeStreamsUrl(seriesId, episode, subType)).build()
 
         return BodyCallObservable(httpClient.newCall(request))
-            .flatMap(fun(body): Observable<Stream> {
+            .flatMap(fun(body): Observable<HttpUrl> {
                 val content = body.string()
                 if (containsCaptcha(content)) {
                     throw SeriesCaptchaException()
                 }
 
-                val unresolvedStreams = arrayListOf<Stream>()
+                val unresolvedStreams = arrayListOf<HttpUrl>()
                 val regex = Regex("<script type=\"text/javascript\">\n\n.*var streams = (\\[.*])")
                 val findResult = regex.find(content)
                 if (findResult != null) {
@@ -184,10 +184,10 @@ class ProxerClient(
                             if (url != null && code != null && providerName != null) {
                                 val replacedUrl = if (url.isEmpty()) code else url.replace("#", code)
                                 // add missing 'http'
-                                val fixedUrl = if (replacedUrl.startsWith("//")) "http:" + replacedUrl else replacedUrl
+                                val fixedUrl = if (replacedUrl.startsWith("//")) "http:$replacedUrl" else replacedUrl
                                 val httpUrl = HttpUrl.parse(fixedUrl)
                                 if (httpUrl != null) {
-                                    unresolvedStreams.add(Stream(fixedUrl, providerName))
+                                    unresolvedStreams.add(httpUrl)
                                 }
                             }
                         }
@@ -197,16 +197,15 @@ class ProxerClient(
                 return Observable.from(unresolvedStreams)
             })
             // resolve the link to the stream provider to the actual video stream
-            .flatMap(fun(unresolvedStream): Observable<Stream> {
-
+            .flatMap { url ->
                 val resolveObservables = streamResolvers
                     .asSequence()
-                    .filter { it.appliesToUrl(unresolvedStream.streamUrl) }
-                    .map { it.resolveStream(unresolvedStream.streamUrl) }
+                    .filter { it.appliesToUrl(url) }
+                    .map { it.resolveStream(url) }
                     .toList()
 
-                return Observable.mergeDelayError(resolveObservables)
-            })
+                Observable.mergeDelayError(resolveObservables)
+            }
     }
 
     private fun loadSeriesList(url: String): Observable<List<SeriesCover>> {

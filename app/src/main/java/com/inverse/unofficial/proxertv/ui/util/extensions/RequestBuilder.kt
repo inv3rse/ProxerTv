@@ -11,7 +11,7 @@ import com.bumptech.glide.request.target.Target
  */
 fun <T> RequestBuilder<T>.simpleListener(
     onLoadFailed: (GlideException?) -> Unit = { },
-    onResourceReady: () -> Unit = { }
+    onResourceReady: (T) -> Unit = { }
 ): RequestBuilder<T> {
     return listener(object : RequestListener<T> {
         override fun onLoadFailed(
@@ -31,7 +31,7 @@ fun <T> RequestBuilder<T>.simpleListener(
             dataSource: DataSource?,
             isFirstResource: Boolean
         ): Boolean {
-            onResourceReady()
+            onResourceReady(resource)
             return false
         }
     })

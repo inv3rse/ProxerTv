@@ -8,6 +8,7 @@ import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
 import com.inverse.unofficial.proxertv.base.db.StorageModule
 import com.inverse.unofficial.proxertv.ui.details.DetailsViewModel
+import com.inverse.unofficial.proxertv.ui.player.PlayerViewModel
 import dagger.Component
 import dagger.Module
 import dagger.Provides
@@ -53,4 +54,5 @@ interface BaseComponent {
     fun getGlideHttpClient(): OkHttpClient
 
     fun getDetailsViewModel(): DetailsViewModel
+    fun getPlayerViewModel(): PlayerViewModel
 }
