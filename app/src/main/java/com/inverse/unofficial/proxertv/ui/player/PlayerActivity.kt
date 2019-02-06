@@ -24,6 +24,7 @@ import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.model.Series
 import com.inverse.unofficial.proxertv.model.ServerConfig
 import com.inverse.unofficial.proxertv.model.Stream
+import com.inverse.unofficial.proxertv.ui.util.ErrorFragment
 import com.inverse.unofficial.proxertv.ui.util.ErrorState
 import com.inverse.unofficial.proxertv.ui.util.LoadingState
 import com.inverse.unofficial.proxertv.ui.util.SuccessState
@@ -35,8 +36,7 @@ import timber.log.Timber
 /**
  * Player for an [Episode] with multiple stream options.
  */
-class PlayerActivity : FragmentActivity() {
-
+class PlayerActivity : FragmentActivity(), ErrorFragment.EventListener {
     private lateinit var overlayFragment: PlayerOverlayFragment
     private lateinit var model: PlayerViewModel
     private lateinit var videoPlayer: VideoPlayer
@@ -70,6 +70,7 @@ class PlayerActivity : FragmentActivity() {
             when (state) {
                 is LoadingState -> {
                     player_buffer_spinner.isVisible = true
+                    videoPlayer.stop()
                 }
                 is SuccessState -> {
                     val streams = state.data
@@ -81,6 +82,14 @@ class PlayerActivity : FragmentActivity() {
                 }
                 is ErrorState -> {
                     player_buffer_spinner.isVisible = false
+
+                    val msg = if (state.error is PlayerViewModel.NoSupportedStreamException) {
+                        getString(R.string.stream_error_no_streams_found)
+                    } else {
+                        getString(R.string.stream_error_general)
+                    }
+
+                    showErrorFragment(msg)
                 }
             }
         })
@@ -121,11 +130,15 @@ class PlayerActivity : FragmentActivity() {
         initFromExtras(model)
     }
 
-    private fun playStream(stream: Stream) {
+    override fun onDismissError() {
+        finish()
+    }
+
+    private fun playStream(stream: Stream, keepPosition: Boolean = false) {
         overlayFragment.streamAdapter.removeFailed(stream)
         overlayFragment.streamAdapter.setCurrentStream(stream)
 
-        videoPlayer.initPlayer(Uri.parse(stream.streamUrl), this, false)
+        videoPlayer.initPlayer(Uri.parse(stream.streamUrl), this, keepPosition)
         videoPlayer.play()
     }
 
@@ -177,6 +190,14 @@ class PlayerActivity : FragmentActivity() {
         mediaSession.setSessionActivity(pi)
     }
 
+    private fun showErrorFragment(message: String?) {
+        val errorFragment = ErrorFragment.newInstance(getString(R.string.stream_error_title), message)
+
+        supportFragmentManager.beginTransaction()
+            .add(R.id.player_root_frame, errorFragment)
+            .commit()
+    }
+
     /**
      * Handles controls from MediaSession
      */
@@ -209,25 +230,8 @@ class PlayerActivity : FragmentActivity() {
 
             val url = extras?.getString(CustomPlayerAction.KEY_STREAM_URL) ?: return
             val providerName = extras.getString(CustomPlayerAction.KEY_PROVIDER_NAME) ?: return
-            playStream(Stream(url, providerName))
+            playStream(Stream(url, providerName), keepPosition = true)
         }
-    }
-
-    private fun setPlaybackState(state: Int) {
-        val playbackState = PlaybackState.Builder()
-            .setState(state, videoPlayer.position, 1F)
-            .setBufferedPosition(videoPlayer.bufferedPosition)
-            .setActions(getStateActions(state))
-            .build()
-
-        mediaSession.setPlaybackState(playbackState)
-    }
-
-    private fun getStateActions(state: Int): Long {
-        val playPause =
-            if (state == PlaybackState.STATE_PLAYING) PlaybackState.ACTION_PAUSE else PlaybackState.ACTION_PLAY
-
-        return playPause or PlaybackState.ACTION_FAST_FORWARD or PlaybackState.ACTION_REWIND
     }
 
     /**
@@ -282,6 +286,23 @@ class PlayerActivity : FragmentActivity() {
             overlayFragment.streamAdapter.getCurrentStream()?.let { currentStream ->
                 overlayFragment.streamAdapter.addFailed(currentStream)
             }
+        }
+
+        private fun setPlaybackState(state: Int) {
+            val playbackState = PlaybackState.Builder()
+                .setState(state, videoPlayer.position, 1F)
+                .setBufferedPosition(videoPlayer.bufferedPosition)
+                .setActions(getStateActions(state))
+                .build()
+
+            mediaSession.setPlaybackState(playbackState)
+        }
+
+        private fun getStateActions(state: Int): Long {
+            val playPause =
+                if (state == PlaybackState.STATE_PLAYING) PlaybackState.ACTION_PAUSE else PlaybackState.ACTION_PLAY
+
+            return playPause or PlaybackState.ACTION_FAST_FORWARD or PlaybackState.ACTION_REWIND
         }
     }
 

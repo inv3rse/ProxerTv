@@ -70,7 +70,9 @@ class PlayerViewModel @Inject constructor(
                 }
 
                 override fun onComplete() {
-                    streams.value = SuccessState(streamList)
+                    if (streamList.isEmpty()) {
+                        streams.value = ErrorState(error = NoSupportedStreamException())
+                    }
                 }
 
                 override fun onError(e: Throwable) {
@@ -108,4 +110,6 @@ class PlayerViewModel @Inject constructor(
     override fun onCleared() {
         disposables.dispose()
     }
+
+    class NoSupportedStreamException: Exception()
 }

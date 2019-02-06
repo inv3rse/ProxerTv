@@ -15,10 +15,12 @@
     <string name="row_search_results">Suchergebnisse</string>
     <string name="description_active_stream">Aktiver Stream</string>
     <string name="dismiss_error">Zurück</string>
-    <string name="stream_error">Stream Fehler</string>
-    <string name="no_streams_found">Keine unterstützden Streams gefunden.</string>
     <string name="stream_captcha_error">Proxer.me benötigt eine captcha Eingabe. Diese kann von jedem Gerät mit derselben IP getätigt werden.</string>
     <string name="series_cover_description">Seriencover</string>
+
+    <string name="stream_error_title">Stream Fehler</string>
+    <string name="stream_error_no_streams_found">Keine unterstützden Streams gefunden.</string>
+    <string name="stream_error_general">Fehler beim laden der Streams.</string>
 
     <!-- Series Details -->
     <string name="series_details_list_label"><b>Liste:</b></string>

@@ -7,7 +7,6 @@ import androidx.leanback.app.ErrorSupportFragment
 import com.inverse.unofficial.proxertv.R
 
 class ErrorFragment : ErrorSupportFragment(), View.OnClickListener {
-    var dismissListener: ErrorDismissListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,18 +25,25 @@ class ErrorFragment : ErrorSupportFragment(), View.OnClickListener {
     }
 
     override fun onClick(p0: View?) {
-        dismissListener?.onDismiss()
+        when {
+            targetFragment != null -> {
+                (targetFragment as? EventListener)?.onDismissError()
+            }
+            else -> {
+                (activity as? EventListener)?.onDismissError()
+            }
+        }
     }
 
-    interface ErrorDismissListener {
-        fun onDismiss()
+    interface EventListener {
+        fun onDismissError()
     }
 
     companion object {
         private const val KEY_TITLE = "KEY_TITLE"
         private const val KEY_MSG = "KEY_MSG"
 
-        fun newInstance(title: String, message: String): ErrorFragment {
+        fun newInstance(title: String, message: String?): ErrorFragment {
             val arguments = Bundle()
             arguments.putString(KEY_TITLE, title)
             arguments.putString(KEY_MSG, message)

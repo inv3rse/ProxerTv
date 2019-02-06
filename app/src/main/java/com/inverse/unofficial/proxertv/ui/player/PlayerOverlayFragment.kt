@@ -81,49 +81,4 @@ class PlayerOverlayFragment : PlaybackSupportFragment(), OnItemViewClickedListen
         adapter = rowsAdapter
         setOnItemViewClickedListener(this)
     }
-
-//        private fun loadStreams() {
-//        val client = App.component.getProxerClient()
-//        streamAdapter.clear()
-//
-//        subscriptions.add(
-//            client.loadEpisodeStreams(series!!.id, episode!!.episodeNum, episode!!.languageType)
-//                .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
-//                .subscribe({ stream ->
-//                    // add the stream to the adapter first
-//                    streamAdapter.addStream(stream)
-//                    if (streamAdapter.getCurrentStream() == null) {
-//                        setStream(stream)
-//                    }
-//                }, { throwable ->
-//                    if (throwable is ProxerClient.SeriesCaptchaException) {
-//                        showErrorFragment(getString(R.string.stream_captcha_error))
-//                    } else {
-//                        Timber.e(throwable)
-//                        checkValidStreamsFound()
-//                    }
-//                }, { checkValidStreamsFound() })
-//        )
-//    }
-//
-//    private fun checkValidStreamsFound() {
-//        if (streamAdapter.size() == 0) {
-//            showErrorFragment(getString(R.string.no_streams_found))
-//        }
-//    }
-//
-//    private fun showErrorFragment(message: String) {
-//        val errorFragment = ErrorFragment.newInstance(getString(R.string.stream_error), message)
-//        errorFragment.dismissListener = object : ErrorFragment.ErrorDismissListener {
-//            override fun onDismiss() {
-//                activity?.finish()
-//            }
-//        }
-//
-//        requireFragmentManager().beginTransaction()
-//            .detach(this) // the error fragment would sometimes not keep the focus
-//            .add(R.id.player_root_frame, errorFragment)
-//            .commit()
-//    }
-
 }
