@@ -17,6 +17,7 @@
         android:transitionName="series_cover"
         app:layout_constraintDimensionRatio="0.714285714"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         tools:scaleType="centerCrop"
         tools:src="@drawable/proxer_tv_banner" />
 
