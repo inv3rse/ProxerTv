@@ -1,69 +1,27 @@
-machine:
-    java:
-        version: openjdk8
-
-    environment:
-        GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError"'
-        ANDROID_HOME: /usr/local/android-sdk-linux
-        ANDROID_BUILD_TOOLS: 25.0.2
-
-dependencies:
-    pre:
-        # Remove any leftover lock from previous builds
-        - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
-
-        # Make sure we have the sdkmanager available, and update the Android SDK tools if not
-        - if [ ! -e $ANDROID_HOME/tools/bin/sdkmanager ]; then echo y | android update sdk --no-ui --all --filter tools; fi
-
-        # Pre-accept Android SDK components licenses
-        - mkdir "$ANDROID_HOME/licenses" || true
-        - echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55" > "$ANDROID_HOME/licenses/android-sdk-license"
-
-        # Install all the required SDK components
-        - $ANDROID_HOME/tools/bin/sdkmanager --verbose "platform-tools" "build-tools;"$ANDROID_BUILD_TOOLS "extras;google;m2repository"
-
-    override:
-        # Force Gradle to pre-download dependencies for the app module (the default would only be for the root, which is useless)
-        - if [ -f ./gradlew ]; then ./gradlew app:dependencies --console=plain --no-daemon;else gradle app:dependencies --console=plain --no-daemon;fi
-
-    cache_directories:
-        # Android SDK
-        - /usr/local/android-sdk-linux/tools
-        - /usr/local/android-sdk-linux/platform-tools
-        - /usr/local/android-sdk-linux/build-tools
-        - /usr/local/android-sdk-linux/licenses
-        - /usr/local/android-sdk-linux/extras/google/m2repository
-
-        # Gradle caches
-        - /home/ubuntu/.gradle/caches/
-        - /home/ubuntu/.gradle/wrapper/
-
-test:
-#    pre:
-#        - emulator -avd circleci-android24 -no-window:
-#            background: true
-#            parallel: true
-
-    override:
-        # Run lint and unit tests
-        - ./gradlew assembleDebug assembleDebugAndroidTest check -PdisablePreDex --no-daemon --console=plain --continue
-
-        # instrumentation tests
-#        - circle-android wait-for-boot
-#        - ./gradlew connectedAndroidTest -PdisablePreDex --no-daemon --console=plain
-
-    post:
-        # Collect the JUnit reports
-        - mkdir -p $CIRCLE_TEST_REPORTS/reports/junit
-        - find app/build/test-results/ -name "*.xml" -exec cp {} $CIRCLE_TEST_REPORTS/reports/junit/ \;
-
-        # Collect Instrumentation test results
-#        - cp -r app/build/outputs/androidTest-results/* $CIRCLE_TEST_REPORTS/reports/instrumentation/
-
-        # Collect the Android Lint reports
-        - mkdir -p $CIRCLE_TEST_REPORTS/reports/lint
-        - find app/build/reports -name "lint*.html" -exec cp {} $CIRCLE_TEST_REPORTS/reports/lint/ \;
-        - find app/build/reports -name "lint*.xml" -exec cp {} $CIRCLE_TEST_REPORTS/reports/lint/ \;
-
-        # Copy apk to artifacts
-        - cp -r app/build/outputs/apk $CIRCLE_ARTIFACTS
+version: 2
+jobs:
+    build:
+        working_directory: ~/code
+        docker:
+        - image: circleci/android:api-28
+        environment:
+            JVM_OPTS: -Xmx3200m
+        steps:
+        - checkout
+        - restore_cache:
+              key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+        - run:
+              name: Download Dependencies
+              command: ./gradlew androidDependencies
+        - save_cache:
+              paths:
+              - ~/.gradle
+              key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+        - run:
+              name: Run Tests
+              command: ./gradlew lint test
+        - store_artifacts:
+              path: app/build/reports
+              destination: reports
+        - store_test_results:
+              path: app/build/test-results
