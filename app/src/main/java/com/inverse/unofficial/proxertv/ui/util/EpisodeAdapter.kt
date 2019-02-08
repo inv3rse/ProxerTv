@@ -4,9 +4,15 @@ import androidx.leanback.widget.ObjectAdapter
 import com.inverse.unofficial.proxertv.model.Episode
 
 class EpisodeAdapter(
-        private val episodes: List<Episode>,
+        episodes: List<Episode>,
         progress: Int,
         presenter: EpisodePresenter) : ObjectAdapter(presenter) {
+
+    var episodes: List<Episode> = episodes
+        set(value) {
+            field = value
+            notifyChanged()
+        }
 
     var progress = progress
         set(value) {
@@ -24,7 +30,7 @@ class EpisodeAdapter(
     }
 
     data class EpisodeHolder(
-            val episode: Episode,
-            val watched: Boolean
+        val episode: Episode,
+        val watched: Boolean
     )
 }

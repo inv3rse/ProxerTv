@@ -5,12 +5,17 @@ import android.os.Handler
 import android.view.View
 import androidx.fragment.app.FragmentTransaction
 import androidx.leanback.app.DetailsSupportFragment
-import androidx.leanback.widget.*
+import androidx.leanback.widget.OnItemViewClickedListener
+import androidx.leanback.widget.Presenter
+import androidx.leanback.widget.Row
+import androidx.leanback.widget.RowPresenter
 import androidx.lifecycle.Observer
 import com.inverse.unofficial.proxertv.base.App
-import com.inverse.unofficial.proxertv.model.Episode
 import com.inverse.unofficial.proxertv.ui.player.PlayerActivity
-import com.inverse.unofficial.proxertv.ui.util.*
+import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
+import com.inverse.unofficial.proxertv.ui.util.ErrorState
+import com.inverse.unofficial.proxertv.ui.util.GlideApp
+import com.inverse.unofficial.proxertv.ui.util.SuccessState
 import com.inverse.unofficial.proxertv.ui.util.extensions.provideViewModel
 
 /**
@@ -20,8 +25,6 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
     SeriesDetailsRowPresenter.SeriesDetailsRowListener {
 
     private lateinit var detailsAdapter: DetailsAdapter
-    private lateinit var episodePresenter: EpisodePresenter
-
     private lateinit var model: DetailsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +38,7 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
             ?: throw IllegalArgumentException("seriesId must be set")
 
         val glide = GlideApp.with(this)
-        detailsAdapter = DetailsAdapter(glide, this, object : CoverLoadListener {
+        detailsAdapter = DetailsAdapter(glide, this, seriesId, object : CoverLoadListener {
             override fun onCoverLoadFailed() {
                 activity?.startPostponedEnterTransition()
                 handler.removeCallbacksAndMessages(null)
@@ -47,7 +50,6 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
             }
         })
 
-        episodePresenter = EpisodePresenter(glide, seriesId)
         adapter = detailsAdapter
         onItemViewClickedListener = this
 
@@ -72,14 +74,7 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
         model.episodesState.observe(viewLifecycleOwner, Observer {
             when (it) {
                 is SuccessState -> {
-                    detailsAdapter.episodes = it.data.map { category ->
-                        val header = HeaderItem(category.title)
-
-                        val episodes = category.episodes.map { num -> Episode(num, category.title) }
-                        val adapter = EpisodeAdapter(episodes, category.progress, episodePresenter)
-
-                        ListRow(header, adapter)
-                    }
+                    detailsAdapter.episodes = it.data
                 }
             }
         })

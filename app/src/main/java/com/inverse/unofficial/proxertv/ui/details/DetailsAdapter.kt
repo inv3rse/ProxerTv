@@ -1,9 +1,9 @@
 package com.inverse.unofficial.proxertv.ui.details
 
-import androidx.leanback.widget.ClassPresenterSelector
-import androidx.leanback.widget.ListRow
-import androidx.leanback.widget.ListRowPresenter
-import androidx.leanback.widget.ObjectAdapter
+import androidx.leanback.widget.*
+import com.inverse.unofficial.proxertv.model.Episode
+import com.inverse.unofficial.proxertv.ui.util.EpisodeAdapter
+import com.inverse.unofficial.proxertv.ui.util.EpisodePresenter
 import com.inverse.unofficial.proxertv.ui.util.GlideRequests
 
 /**
@@ -12,8 +12,12 @@ import com.inverse.unofficial.proxertv.ui.util.GlideRequests
 class DetailsAdapter(
     glide: GlideRequests,
     selectSeriesDetailsRowListener: SeriesDetailsRowPresenter.SeriesDetailsRowListener,
+    seriesId: Int,
     coverLoadListener: CoverLoadListener
 ) : ObjectAdapter() {
+
+    private val episodePresenter = EpisodePresenter(glide, seriesId)
+    private val episodeAdapters = mutableMapOf<String, EpisodeAdapter>()
 
     init {
         val presenterSelector = ClassPresenterSelector()
@@ -43,19 +47,27 @@ class DetailsAdapter(
             }
         }
 
-    var episodes = emptyList<ListRow>()
+    var episodes = emptyList<EpisodeCategory>()
         set(value) {
-            val removeCount = field.size
+            val oldCount = field.size
             field = value
 
-            val start = if (seriesDetails == null) 0 else 1
+            var changed = oldCount != value.count()
+            value.forEach { category ->
+                val adapter = episodeAdapters[category.title]
+                val episodes = category.episodes.map { num -> Episode(num, category.title) }
 
-            if (removeCount > 0) {
-                notifyItemRangeRemoved(start, removeCount)
+                if (adapter == null) {
+                    episodeAdapters[category.title] = EpisodeAdapter(episodes, category.progress, episodePresenter)
+                    changed = true
+                } else {
+                    adapter.episodes = episodes
+                    adapter.progress = category.progress
+                }
             }
 
-            if (value.isNotEmpty()) {
-                notifyItemRangeInserted(start, value.size)
+            if (changed) {
+                notifyChanged()
             }
         }
 
@@ -67,9 +79,18 @@ class DetailsAdapter(
         val series = seriesDetails
 
         return if (series != null) {
-            if (position == 0) series else episodes[position - 1]
+            if (position == 0) series else getEpisodesRow(position - 1)
         } else {
-            episodes[position]
+            getEpisodesRow(position)
         }
+    }
+
+    private fun getEpisodesRow(position: Int): ListRow {
+        val category = episodes[position]
+
+        val header = HeaderItem(category.title)
+        val adapter = episodeAdapters[category.title]
+
+        return ListRow(position.toLong(), header, adapter)
     }
 }
