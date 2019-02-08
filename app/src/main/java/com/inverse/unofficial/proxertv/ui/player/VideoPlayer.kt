@@ -238,9 +238,8 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
                     mainHandler.postDelayed(this, PROGRESS_UPDATE_PERIOD)
                 }
             }
+            mainHandler.post(progressRunnable)
         }
-
-        mainHandler.post(progressRunnable)
     }
 
     private fun stopProgressUpdate() {
@@ -274,8 +273,8 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
      */
     private fun setVideoRendererDisabled(disabled: Boolean) {
         (0..(player.rendererCount - 1))
-                .filter { player.getRendererType(it) == C.TRACK_TYPE_VIDEO }
-                .forEach { trackSelector.setRendererDisabled(it, disabled) }
+            .filter { player.getRendererType(it) == C.TRACK_TYPE_VIDEO }
+            .forEach { trackSelector.setRendererDisabled(it, disabled) }
     }
 
     interface StatusListener {
@@ -316,7 +315,12 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
     }
 
     private inner class VideoEventListener : SimpleExoPlayer.VideoListener {
-        override fun onVideoSizeChanged(width: Int, height: Int, unappliedRotationDegrees: Int, pixelWidthHeightRatio: Float) {
+        override fun onVideoSizeChanged(
+            width: Int,
+            height: Int,
+            unappliedRotationDegrees: Int,
+            pixelWidthHeightRatio: Float
+        ) {
             aspectRatio = if (height == 0) 1F else width * pixelWidthHeightRatio / height
             aspectRatioFrameLayout?.setAspectRatio(aspectRatio)
         }
