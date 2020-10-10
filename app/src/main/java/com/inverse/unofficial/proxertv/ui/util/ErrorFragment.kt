@@ -18,7 +18,7 @@ class ErrorFragment : ErrorSupportFragment(), View.OnClickListener {
         buttonClickListener = this
     }
 
-    override fun onAttach(context: Context?) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
         val drawableId = androidx.leanback.R.drawable.lb_ic_sad_cloud
         imageDrawable = resources.getDrawable(drawableId, context?.theme)

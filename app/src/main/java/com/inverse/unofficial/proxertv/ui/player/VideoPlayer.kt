@@ -12,16 +12,23 @@ import android.view.SurfaceView
 import androidx.media.AudioAttributesCompat
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
-import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.C
+import com.google.android.exoplayer2.DefaultRenderersFactory
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
-import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.TrackGroupArray
+import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.video.VideoListener
 import timber.log.Timber
 
 /**
@@ -41,6 +48,7 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
     // ui, context holding
     private var aspectRatioFrameLayout: AspectRatioFrameLayout? = null
     private var surface: Surface? = null
+
     // might be context holding, user might have to remove it
     private var statusListener: StatusListener? = null
 
@@ -51,15 +59,19 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
         private set
 
     init {
-        val bandwidthMeter = DefaultBandwidthMeter()
-        val videoTrackSelectionFactory = AdaptiveTrackSelection.Factory(bandwidthMeter)
-        trackSelector = DefaultTrackSelector(videoTrackSelectionFactory)
+        val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
 
-        val rendererFactory = DefaultRenderersFactory(context, null)
+        val trackSelectionFactory = AdaptiveTrackSelection.Factory()
+        trackSelector = DefaultTrackSelector(context, trackSelectionFactory)
 
-        player = ExoPlayerFactory.newSimpleInstance(rendererFactory, trackSelector)
+        val renderersFactory = DefaultRenderersFactory(context)
+        player = SimpleExoPlayer.Builder(context, renderersFactory)
+            .setBandwidthMeter(bandwidthMeter)
+            .setTrackSelector(trackSelector)
+            .build()
+
         player.addListener(ExoPlayerListener())
-        player.setVideoListener(VideoEventListener())
+        player.addVideoListener(VideoEventListener())
 
         if (savedState != null) {
             aspectRatio = savedState.getFloat(KEY_ASPECT_RATIO)
@@ -80,11 +92,18 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
             player.stop()
         }
 
-        val dataSourceFactory = DefaultDataSourceFactory(context, USER_AGENT)
-        val extractorsFactory = DefaultExtractorsFactory()
-        val videoSource = ExtractorMediaSource(videoUri, dataSourceFactory, extractorsFactory, null, null)
+        val mediaItem = MediaItem.Builder().setUri(videoUri).build()
 
-        player.prepare(videoSource, !keepPosition, !keepPosition)
+        val dataSourceFactory = DefaultDataSourceFactory(context, USER_AGENT)
+        val videoSource = if (videoUri.lastPathSegment?.endsWith(".m3u8") == true) {
+            HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+        } else {
+            val extractorsFactory = DefaultExtractorsFactory()
+            ProgressiveMediaSource.Factory(dataSourceFactory, extractorsFactory).createMediaSource(mediaItem)
+        }
+
+        player.setMediaSource(videoSource, !keepPosition)
+        player.prepare()
         isInitialized = true
     }
 
@@ -272,9 +291,13 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
      * Enable or disable all video renderer
      */
     private fun setVideoRendererDisabled(disabled: Boolean) {
-        (0..(player.rendererCount - 1))
+        (0 until player.rendererCount)
             .filter { player.getRendererType(it) == C.TRACK_TYPE_VIDEO }
-            .forEach { trackSelector.setRendererDisabled(it, disabled) }
+            .forEach {
+                trackSelector.setParameters(
+                    trackSelector.buildUponParameters().setRendererDisabled(it, disabled)
+                )
+            }
     }
 
     interface StatusListener {
@@ -287,7 +310,7 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
         fun onError(error: ExoPlaybackException)
     }
 
-    private inner class ExoPlayerListener : ExoPlayer.EventListener {
+    private inner class ExoPlayerListener : Player.EventListener {
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             if (playWhenReady) {
                 startProgressUpdate()
@@ -299,14 +322,6 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
             statusListener?.videoDurationChanged(player.duration)
         }
 
-        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {}
-
-        override fun onLoadingChanged(isLoading: Boolean) {}
-
-        override fun onPositionDiscontinuity() {}
-
-        override fun onTimelineChanged(timeline: Timeline?, manifest: Any?) {}
-
         override fun onTracksChanged(trackGroups: TrackGroupArray, trackSelections: TrackSelectionArray) {}
 
         override fun onPlayerError(error: ExoPlaybackException) {
@@ -314,7 +329,7 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
         }
     }
 
-    private inner class VideoEventListener : SimpleExoPlayer.VideoListener {
+    private inner class VideoEventListener : VideoListener {
         override fun onVideoSizeChanged(
             width: Int,
             height: Int,

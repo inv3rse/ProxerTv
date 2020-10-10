@@ -7,17 +7,17 @@ import okhttp3.Response
 /**
  * An interceptor that overrides the cache header
  */
-class ProxerCacheRewriteInterceptor(val serverConfig: ServerConfig) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response? {
+class ProxerCacheRewriteInterceptor(private val serverConfig: ServerConfig) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
 
         val request = chain.request()
         val response = chain.proceed(request)
 
-        if (request.url().host().contains(serverConfig.host)
-                && request.method().equals("GET", true)
+        if (request.url.host.contains(serverConfig.host)
+                && request.method.equals("GET", true)
                 && response.isSuccessful) {
 
-            val maxAge = when (request.url().toString()) {
+            val maxAge = when (request.url.toString()) {
                 serverConfig.topAccessListUrl(),
                 serverConfig.topRatingListUrl(),
                 serverConfig.topRatingMovieListUrl(),

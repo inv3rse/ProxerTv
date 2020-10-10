@@ -13,13 +13,13 @@ fun containsCaptcha(htmlBody: String): Boolean {
  * Interceptor that makes sure that a captcha response is not loaded from cache.
  */
 class NoCacheCaptchaInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response? {
+    override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val response = chain.proceed(request)
 
-        val responseBody = response.body()
-        if (request.url().toString().contains("proxer.me/watch")
-                && response.cacheResponse() != null
+        val responseBody = response.body
+        if (request.url.toString().contains("proxer.me/watch")
+                && response.cacheResponse != null
                 && responseBody != null) {
 
             // We have to check the response body.

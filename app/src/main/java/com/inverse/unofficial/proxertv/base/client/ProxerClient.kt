@@ -8,6 +8,7 @@ import com.inverse.unofficial.proxertv.base.client.util.StreamResolver
 import com.inverse.unofficial.proxertv.model.*
 import okhttp3.Cookie
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -30,10 +31,10 @@ class ProxerClient(
 
     init {
         // set adult content cookie
-        val url = HttpUrl.parse(serverConfig.baseUrl) ?: throw IllegalArgumentException("invalid base url")
-        val adultCookie = Cookie.Builder().hostOnlyDomain(url.host()).path("/").name("adult")
+        val url = serverConfig.baseUrl.toHttpUrlOrNull() ?: throw IllegalArgumentException("invalid base url")
+        val adultCookie = Cookie.Builder().hostOnlyDomain(url.host).path("/").name("adult")
             .value("1").build()
-        httpClient.cookieJar().saveFromResponse(url, listOf(adultCookie))
+        httpClient.cookieJar.saveFromResponse(url, listOf(adultCookie))
     }
 
     /**
@@ -185,7 +186,7 @@ class ProxerClient(
                                 val replacedUrl = if (url.isEmpty()) code else url.replace("#", code)
                                 // add missing 'http'
                                 val fixedUrl = if (replacedUrl.startsWith("//")) "http:$replacedUrl" else replacedUrl
-                                val httpUrl = HttpUrl.parse(fixedUrl)
+                                val httpUrl = fixedUrl.toHttpUrlOrNull()
                                 if (httpUrl != null) {
                                     unresolvedStreams.add(httpUrl)
                                 }

@@ -28,9 +28,9 @@ class CallObservable(private val call: Call) : Observable<Response>(fun(subscrib
  * Exception for an unsuccessful response.
  */
 class OkHttpException(response: Response) :
-        Exception("${response.request().url()}\n HTTP ${response.code()} ${response.message()}") {
+        Exception("${response.request.url}\n HTTP ${response.code} ${response.message}") {
 
-    val code = response.code()
+    val code = response.code
 }
 
 /**
@@ -51,7 +51,7 @@ class BodyCallObservable(private val call: Call) : Observable<ResponseBody>(fun(
                     return
                 }
 
-                val body = response.body()
+                val body = response.body
                 if (body != null) {
                     subscriber.onNext(body)
                     subscriber.onCompleted()

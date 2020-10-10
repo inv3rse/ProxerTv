@@ -11,7 +11,7 @@ import org.mozilla.javascript.Context
  */
 class CloudFlareInterceptor : Interceptor {
 
-    override fun intercept(chain: Interceptor.Chain): Response? {
+    override fun intercept(chain: Interceptor.Chain): Response {
         // always set the user agent
         val request = chain.request().newBuilder()
                 .header("User-Agent", USER_AGENT)
@@ -19,8 +19,8 @@ class CloudFlareInterceptor : Interceptor {
 
         val response = chain.proceed(request)
 
-        val responseBody = response.body()
-        if (response.code() == 503 && "cloudflare-nginx" == response.header("Server") && responseBody != null) {
+        val responseBody = response.body
+        if (response.code == 503 && "cloudflare-nginx" == response.header("Server") && responseBody != null) {
             val body = responseBody.string()
 
             val operationPattern = Regex("setTimeout\\(function\\(\\)\\{\\s+(var s,t,o,p,b,r,e,a,k,i,n,g,f.+?\\r?\\n[\\s\\S]+?a\\.value =.+?)\\r?\\n")
@@ -42,12 +42,12 @@ class CloudFlareInterceptor : Interceptor {
                 val scope = rhino.initStandardObjects()
 
                 val result = (rhino.evaluateString(scope, js, "CloudFlare JS Challenge", 1, null) as Double).toInt()
-                val requestUrl = response.request().url()
-                val answer = (result + requestUrl.host().length).toString()
+                val requestUrl = response.request.url
+                val answer = (result + requestUrl.host.length).toString()
 
                 val url = HttpUrl.Builder()
-                        .scheme(requestUrl.scheme())
-                        .host(requestUrl.host())
+                        .scheme(requestUrl.scheme)
+                        .host(requestUrl.host)
                         .addPathSegment("/cdn-cgi/l/chk_jschl")
                         .addQueryParameter("jschl_vc", challenge)
                         .addQueryParameter("pass", challengePass)

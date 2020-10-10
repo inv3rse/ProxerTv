@@ -375,7 +375,7 @@ class ProxerRepository(
                 login(user.username, user.password)
             } else {
                 // abort with the original error
-                Observable.error(error)
+                Observable.error<T>(error)
             }
         }
     }
@@ -390,7 +390,7 @@ class ProxerRepository(
                 setUserSeriesList(error.remoteList)
             } else {
                 // abort with the original error
-                Observable.error(error)
+                Observable.error<T>(error)
             }
         }
     }
