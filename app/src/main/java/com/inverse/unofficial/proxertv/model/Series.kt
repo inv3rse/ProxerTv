@@ -1,9 +1,10 @@
 package com.inverse.unofficial.proxertv.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
-import nz.bradcampbell.paperparcel.PaperParcel
-import nz.bradcampbell.paperparcel.PaperParcelable
+import kotlinx.android.parcel.Parcelize
+import kotlin.math.ceil
 
 
 /**
@@ -19,8 +20,9 @@ interface ISeriesCover {
  * For a more complex series use [Series]
  */
 data class SeriesCover(
-        override val id: Int,
-        override val name: String) : ISeriesCover
+    override val id: Int,
+    override val name: String
+) : ISeriesCover
 
 /**
  * The possible lists a series can be on. If the list is NONE, then the entry is not in the db.
@@ -36,10 +38,10 @@ enum class SeriesList {
          * @return the matching ordinal value or [NONE]
          */
         fun fromOrdinal(ordinal: Int): SeriesList {
-            if (ordinal >= NONE.ordinal && ordinal <= FINISHED.ordinal) {
-                return SeriesList.values()[ordinal]
+            return if (ordinal >= NONE.ordinal && ordinal <= FINISHED.ordinal) {
+                values()[ordinal]
             } else {
-                return NONE
+                NONE
             }
         }
 
@@ -75,10 +77,11 @@ interface ISeriesDbEntry : ISeriesCover {
  * A [SeriesCover] with a comment id and the list it is stored on.
  */
 data class SeriesDbEntry(
-        override val id: Int,
-        override val name: String,
-        override val userList: SeriesList,
-        override val cid: Long = SeriesDbEntry.NO_COMMENT_ID) : ISeriesDbEntry {
+    override val id: Int,
+    override val name: String,
+    override val userList: SeriesList,
+    override val cid: Long = NO_COMMENT_ID
+) : ISeriesDbEntry {
 
     companion object {
         const val NO_COMMENT_ID = -1L
@@ -88,27 +91,24 @@ data class SeriesDbEntry(
 /**
  * Represents a complete Series
  */
-@PaperParcel
+@Parcelize
 data class Series(
-        @SerializedName("id")
-        override val id: Int,
-        @SerializedName("name")
-        override val name: String,
-        @SerializedName("genre")
-        val genres: String,
-        @SerializedName("description")
-        val description: String = "",
-        @SerializedName("count")
-        val count: Int,
-        @SerializedName("state")
-        val state: Int) : PaperParcelable, ISeriesCover {
+    @SerializedName("id")
+    override val id: Int,
+    @SerializedName("name")
+    override val name: String,
+    @SerializedName("genre")
+    val genres: String,
+    @SerializedName("description")
+    val description: String = "",
+    @SerializedName("count")
+    val count: Int,
+    @SerializedName("state")
+    val state: Int
+) : Parcelable, ISeriesCover {
 
     fun pages(): Int {
-        return Math.ceil(count.toDouble() / ProxerClient.EPISODES_PER_PAGE).toInt()
-    }
-
-    companion object {
-        @JvmField val CREATOR = PaperParcelable.Creator(Series::class.java)
+        return ceil(count.toDouble() / ProxerClient.EPISODES_PER_PAGE).toInt()
     }
 }
 
@@ -116,26 +116,27 @@ data class Series(
  * The model returned by the user list api
  */
 data class UserListSeriesEntry(
-        @SerializedName("medium")
-        val medium: String,
-        @SerializedName("id")
-        val id: Int,
-        @SerializedName("name")
-        val name: String,
-        @SerializedName("count")
-        val count: Int,
-        @SerializedName("cid")
-        val cid: Long,
-        @SerializedName("state")
-        val commentState: Int,
-        @SerializedName("episode")
-        val episode: Int,
-        @SerializedName("rating")
-        val rating: Int,
-        @SerializedName("comment")
-        val comment: String,
-        @SerializedName("data")
-        val commentRating: CommentRatings?) {
+    @SerializedName("medium")
+    val medium: String,
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("count")
+    val count: Int,
+    @SerializedName("cid")
+    val cid: Long,
+    @SerializedName("state")
+    val commentState: Int,
+    @SerializedName("episode")
+    val episode: Int,
+    @SerializedName("rating")
+    val rating: Int,
+    @SerializedName("comment")
+    val comment: String,
+    @SerializedName("data")
+    val commentRating: CommentRatings?
+) {
 
     companion object {
         // ------------ User list state ------------

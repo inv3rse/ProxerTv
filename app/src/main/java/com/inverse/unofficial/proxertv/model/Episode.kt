@@ -1,17 +1,13 @@
 package com.inverse.unofficial.proxertv.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
-import nz.bradcampbell.paperparcel.PaperParcel
-import nz.bradcampbell.paperparcel.PaperParcelable
+import kotlinx.android.parcel.Parcelize
 
-@PaperParcel
+@Parcelize
 data class Episode(
         @SerializedName("no")
         val episodeNum: Int,
         @SerializedName("typ")
-        val languageType: String) : PaperParcelable {
-
-    companion object {
-        @JvmField val CREATOR = PaperParcelable.Creator(Episode::class.java)
-    }
-}
+        val languageType: String
+) : Parcelable

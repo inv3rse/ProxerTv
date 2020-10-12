@@ -140,12 +140,6 @@ dependencies {
     def anko_version = '0.10.7'
     implementation "org.jetbrains.anko:anko-sqlite:$anko_version"
 
-    // PaperParcel
-    def paperparcel_version = '1.0.0'
-    implementation "com.github.grandstaish.paperparcel:paperparcel:$paperparcel_version"
-    implementation "com.github.grandstaish.paperparcel:paperparcel-kotlin:$paperparcel_version"
-    kapt "com.github.grandstaish.paperparcel:compiler:$paperparcel_version"
-
     // Timber
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
