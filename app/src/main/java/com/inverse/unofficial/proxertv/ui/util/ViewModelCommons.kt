@@ -3,7 +3,6 @@ package com.inverse.unofficial.proxertv.ui.util
 /**
  * Util for the common load content error state behavior.
  */
-@Suppress("unused")
 sealed class LoadContentErrorState<T> {
     abstract val data: T?
 }

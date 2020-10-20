@@ -17,8 +17,8 @@ if (hasProperty(signing)) {
 }
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion "28.0.3"
+    compileSdkVersion 29
+    buildToolsVersion "29.0.3"
 
     defaultConfig {
         applicationId "com.inverse.unofficial.proxertv"
@@ -144,7 +144,7 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
     // Testing
-    testImplementation 'junit:junit:4.13'
+    testImplementation 'junit:junit:4.13.1'
     testImplementation "com.squareup.okhttp3:mockwebserver:$okhttp_version"
     testImplementation "com.nhaarman:mockito-kotlin:1.6.0"
     androidTestImplementation "com.squareup.okhttp3:mockwebserver:$okhttp_version"

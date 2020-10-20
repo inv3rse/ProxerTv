@@ -6,7 +6,12 @@ import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.PlaybackState
-import androidx.leanback.widget.*
+import androidx.leanback.widget.AbstractDetailsDescriptionPresenter
+import androidx.leanback.widget.Action
+import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.OnActionClickedListener
+import androidx.leanback.widget.PlaybackControlsRow
+import androidx.leanback.widget.PlaybackControlsRowPresenter
 import timber.log.Timber
 import kotlin.math.max
 
@@ -52,7 +57,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
         }
 
         val detailsPresenter = object : AbstractDetailsDescriptionPresenter() {
-            override fun onBindDescription(viewHolder: AbstractDetailsDescriptionPresenter.ViewHolder, item: Any) {
+            override fun onBindDescription(viewHolder: ViewHolder, item: Any) {
                 viewHolder.title.text = metaData?.getText(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) ?: ""
                 viewHolder.subtitle.text = metaData?.getText(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE) ?: ""
             }
@@ -72,7 +77,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
                 fastForwardAction.id -> fastForward()
                 pictureInPictureAction.id -> {
                     overlayFragment.requireActivity()
-                            .enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+                        .enterPictureInPictureMode(PictureInPictureParams.Builder().build())
                 }
                 else -> return false
             }
@@ -104,7 +109,7 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
     }
 
     private inner class MediaControllerCallback : MediaController.Callback() {
-        override fun onPlaybackStateChanged(state: PlaybackState) {
+        override fun onPlaybackStateChanged(state: PlaybackState?) {
             // Update your UI to reflect the new state. Do not change media playback here.
             playbackState = state
             updateProgress()
@@ -126,5 +131,5 @@ class PlaybackControlsHelper(context: Context, val overlayFragment: PlayerOverla
         }
     }
 
-    private class NoAction : Action(Action.NO_ID)
+    private class NoAction : Action(NO_ID)
 }
