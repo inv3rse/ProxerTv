@@ -27,7 +27,7 @@ class DetailsActivity : FragmentActivity() {
          */
         fun createIntentWithOptions(
             activity: Activity,
-            seriesId: Int,
+            seriesId: Long,
             coverView: View
         ): Pair<Intent, ActivityOptionsCompat> {
             val intent = Intent(activity, DetailsActivity::class.java)

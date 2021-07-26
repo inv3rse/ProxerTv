@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'com.squareup.sqldelight'
 
 // get api key from properties or environment variable
 def apiKey = ""
@@ -17,13 +18,13 @@ if (hasProperty(signing)) {
 }
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    compileSdkVersion 30
+    buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "com.inverse.unofficial.proxertv"
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 30
         versionCode 11
         versionName "Alpha 11"
 
@@ -57,6 +58,8 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_1_8
+        freeCompilerArgs += '-Xopt-in=kotlin.RequiresOptIn'
+        freeCompilerArgs += '-Xopt-in=androidx.paging.ExperimentalPagingApi'
     }
 }
 
@@ -70,29 +73,37 @@ dependencies {
 
     // Kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.1'
 
     // Ktx
-    implementation 'androidx.core:core-ktx:1.3.2'
+    implementation 'androidx.core:core-ktx:1.6.0'
 
     // Lifecycle, ViewModel, LiveData
-    def lifecycle_version = '2.2.0'
-    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
-    implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1'
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.3.1'
 
     // Live Data thread override test rule
     testImplementation "androidx.arch.core:core-testing:2.1.0"
 
     // Support Library
-    implementation 'androidx.leanback:leanback:1.0.0'
+    implementation 'androidx.leanback:leanback:1.1.0-rc01'
+    implementation 'androidx.fragment:fragment-ktx:1.3.5'
+    implementation 'androidx.appcompat:appcompat:1.3.0'
+
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation('androidx.media:media:1.2.0')
+    implementation('androidx.media:media:1.3.1')
 
     // constraint layout
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.2'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+
+    def paging_version = "3.1.0-alpha04"
+    implementation "androidx.paging:paging-runtime-ktx:$paging_version"
+    implementation 'androidx.leanback:leanback-paging:1.1.0-alpha07'
 
     // Glide
-    def glide_version = '4.11.0'
+    def glide_version = '4.12.0'
     implementation "com.github.bumptech.glide:glide:$glide_version"
     implementation "com.github.bumptech.glide:okhttp3-integration:$glide_version"
     kapt "com.github.bumptech.glide:compiler:$glide_version"
@@ -109,13 +120,13 @@ dependencies {
     implementation 'com.github.akarnokd:rxjava2-interop:0.13.4'
 
     // OkHttp
-    def okhttp_version = '4.0.1'
+    def okhttp_version = '4.9.1'
     implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$okhttp_version"
     implementation 'com.github.franmontiel:PersistentCookieJar:v1.0.1'
 
     // Retrofit
-    def retrofit_version = "2.6.4"
+    def retrofit_version = "2.9.0"
     implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
     implementation "com.squareup.retrofit2:converter-gson:$retrofit_version"
     implementation "com.squareup.retrofit2:adapter-rxjava:$retrofit_version"
@@ -129,12 +140,17 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.10.3'
 
     // ExoPlayer
-    implementation('com.google.android.exoplayer:exoplayer:2.12.0')
+    implementation('com.google.android.exoplayer:exoplayer:2.14.1')
 
     // Dagger 2
-    def dagger_version = '2.29.1'
+    def dagger_version = '2.35.1'
     implementation "com.google.dagger:dagger:$dagger_version"
     kapt "com.google.dagger:dagger-compiler:$dagger_version"
+
+    // SQLDelight
+    implementation "com.squareup.sqldelight:android-driver:$sqldelight_version"
+    implementation "com.squareup.sqldelight:coroutines-extensions-jvm:$sqldelight_version"
+    implementation "com.squareup.sqldelight:android-paging3-extensions:1.5.0"
 
     // Anko
     def anko_version = '0.10.7'
@@ -144,14 +160,15 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
     // Testing
-    testImplementation 'junit:junit:4.13.1'
+    testImplementation 'junit:junit:4.13.2'
     testImplementation "com.squareup.okhttp3:mockwebserver:$okhttp_version"
     testImplementation "com.nhaarman:mockito-kotlin:1.6.0"
+    testImplementation "androidx.paging:paging-common-ktx:$paging_version"
     androidTestImplementation "com.squareup.okhttp3:mockwebserver:$okhttp_version"
-    androidTestImplementation('androidx.test:runner:1.3.0') {
+    androidTestImplementation('androidx.test:runner:1.4.0') {
         exclude module: 'support-annotations'
     }
-    androidTestImplementation('androidx.test:rules:1.3.0') {
+    androidTestImplementation('androidx.test:rules:1.4.0') {
         exclude module: 'support-annotations'
     }
 }

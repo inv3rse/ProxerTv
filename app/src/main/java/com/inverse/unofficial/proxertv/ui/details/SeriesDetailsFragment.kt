@@ -34,7 +34,7 @@ class SeriesDetailsFragment : DetailsSupportFragment(), OnItemViewClickedListene
         val handler = Handler()
         handler.postDelayed({ activity?.startPostponedEnterTransition() }, MAX_TRANSITION_DELAY)
 
-        val seriesId = activity?.intent?.extras?.getInt(DetailsActivity.EXTRA_SERIES_ID)
+        val seriesId = activity?.intent?.extras?.getLong(DetailsActivity.EXTRA_SERIES_ID)
             ?: throw IllegalArgumentException("seriesId must be set")
 
         val glide = GlideApp.with(this)

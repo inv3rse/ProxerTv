@@ -2,8 +2,19 @@ package com.inverse.unofficial.proxertv.base.client
 
 import com.inverse.unofficial.proxertv.base.client.util.FailOnError
 import com.inverse.unofficial.proxertv.base.client.util.WrappedResponse
-import com.inverse.unofficial.proxertv.model.*
-import retrofit2.http.*
+import com.inverse.unofficial.proxertv.model.Episodes
+import com.inverse.unofficial.proxertv.model.LoginResponse
+import com.inverse.unofficial.proxertv.model.Series
+import com.inverse.unofficial.proxertv.model.UserListSeriesEntry
+import com.inverse.unofficial.proxertv.model.WrappedData
+import retrofit2.http.Field
+import retrofit2.http.FieldMap
+import retrofit2.http.FormUrlEncoded
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Headers
+import retrofit2.http.POST
+import retrofit2.http.Query
 import rx.Observable
 
 /**
@@ -45,7 +56,7 @@ interface ProxerApi {
      */
     @GET("info/entry")
     @WrappedResponse
-    fun entryInfo(@Query("id") id: Int): Observable<Series>
+    fun entryInfo(@Query("id") id: Long): Observable<Series>
 
     /**
      * Get the info for a series.
@@ -55,7 +66,7 @@ interface ProxerApi {
      */
     @GET("info/entry")
     @WrappedResponse
-    fun entryInfo(@Query("id") id: Int, @Header("Cache-Control") cacheControl: String): Observable<Series>
+    fun entryInfo(@Query("id") id: Long, @Header("Cache-Control") cacheControl: String): Observable<Series>
 
     /**
      * Get the list of episodes for a series.
@@ -66,7 +77,7 @@ interface ProxerApi {
      */
     @GET("info/listinfo")
     @WrappedResponse
-    fun entryEpisodes(@Query("id") id: Int, @Query("p") page: Int, @Query("limit") limit: Int): Observable<Episodes>
+    fun entryEpisodes(@Query("id") id: Long, @Query("p") page: Int, @Query("limit") limit: Int): Observable<Episodes>
 
     /**
      * Add a series to the users list. Unable to change the list type of an existing entry.
@@ -76,7 +87,7 @@ interface ProxerApi {
     @POST("info/setuserinfo")
     @FailOnError
     @FormUrlEncoded
-    fun addSeriesToList(@Field("id") seriesId: Int, @Field("type") type: String): Observable<Boolean>
+    fun addSeriesToList(@Field("id") seriesId: Long, @Field("type") type: String): Observable<Boolean>
 
     /**
      * Set the progress of the comment for a series

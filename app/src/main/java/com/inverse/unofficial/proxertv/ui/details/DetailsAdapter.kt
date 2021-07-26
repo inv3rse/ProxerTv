@@ -12,7 +12,7 @@ import com.inverse.unofficial.proxertv.ui.util.GlideRequests
 class DetailsAdapter(
     glide: GlideRequests,
     selectSeriesDetailsRowListener: SeriesDetailsRowPresenter.SeriesDetailsRowListener,
-    seriesId: Int,
+    seriesId: Long,
     coverLoadListener: CoverLoadListener
 ) : ObjectAdapter() {
 

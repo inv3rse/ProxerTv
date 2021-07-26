@@ -1,0 +1,50 @@
+import com.inverse.unofficial.proxertv.model.SystemSeriesList;
+
+/**
+ * Entity for a series entry on a system list.
+ */
+CREATE TABLE systemSeriesListEntry (
+    orderPosition INTEGER NOT NULL,
+    listType TEXT AS SystemSeriesList NOT NULL,
+    seriesId INTEGER NOT NULL,
+    seriesName TEXT NOT NULL,
+    PRIMARY KEY(orderPosition, listType),
+    FOREIGN KEY (seriesId) REFERENCES seriesEntity(id) ON DELETE CASCADE
+);
+
+CREATE INDEX systemIndexListType ON systemSeriesListEntry(listType);
+
+/**
+ * Query the [SystemSeriesListEntry]s on the [listType].
+ */
+queryEntriesByListType:
+SELECT * FROM systemSeriesListEntry WHERE listType = :listType ORDER BY orderPosition;
+
+queryEntriesByListTypeWindow:
+SELECT * FROM systemSeriesListEntry WHERE listType = :listType
+    AND orderPosition >= :beginIncluse
+    AND orderPosition < :endExclusiove
+    ORDER BY orderPosition;
+
+
+/**
+ * Query the [SeriesEntity]s on the [listType].
+ */
+querySeriesByListType:
+SELECT seriesEntity.* FROM systemSeriesListEntry
+    INNER JOIN seriesEntity ON systemSeriesListEntry.seriesId = seriesEntity.id
+    WHERE listType = :listType
+    ORDER BY systemSeriesListEntry.orderPosition;
+
+/**
+ * Add the [seriesId] to the list of [listType].
+ */
+upsertSeriesToList:
+INSERT OR REPLACE INTO systemSeriesListEntry (orderPosition, listType, seriesId, seriesName)
+    VALUES (:position, :listType, :seriesId, :seriesName);
+
+/**
+ * Clear the list of [listType].
+ */
+clearSeriesList:
+DELETE FROM systemSeriesListEntry WHERE listType = :listType;

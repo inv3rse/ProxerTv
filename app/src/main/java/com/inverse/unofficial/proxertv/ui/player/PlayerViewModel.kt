@@ -49,7 +49,7 @@ class PlayerViewModel @Inject constructor(
         loadStreams(series.id, episode)
     }
 
-    fun loadStreams(seriesId: Int, episode: Episode) {
+    fun loadStreams(seriesId: Long, episode: Episode) {
         disposables.clear()
         streams.value = LoadingState()
 

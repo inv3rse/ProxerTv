@@ -41,7 +41,7 @@ class SeriesProgressDbHelper(context: Context) : ManagedSQLiteOpenHelper(context
 
 open class SeriesProgressDb(private val dbHelper: SeriesProgressDbHelper) {
     // Pair<SeriesId, Progress>
-    private val changeSubject = SerializedSubject(PublishSubject.create<Pair<Int, Int>>())
+    private val changeSubject = SerializedSubject(PublishSubject.create<Pair<Long, Int>>())
 
     /**
      * Set the progress for a specific series.
@@ -49,7 +49,7 @@ open class SeriesProgressDb(private val dbHelper: SeriesProgressDbHelper) {
      * @param progress progress of the series
      * @return an [Observable] emitting onError or onCompleted
      */
-    open fun setProgress(seriesId: Int, progress: Int): Observable<Unit> {
+    open fun setProgress(seriesId: Long, progress: Int): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
                 replace(SeriesProgressScheme.TABLE,
@@ -64,7 +64,7 @@ open class SeriesProgressDb(private val dbHelper: SeriesProgressDbHelper) {
      * @param seriesId series to get the progress for
      * @return an [Observable] emitting the progress
      */
-    open fun getProgress(seriesId: Int): Observable<Int> {
+    open fun getProgress(seriesId: Long): Observable<Int> {
         return dbHelper.useAsync {
             select(SeriesProgressScheme.TABLE, SeriesProgressScheme.LAST_EPISODE)
                     .where("(${SeriesProgressScheme.ID} = $seriesId)").parseOpt(IntParser)
@@ -76,7 +76,7 @@ open class SeriesProgressDb(private val dbHelper: SeriesProgressDbHelper) {
      * @param seriesId series to get the progress for
      * @return an [Observable] emitting the progress and any subsequent changes
      */
-    fun observeProgress(seriesId: Int): Observable<Int> {
+    fun observeProgress(seriesId: Long): Observable<Int> {
         return Observable.concat(
                 getProgress(seriesId),
                 changeSubject.filter { seriesId == it.first }.map { it.second })
@@ -88,9 +88,9 @@ open class SeriesProgressDb(private val dbHelper: SeriesProgressDbHelper) {
     open fun clearDb(): Observable<Unit> {
         return dbHelper
                 // select all ids in the db
-                .useAsync { select(SeriesProgressScheme.TABLE, SeriesProgressScheme.ID).parseList(IntParser) }
+                .useAsync { select(SeriesProgressScheme.TABLE, SeriesProgressScheme.ID).parseList(LongParser) }
                 // clear the db and notify progress change
-                .map { ids: List<Int> ->
+                .map { ids: List<Long> ->
                     dbHelper.clearDb()
                     ids.forEach { changeSubject.onNext(Pair(it, 0)) }
                 }

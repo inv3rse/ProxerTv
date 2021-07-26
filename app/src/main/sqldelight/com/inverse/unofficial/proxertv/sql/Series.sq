@@ -1,0 +1,23 @@
+/**
+ * Entity for a series entry.
+ */
+CREATE TABLE seriesEntity (
+    id INTEGER NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    genres TEXT NOT NULL,
+    description TEXT NOT NULL,
+    episodeCount INTEGER NOT NULL,
+    state INTEGER NOT NULL
+);
+
+/**
+ * Query the series entity by id.
+ */
+queryById:
+SELECT * FROM seriesEntity WHERE id = :id;
+
+/**
+ * Insert or replace a [SeriesEntity].
+ */
+upsert:
+INSERT OR REPLACE INTO seriesEntity (id, name, genres, description, episodeCount, state) VALUES ?;

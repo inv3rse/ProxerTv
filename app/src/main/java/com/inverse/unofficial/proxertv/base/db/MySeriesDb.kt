@@ -53,7 +53,7 @@ class SeriesDbHelper(context: Context) : ManagedSQLiteOpenHelper(context, DB_NAM
  * The db for the users series.
  */
 open class MySeriesDb(private val dbHelper: SeriesDbHelper) {
-    private val listObservable = SerializedSubject(PublishSubject.create<Int>())
+    private val listObservable = SerializedSubject(PublishSubject.create<Long>())
 
     /**
      * Observe the series list.
@@ -123,7 +123,7 @@ open class MySeriesDb(private val dbHelper: SeriesDbHelper) {
      * @param seriesId the series id
      * @return an [Observable] emitting the [SeriesCover] or throwing an error
      */
-    open fun getSeries(seriesId: Int): Observable<ISeriesDbEntry> {
+    open fun getSeries(seriesId: Long): Observable<ISeriesDbEntry> {
         return dbHelper.useAsync {
             select(SeriesScheme.TABLE).where("(${SeriesScheme.ID} = $seriesId)").exec {
                 if (count == 1) {
@@ -140,7 +140,7 @@ open class MySeriesDb(private val dbHelper: SeriesDbHelper) {
      * @param seriesId the series id
      * @return an [Observable] emitting the [SeriesList] an subsequent changes
      */
-    open fun observeSeriesListState(seriesId: Int): Observable<SeriesList> {
+    open fun observeSeriesListState(seriesId: Long): Observable<SeriesList> {
         return listObservable
                 .startWith(ALL_CHANGE)
                 .filter { it == ALL_CHANGE || it == seriesId }
@@ -173,7 +173,7 @@ open class MySeriesDb(private val dbHelper: SeriesDbHelper) {
      * @param seriesId id of the series to remove
      * @return an [Observable] emitting onError or OnCompleted
      */
-    open fun removeSeries(seriesId: Int): Observable<Unit> {
+    open fun removeSeries(seriesId: Long): Observable<Unit> {
         return dbHelper.useAsync {
             transaction {
                 delete(SeriesScheme.TABLE, "(${SeriesScheme.ID} = $seriesId)")
@@ -186,13 +186,13 @@ open class MySeriesDb(private val dbHelper: SeriesDbHelper) {
      */
     class NoSeriesEntryException(msg: String = "no series found") : RuntimeException(msg)
 
-    private fun notifyListChange(changeId: Int) {
+    private fun notifyListChange(changeId: Long) {
         listObservable.onNext(changeId)
     }
 
     private class SeriesRowParser : RowParser<ISeriesDbEntry> {
         @Suppress("ConvertLambdaToReference")
-        private val parser = rowParser { id: Int, title: String, cid: Long, list: Int -> SeriesDbEntry(id, title, SeriesList.fromOrdinal(list), cid) }
+        private val parser = rowParser { id: Long, title: String, cid: Long, list: Int -> SeriesDbEntry(id, title, SeriesList.fromOrdinal(list), cid) }
 
         override fun parseRow(columns: Array<Any?>): ISeriesDbEntry {
             return parser.parseRow(columns)
@@ -200,6 +200,6 @@ open class MySeriesDb(private val dbHelper: SeriesDbHelper) {
     }
 
     companion object {
-        const val ALL_CHANGE = -1
+        const val ALL_CHANGE = -1L
     }
 }

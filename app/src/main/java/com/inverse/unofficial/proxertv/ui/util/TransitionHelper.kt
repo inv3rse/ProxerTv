@@ -11,12 +11,12 @@ object TransitionHelper {
     /**
      * Get the transition name for the series cover
      */
-    fun getCoverTransitionName(seriesId: Int) = "cover_$seriesId"
+    fun getCoverTransitionName(seriesId: Long) = "cover_$seriesId"
 
     /**
      * Set the transition name for the series cover
      */
-    fun setCoverTransitionName(view: View, seriesId: Int) {
+    fun setCoverTransitionName(view: View, seriesId: Long) {
         ViewCompat.setTransitionName(view, getCoverTransitionName(seriesId))
     }
 }

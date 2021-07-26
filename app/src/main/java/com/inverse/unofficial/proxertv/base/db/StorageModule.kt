@@ -1,12 +1,17 @@
 package com.inverse.unofficial.proxertv.base.db
 
 import android.app.Application
+import com.inverse.unofficial.proxertv.Database
+import com.inverse.unofficial.proxertv.sql.SystemSeriesListEntry
+import com.inverse.unofficial.proxertv.sql.UserSeriesListEntry
+import com.squareup.sqldelight.EnumColumnAdapter
+import com.squareup.sqldelight.android.AndroidSqliteDriver
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
 
 @Module
-class StorageModule {
+object StorageModule {
 
     @Provides
     fun provideSeriesDbHelper(application: Application): SeriesDbHelper {
@@ -28,5 +33,15 @@ class StorageModule {
     @Singleton
     fun provideSeriesProgressRepository(dbHelper: SeriesProgressDbHelper): SeriesProgressDb {
         return SeriesProgressDb(dbHelper)
+    }
+
+    @Provides
+    fun provideSeriesDb(application: Application): Database {
+        val driver = AndroidSqliteDriver(Database.Schema, application, "series.db")
+        return Database(
+            driver = driver,
+            systemSeriesListEntryAdapter = SystemSeriesListEntry.Adapter(listTypeAdapter = EnumColumnAdapter()),
+            userSeriesListEntryAdapter = UserSeriesListEntry.Adapter(listTypeAdapter = EnumColumnAdapter())
+        )
     }
 }

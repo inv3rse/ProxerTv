@@ -1,0 +1,54 @@
+import com.inverse.unofficial.proxertv.model.UserSeriesList;
+
+/**
+ * Entity for a series entry on a users list.
+ */
+CREATE TABLE userSeriesListEntry (
+    listType TEXT AS UserSeriesList NOT NULL,
+    seriesId INTEGER NOT NULL,
+    seriesName TEXT NOT NULL,
+    orderPosition INTEGER NOT NULL,
+    PRIMARY KEY (seriesId, listType),
+    FOREIGN KEY (seriesId) REFERENCES seriesEntity(id) ON DELETE CASCADE
+);
+
+CREATE INDEX userIndexListType ON userSeriesListEntry(listType);
+
+/**
+ * Query the [UserSeriesListEntry]s on the [listType].
+ */
+queryEntriesByListType:
+SELECT * FROM userSeriesListEntry WHERE listType = :listType;
+
+/**
+ * Query the [SeriesEntity]s on the [listType].
+ */
+querySeriesByListType:
+SELECT seriesEntity.* FROM userSeriesListEntry
+    INNER JOIN seriesEntity ON userSeriesListEntry.seriesId = seriesEntity.id
+    WHERE listType = :listType
+    ORDER BY userSeriesListEntry.orderPosition;
+
+/**
+ * Move the [seriesId] to the list of [listType] removing it from any other list if set before.
+ */
+moveSeriesToList:
+INSERT OR REPLACE INTO userSeriesListEntry (listType, seriesId, seriesName, orderPosition)
+    VALUES (:listType, :seriesId, :seriesName, :position);
+
+/**
+ * Move the [seriesId] to the list of [listType] removing it from any other list if set before.
+ */
+moveAsLastSeriesToList:
+INSERT OR REPLACE INTO userSeriesListEntry (listType, seriesId, seriesName, orderPosition) VALUES (
+    :listType,
+    :seriesId,
+    :seriesName,
+    (SELECT MAX(orderPosition) + 1 FROM userSeriesListEntry WHERE listType = :listType)
+ );
+
+/**
+ * Clear the list of [listType].
+ */
+clearSeriesList:
+DELETE FROM userSeriesListEntry WHERE listType = :listType;

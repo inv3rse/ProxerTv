@@ -3,37 +3,53 @@ package com.inverse.unofficial.proxertv.ui.home
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.view.View
 import androidx.leanback.app.BrowseSupportFragment
-import androidx.leanback.widget.*
+import androidx.leanback.paging.PagingDataAdapter
+import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.ImageCardView
+import androidx.leanback.widget.ListRow
+import androidx.leanback.widget.ListRowPresenter
+import androidx.leanback.widget.OnItemViewClickedListener
+import androidx.leanback.widget.OnItemViewSelectedListener
+import androidx.leanback.widget.Presenter
+import androidx.leanback.widget.Row
+import androidx.leanback.widget.RowPresenter
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DiffUtil
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.base.App
 import com.inverse.unofficial.proxertv.base.User
-import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.model.ISeriesCover
-import com.inverse.unofficial.proxertv.model.SeriesCover
-import com.inverse.unofficial.proxertv.model.SeriesList
+import com.inverse.unofficial.proxertv.model.SystemSeriesListEntry
 import com.inverse.unofficial.proxertv.ui.details.DetailsActivity
 import com.inverse.unofficial.proxertv.ui.home.login.LoginActivity
 import com.inverse.unofficial.proxertv.ui.home.logout.LogoutActivity
 import com.inverse.unofficial.proxertv.ui.search.SearchActivity
-import com.inverse.unofficial.proxertv.ui.util.*
+import com.inverse.unofficial.proxertv.ui.util.CoverPresenterSelector
+import com.inverse.unofficial.proxertv.ui.util.GlideApp
+import com.inverse.unofficial.proxertv.ui.util.UserAction
+import com.inverse.unofficial.proxertv.ui.util.UserActionAdapter
+import com.inverse.unofficial.proxertv.ui.util.UserActionHolder
+import com.inverse.unofficial.proxertv.ui.util.extensions.provideViewModel
+import kotlinx.coroutines.flow.collect
 import org.jetbrains.anko.toast
-import rx.Observable
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
 import rx.subscriptions.CompositeSubscription
 import timber.log.Timber
-import java.util.*
+import java.util.Date
+import kotlin.math.max
 
 /**
  * Main screen of the app. Shows multiple rows of series items with only name and cover.
  */
 class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.OnClickListener,
     OnItemViewSelectedListener {
-    private val seriesUpdateHandler = Handler()
+    private val seriesUpdateHandler = Handler(Looper.getMainLooper())
     private val subscriptions = CompositeSubscription()
     private var syncSubscription: Subscription? = null
 
@@ -54,6 +70,13 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
         }
     }
 
+    private lateinit var topAccessSeriesAdapter: PagingDataAdapter<SystemSeriesListEntry>
+    private lateinit var topRatedSeriesAdapter: PagingDataAdapter<SystemSeriesListEntry>
+    private lateinit var topRatedMoviesAdapter: PagingDataAdapter<SystemSeriesListEntry>
+    private lateinit var airingSeriesAdapter: PagingDataAdapter<SystemSeriesListEntry>
+
+    private val viewModel by lazy { provideViewModel(this) { App.component.getHomeViewModel() } }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         title = getString(R.string.app_name)
@@ -67,8 +90,53 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
         onItemViewSelectedListener = this
         setOnSearchClickedListener(this)
 
+        val systemSeriesDiffCallback = object : DiffUtil.ItemCallback<SystemSeriesListEntry>() {
+            override fun areItemsTheSame(oldItem: SystemSeriesListEntry, newItem: SystemSeriesListEntry): Boolean {
+                return oldItem == newItem
+            }
+
+            override fun areContentsTheSame(
+                oldItem: SystemSeriesListEntry,
+                newItem: SystemSeriesListEntry
+            ): Boolean {
+                return oldItem == newItem
+            }
+        }
+        val presenterSelector = CoverPresenterSelector(GlideApp.with(this))
+        topAccessSeriesAdapter = PagingDataAdapter(presenterSelector, systemSeriesDiffCallback)
+        topRatedSeriesAdapter = PagingDataAdapter(presenterSelector, systemSeriesDiffCallback)
+        topRatedMoviesAdapter = PagingDataAdapter(presenterSelector, systemSeriesDiffCallback)
+        airingSeriesAdapter = PagingDataAdapter(presenterSelector, systemSeriesDiffCallback)
+
         initDefaultRows()
         loadContent()
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.topAccessSeriesList.collect {
+                topAccessSeriesAdapter.submitData(it)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.topRatedSeriesList.collect {
+                topRatedSeriesAdapter.submitData(it)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.topRatedMoviesList.collect {
+                topRatedMoviesAdapter.submitData(it)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.airingSeriesList.collect {
+                airingSeriesAdapter.submitData(it)
+            }
+        }
     }
 
     override fun onStart() {
@@ -76,7 +144,7 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
         // little optimization to avoid updating on start if not necessary
         seriesUpdateHandler.removeCallbacks(updateRunner)
         val delay = (nextUpdate ?: 0) - Date().time
-        seriesUpdateHandler.postDelayed(updateRunner, Math.max(delay, 0))
+        seriesUpdateHandler.postDelayed(updateRunner, max(delay, 0))
     }
 
     override fun onStop() {
@@ -168,116 +236,122 @@ class MainFragment : BrowseSupportFragment(), OnItemViewClickedListener, View.On
     }
 
     private fun loadContent() {
+        rowsHelper.addRow(topAccessSeriesAdapter, R.string.row_top_access, POS_TOP_ACCESS_LIST)
+        rowsHelper.addRow(topRatedSeriesAdapter, R.string.row_top_rating, POS_TOP_RATING_LIST)
+        rowsHelper.addRow(topRatedMoviesAdapter, R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST)
+        rowsHelper.addRow(airingSeriesAdapter, R.string.row_airing, POS_AIRING_LIST)
+
         val presenterSelector = CoverPresenterSelector(GlideApp.with(this))
-        val userListObservable = proxerRepository.syncUserList()
-            .flatMap { proxerRepository.observeSeriesList() }
-            .subscribeOn(Schedulers.io())
-            .publish()
+//        val userListObservable = proxerRepository.syncUserList()
+//            .flatMap { proxerRepository.observeSeriesList() }
+//            .subscribeOn(Schedulers.io())
+//            .publish()
+//
+//        rowsHelper.addObservableRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            userListObservable.map { list -> list.filter { it.userList == SeriesList.WATCHLIST } },
+//            R.string.row_my_list, POS_USER_LIST
+//        )
+//
+//        rowsHelper.addObservableRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            updateSubject.flatMap { getUpdatesRowObservable().takeUntil(updateSubject) },
+//            R.string.row_updates, POS_UPDATES_LIST
+//        )
+//
 
-        rowsHelper.addObservableRow(
-            ArrayObjectAdapter(presenterSelector),
-            userListObservable.map { list -> list.filter { it.userList == SeriesList.WATCHLIST } },
-            R.string.row_my_list, POS_USER_LIST
-        )
-
-        rowsHelper.addObservableRow(
-            ArrayObjectAdapter(presenterSelector),
-            updateSubject.flatMap { getUpdatesRowObservable().takeUntil(updateSubject) },
-            R.string.row_updates, POS_UPDATES_LIST
-        )
-
-        rowsHelper.addObservablePagingRow(
-            ArrayObjectAdapter(presenterSelector),
-            { proxerRepository.loadTopAccessSeries(it) }, R.string.row_top_access, POS_TOP_ACCESS_LIST
-        )
-
-        rowsHelper.addObservablePagingRow(
-            ArrayObjectAdapter(presenterSelector),
-            { proxerRepository.loadTopRatingSeries(it) }, R.string.row_top_rating, POS_TOP_RATING_LIST
-        )
-
-        rowsHelper.addObservablePagingRow(
-            ArrayObjectAdapter(presenterSelector),
-            { proxerRepository.loadTopRatingMovies(it) }, R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST
-        )
-
-        rowsHelper.addObservablePagingRow(
-            ArrayObjectAdapter(presenterSelector),
-            { proxerRepository.loadAiringSeries(it) }, R.string.row_airing, POS_AIRING_LIST
-        )
-
-        rowsHelper.addObservableRow(
-            ArrayObjectAdapter(presenterSelector),
-            userListObservable.map { list -> list.filter { it.userList == SeriesList.FINISHED } },
-            R.string.row_user_finished, POS_FINISHED_LIST
-        )
-
-        rowsHelper.addObservableRow(
-            ArrayObjectAdapter(presenterSelector),
-            userListObservable.map { list -> list.filter { it.userList == SeriesList.ABORTED } },
-            R.string.row_user_aborted, POS_ABORTED_LIST
-        )
-
-        subscriptions.add(userListObservable.connect())
+//        rowsHelper.addObservablePagingRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            { proxerRepository.loadTopAccessSeries(it) }, R.string.row_top_access, POS_TOP_ACCESS_LIST
+//        )
+//
+//        rowsHelper.addObservablePagingRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            { proxerRepository.loadTopRatingSeries(it) }, R.string.row_top_rating, POS_TOP_RATING_LIST
+//        )
+//
+//        rowsHelper.addObservablePagingRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            { proxerRepository.loadTopRatingMovies(it) }, R.string.row_top_rating_movies, POS_TOP_MOVIES_LIST
+//        )
+//
+//        rowsHelper.addObservablePagingRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            { proxerRepository.loadAiringSeries(it) }, R.string.row_airing, POS_AIRING_LIST
+//        )
+//
+//        rowsHelper.addObservableRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            userListObservable.map { list -> list.filter { it.userList == SeriesList.FINISHED } },
+//            R.string.row_user_finished, POS_FINISHED_LIST
+//        )
+//
+//        rowsHelper.addObservableRow(
+//            ArrayObjectAdapter(presenterSelector),
+//            userListObservable.map { list -> list.filter { it.userList == SeriesList.ABORTED } },
+//            R.string.row_user_aborted, POS_ABORTED_LIST
+//        )
+//
+//        subscriptions.add(userListObservable.connect())
     }
 
 
-    private fun getUpdatesRowObservable(): Observable<List<SeriesCover>> {
-        val calendar = GregorianCalendar.getInstance()
-        calendar.add(Calendar.DAY_OF_MONTH, -UPDATES_HISTORY)
-        val lastUpdateDate = calendar.time
-
-        return proxerRepository.loadUpdatesList()
-            // series list to single items
-            .flatMap { Observable.from(it) }
-            // discard anything older than 3 days
-            .filter { it.updateDate >= lastUpdateDate }
-            // remove the update date information
-            .map { it.seriesCover }
-            // no duplicates
-            .distinct()
-            // map to an observable (not subscribed) that combines the series with the local progress and a boolean
-            // indicating whether it is on the user list or not
-            .map {
-                Observable.combineLatest(
-                    Observable.just(it),
-                    proxerRepository.observeSeriesProgress(it.id),
-                    proxerRepository.observeSeriesList().map { myList -> myList.find { s -> s.id == it.id } != null }
-                ) { series, progress, inList -> Triple(series, progress, inList) }
-            }
-            .toList()
-            // to automatically re emitting list of series with progress
-            // as soon as the progress for a series changes, the list is updated
-            .flatMap(fun(observables: List<Observable<Triple<SeriesCover, Int, Boolean>>>): Observable<List<Triple<SeriesCover, Int, Boolean>>> {
-                return Observable.combineLatest(
-                    observables,
-                    fun(array: Array<out Any>): List<Triple<SeriesCover, Int, Boolean>> {
-                        return array.map {
-                            @Suppress("UNCHECKED_CAST")
-                            it as Triple<SeriesCover, Int, Boolean>
-                        }
-                    }
-                )
-            })
-            // for series on "my list" where the local progress is > 0 check for a new episode
-            .flatMap { list ->
-                Observable.from(list)
-                    .filter { it.second > 0 && it.third }
-                    .flatMap {
-                        Observable.zip(
-                            Observable.just(it),
-                            proxerRepository.loadEpisodesPage(
-                                it.first.id,
-                                ProxerClient.getTargetPageForEpisode(it.second + 1)
-                            )
-                        ) { (seriesCover, progress), episodesMap -> Triple(seriesCover, progress, episodesMap) }
-                    }
-                    // check if any episode subtype contains the next episode according to the users progress
-                    .filter { it.third.any { entry -> entry.value.contains(it.second + 1) } }
-                    .map { it.first }
-                    .toList()
-            }
-    }
+//    private fun getUpdatesRowObservable(): Observable<List<SeriesCover>> {
+//        val calendar = GregorianCalendar.getInstance()
+//        calendar.add(Calendar.DAY_OF_MONTH, -UPDATES_HISTORY)
+//        val lastUpdateDate = calendar.time
+//
+//        return proxerRepository.loadUpdatesList()
+//            // series list to single items
+//            .flatMap { Observable.from(it) }
+//            // discard anything older than 3 days
+//            .filter { it.updateDate >= lastUpdateDate }
+//            // remove the update date information
+//            .map { it.seriesCover }
+//            // no duplicates
+//            .distinct()
+//            // map to an observable (not subscribed) that combines the series with the local progress and a boolean
+//            // indicating whether it is on the user list or not
+//            .map {
+//                Observable.combineLatest(
+//                    Observable.just(it),
+//                    proxerRepository.observeSeriesProgress(it.id),
+//                    proxerRepository.observeSeriesList().map { myList -> myList.find { s -> s.id == it.id } != null }
+//                ) { series, progress, inList -> Triple(series, progress, inList) }
+//            }
+//            .toList()
+//            // to automatically re emitting list of series with progress
+//            // as soon as the progress for a series changes, the list is updated
+//            .flatMap(fun(observables: List<Observable<Triple<SeriesCover, Int, Boolean>>>): Observable<List<Triple<SeriesCover, Int, Boolean>>> {
+//                return Observable.combineLatest(
+//                    observables,
+//                    fun(array: Array<out Any>): List<Triple<SeriesCover, Int, Boolean>> {
+//                        return array.map {
+//                            @Suppress("UNCHECKED_CAST")
+//                            it as Triple<SeriesCover, Int, Boolean>
+//                        }
+//                    }
+//                )
+//            })
+//            // for series on "my list" where the local progress is > 0 check for a new episode
+//            .flatMap { list ->
+//                Observable.from(list)
+//                    .filter { it.second > 0 && it.third }
+//                    .flatMap {
+//                        Observable.zip(
+//                            Observable.just(it),
+//                            proxerRepository.loadEpisodesPage(
+//                                it.first.id,
+//                                ProxerClient.getTargetPageForEpisode(it.second + 1)
+//                            )
+//                        ) { (seriesCover, progress), episodesMap -> Triple(seriesCover, progress, episodesMap) }
+//                    }
+//                    // check if any episode subtype contains the next episode according to the users progress
+//                    .filter { it.third.any { entry -> entry.value.contains(it.second + 1) } }
+//                    .map { it.first }
+//                    .toList()
+//            }
+//    }
 
     private fun synchronizeAccount() {
         syncSubscription?.unsubscribe()

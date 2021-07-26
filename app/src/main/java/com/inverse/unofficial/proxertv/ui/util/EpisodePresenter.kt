@@ -3,7 +3,7 @@ package com.inverse.unofficial.proxertv.ui.util
 import com.inverse.unofficial.proxertv.R
 import com.inverse.unofficial.proxertv.model.ServerConfig
 
-class EpisodePresenter(glide: GlideRequests, seriesId: Int) : BaseCoverPresenter(glide) {
+class EpisodePresenter(glide: GlideRequests, seriesId: Long) : BaseCoverPresenter(glide) {
     private val coverUrl = ServerConfig.coverUrl(seriesId)
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any) {

@@ -11,7 +11,7 @@ import kotlin.math.ceil
  * A [SeriesCover] interface to get around the data class inheritance restriction.
  */
 interface ISeriesCover {
-    val id: Int
+    val id: Long
     val name: String
 }
 
@@ -20,7 +20,7 @@ interface ISeriesCover {
  * For a more complex series use [Series]
  */
 data class SeriesCover(
-    override val id: Int,
+    override val id: Long,
     override val name: String
 ) : ISeriesCover
 
@@ -65,6 +65,14 @@ enum class SeriesList {
     }
 }
 
+enum class UserSeriesList {
+    ABORTED, WATCHLIST, FINISHED
+}
+
+enum class SystemSeriesList {
+    TOP_ACCESS, TOP_RATING, TOP_RATING_MOVIES, AIRING
+}
+
 /**
  * A [SeriesDbEntry] interface to get around the data class inheritance restriction.
  */
@@ -77,7 +85,7 @@ interface ISeriesDbEntry : ISeriesCover {
  * A [SeriesCover] with a comment id and the list it is stored on.
  */
 data class SeriesDbEntry(
-    override val id: Int,
+    override val id: Long,
     override val name: String,
     override val userList: SeriesList,
     override val cid: Long = NO_COMMENT_ID
@@ -94,7 +102,7 @@ data class SeriesDbEntry(
 @Parcelize
 data class Series(
     @SerializedName("id")
-    override val id: Int,
+    override val id: Long,
     @SerializedName("name")
     override val name: String,
     @SerializedName("genre")
@@ -119,7 +127,7 @@ data class UserListSeriesEntry(
     @SerializedName("medium")
     val medium: String,
     @SerializedName("id")
-    val id: Int,
+    val id: Long,
     @SerializedName("name")
     val name: String,
     @SerializedName("count")

@@ -16,7 +16,7 @@ inline fun <reified T : ViewModel> provideViewModel(activity: FragmentActivity?,
         throw IllegalArgumentException("activity must not be null")
     }
 
-    return ViewModelProviders.of(activity, object : ViewModelProvider.Factory {
+    return ViewModelProvider(activity, object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
             return factory() as T
@@ -29,7 +29,7 @@ inline fun <reified T : ViewModel> provideViewModel(activity: FragmentActivity?,
  */
 @Suppress("unused")
 inline fun <reified T : ViewModel> provideViewModel(fragment: Fragment, crossinline factory: () -> T): T {
-    return ViewModelProviders.of(fragment, object : ViewModelProvider.Factory {
+    return ViewModelProvider(fragment, object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
             return factory() as T

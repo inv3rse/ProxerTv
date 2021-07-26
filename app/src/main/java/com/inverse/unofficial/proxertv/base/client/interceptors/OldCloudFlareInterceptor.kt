@@ -9,7 +9,7 @@ import org.mozilla.javascript.Context
 /**
  * Interceptor that tries to handle the CloudFlare js challenge
  */
-class CloudFlareInterceptor : Interceptor {
+class OldCloudFlareInterceptor : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         // always set the user agent

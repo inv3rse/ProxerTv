@@ -256,14 +256,13 @@ class VideoPlayer(context: Context, savedState: Bundle? = null) : SurfaceHolder.
                     statusListener?.progressChanged(player.currentPosition, player.bufferedPosition)
                     mainHandler.postDelayed(this, PROGRESS_UPDATE_PERIOD)
                 }
-            }
-            mainHandler.post(progressRunnable)
+            }.also { mainHandler.post(it) }
         }
     }
 
     private fun stopProgressUpdate() {
-        if (progressRunnable != null) {
-            mainHandler.removeCallbacks(progressRunnable)
+        progressRunnable?.let {
+            mainHandler.removeCallbacks(it)
             progressRunnable = null
         }
     }

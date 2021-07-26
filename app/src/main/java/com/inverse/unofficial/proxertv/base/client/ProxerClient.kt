@@ -6,6 +6,9 @@ import com.inverse.unofficial.proxertv.base.client.interceptors.containsCaptcha
 import com.inverse.unofficial.proxertv.base.client.util.BodyCallObservable
 import com.inverse.unofficial.proxertv.base.client.util.StreamResolver
 import com.inverse.unofficial.proxertv.model.*
+import com.inverse.unofficial.proxertv.ui.util.extensions.await
+import com.inverse.unofficial.proxertv.ui.util.extensions.toV2
+import io.reactivex.Single
 import okhttp3.Cookie
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -42,8 +45,19 @@ class ProxerClient(
      * @param seriesId the id of the series
      * @return an [Observable] emitting true or throwing an error
      */
-    fun addSeriesToWatchList(seriesId: Int): Observable<Boolean> {
+    fun addSeriesToWatchList(seriesId: Long): Observable<Boolean> {
         return api.addSeriesToList(seriesId, "note")
+    }
+
+    suspend fun loadSeriesList(list: SystemSeriesList, page: Int): List<SeriesCover> {
+        val url = when (list) {
+            SystemSeriesList.TOP_ACCESS -> serverConfig.topAccessListUrl(page)
+            SystemSeriesList.TOP_RATING -> serverConfig.topRatingListUrl(page)
+            SystemSeriesList.TOP_RATING_MOVIES -> serverConfig.topRatingMovieListUrl(page)
+            SystemSeriesList.AIRING -> serverConfig.airingListUrl(page)
+        }
+
+        return loadSeriesList(url).toSingle().await()
     }
 
     /**
@@ -101,7 +115,7 @@ class ProxerClient(
                     val dateElement = it.child(5)
 
                     if (nameLinkElement != null && dateElement != null) {
-                        val id = idRegex.find(nameLinkElement.attr("href"))?.groupValues?.get(1)?.toInt()
+                        val id = idRegex.find(nameLinkElement.attr("href"))?.groupValues?.get(1)?.toLong()
                         val title = nameLinkElement.text()
 
                         if (id != null) {
@@ -133,7 +147,7 @@ class ProxerClient(
      * @param page the page to load (first page is 0)
      * @return an [Observable] emitting the available episodes by sub/dub type
      */
-    fun loadEpisodesPage(seriesId: Int, page: Int): Observable<Map<String, List<Int>>> {
+    fun loadEpisodesPage(seriesId: Long, page: Int): Observable<Map<String, List<Int>>> {
         return api.entryEpisodes(seriesId, page, EPISODES_PER_PAGE)
             .map { episodesData ->
                 val episodeMap = hashMapOf<String, MutableList<Int>>()
@@ -150,7 +164,7 @@ class ProxerClient(
      * @param id the series id
      * @return an [Observable] emitting the Series
      */
-    fun loadSeries(id: Int): Observable<Series> {
+    fun loadSeries(id: Long): Observable<Series> {
         return api.entryInfo(id)
     }
 
@@ -161,7 +175,7 @@ class ProxerClient(
      * @param subType the subtype of the episode
      * @return an [Observable] emitting {@link Stream}s in the order they are resolved to the video file
      */
-    fun loadEpisodeStreams(seriesId: Int, episode: Int, subType: String): Observable<Stream> {
+    fun loadEpisodeStreams(seriesId: Long, episode: Int, subType: String): Observable<Stream> {
         val request = Request.Builder().get().url(serverConfig.episodeStreamsUrl(seriesId, episode, subType)).build()
 
         return BodyCallObservable(httpClient.newCall(request))
@@ -222,7 +236,7 @@ class ProxerClient(
                 val seriesCovers = arrayListOf<SeriesCover>()
                 val idRegex = Regex("/info/(\\d+)(/list)?#top")
                 elements.forEach {
-                    val id = idRegex.find(it.attr("href"))?.groupValues?.get(1)?.toInt()
+                    val id = idRegex.find(it.attr("href"))?.groupValues?.get(1)?.toLong()
                     val title = it.text()
                     if (id != null) {
                         seriesCovers.add(SeriesCover(id, title))
@@ -244,7 +258,7 @@ class ProxerClient(
          * @return the target page
          */
         fun getTargetPageForEpisode(episodeNum: Int): Int {
-            return Math.max(episodeNum - 1, 0) / EPISODES_PER_PAGE
+            return (episodeNum - 1).coerceAtLeast(0) / EPISODES_PER_PAGE
         }
     }
 }

@@ -2,23 +2,34 @@ package com.inverse.unofficial.proxertv.base
 
 import com.inverse.unofficial.proxertv.base.client.ProxerClient
 import com.inverse.unofficial.proxertv.base.client.util.ApiErrorException
+import com.inverse.unofficial.proxertv.base.db.LocalSeriesRepository
 import com.inverse.unofficial.proxertv.base.db.MySeriesDb
 import com.inverse.unofficial.proxertv.base.db.SeriesProgressDb
 import com.inverse.unofficial.proxertv.model.ISeriesCover
+import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesDbEntry
 import com.inverse.unofficial.proxertv.model.SeriesList
+import com.inverse.unofficial.proxertv.model.SystemSeriesList
 import com.inverse.unofficial.proxertv.model.UserListSeriesEntry
+import com.inverse.unofficial.proxertv.model.UserSeriesList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rx.Observable
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicLong
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.math.max
 
 /**
  * Repository combining the [ProxerClient] and local databases ([MySeriesDb], [SeriesProgressDb]).
  * Handles the login and synchronizes the local db with online data.
  */
-class ProxerRepository(
+@Singleton
+class ProxerRepository @Inject constructor(
     private val client: ProxerClient,
     private val mySeriesDb: MySeriesDb,
+    private val localSeriesRepository: LocalSeriesRepository,
     private val progressDatabase: SeriesProgressDb,
     private val userSettings: UserSettings
 ) {
@@ -155,7 +166,7 @@ class ProxerRepository(
 
                         val entry = seriesEntry.copy(
                             commentState = SeriesList.toApiState(list),
-                            episode = Math.max(seriesEntry.episode, localProgress)
+                            episode = max(seriesEntry.episode, localProgress)
                         )
 
                         val data = entry.commentRating
@@ -202,7 +213,7 @@ class ProxerRepository(
      * @param seriesId the id of the series
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun removeSeriesFromList(seriesId: Int): Observable<Unit> {
+    fun removeSeriesFromList(seriesId: Long): Observable<Unit> {
         if (userSettings.getUser() != null) {
             // get the users comment id for the series
             return mySeriesDb.getSeries(seriesId)
@@ -226,7 +237,7 @@ class ProxerRepository(
      * @param seriesId the id of the series
      * @return an [Observable] emitting the progress
      */
-    fun getSeriesProgress(seriesId: Int): Observable<Int> {
+    fun getSeriesProgress(seriesId: Long): Observable<Int> {
         return progressDatabase.getProgress(seriesId)
     }
 
@@ -236,7 +247,7 @@ class ProxerRepository(
      * @param progress the progress to set
      * @return an [Observable] emitting onError or OnCompleted
      */
-    fun setSeriesProgress(seriesId: Int, progress: Int): Observable<Unit> {
+    fun setSeriesProgress(seriesId: Long, progress: Int): Observable<Unit> {
         if (userSettings.getUser() != null) {
             return mySeriesDb.getSeries(seriesId)
                 .map { it.cid }
@@ -254,6 +265,10 @@ class ProxerRepository(
         }
 
         return progressDatabase.setProgress(seriesId, progress)
+    }
+
+    suspend fun loadSeriesList(list: SystemSeriesList, page: Int = 1): List<SeriesCover> {
+        return withContext(Dispatchers.IO) { client.loadSeriesList(list, page) }
     }
 
     /**
@@ -292,34 +307,34 @@ class ProxerRepository(
      * @param page the page to load (first page is 0)
      * @return an [Observable] emitting the available episodes by sub/dub type
      */
-    fun loadEpisodesPage(seriesId: Int, page: Int) = client.loadEpisodesPage(seriesId, page)
+    fun loadEpisodesPage(seriesId: Long, page: Int) = client.loadEpisodesPage(seriesId, page)
 
     /**
      * Load the series detail information
      * @param id the series id
      * @return an Observable emitting the Series
      */
-    fun loadSeries(id: Int) = client.loadSeries(id)
+    fun loadSeries(id: Long) = client.loadSeries(id)
 
     /**
      * Observe the series list.
      * @return an [Observable] emitting the current value and any subsequent changes
      */
-    fun observeSeriesList() = mySeriesDb.observeSeriesList()
+    fun observeSeriesList() = localSeriesRepository.observeUserSeriesListEntries(UserSeriesList.WATCHLIST)
 
     /**
      * Observes the on which list the given series is on.
      * @param seriesId the series id
      * @return an [Observable] emitting the [SeriesList] an subsequent changes
      */
-    fun observerSeriesListState(seriesId: Int) = mySeriesDb.observeSeriesListState(seriesId)
+    fun observerSeriesListState(seriesId: Long) = mySeriesDb.observeSeriesListState(seriesId)
 
     /**
      * Observe the progress for a series
      * @param seriesId series to get the progress for
      * @return an [Observable] emitting the progress and any subsequent changes
      */
-    fun observeSeriesProgress(seriesId: Int) = progressDatabase.observeProgress(seriesId)
+    fun observeSeriesProgress(seriesId: Long) = progressDatabase.observeProgress(seriesId)
 
     /**
      * Data class that holds the login information.

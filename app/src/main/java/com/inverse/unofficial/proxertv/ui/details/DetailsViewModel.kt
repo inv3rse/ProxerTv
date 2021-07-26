@@ -29,7 +29,7 @@ class DetailsViewModel @Inject constructor(
     val detailState = MutableLiveData<LoadContentErrorState<DetailsData>>()
     val episodesState = MutableLiveData<LoadContentErrorState<List<EpisodeCategory>>>()
 
-    private var seriesId = -1
+    private var seriesId = -1L
     private val disposables = CompositeDisposable()
 
     private val pageSubject = BehaviorSubject.createDefault(-1)
@@ -37,7 +37,7 @@ class DetailsViewModel @Inject constructor(
     /**
      * Initialize the ViewModel for [seriesId] if it has not been done.
      */
-    fun init(seriesId: Int) {
+    fun init(seriesId: Long) {
         if (this.seriesId == seriesId) {
             return
         }
@@ -49,7 +49,7 @@ class DetailsViewModel @Inject constructor(
     /**
      * Try to load the content.
      */
-    fun loadContent(seriesId: Int) {
+    fun loadContent(seriesId: Long) {
         disposables.clear()
 
         detailState.value = LoadingState()

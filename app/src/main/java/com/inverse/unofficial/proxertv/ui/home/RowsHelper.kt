@@ -2,10 +2,15 @@ package com.inverse.unofficial.proxertv.ui.home
 
 import android.content.res.Resources
 import android.os.Handler
+import android.os.Looper
 import android.util.SparseBooleanArray
 import android.util.SparseIntArray
 import androidx.annotation.StringRes
-import androidx.leanback.widget.*
+import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.HeaderItem
+import androidx.leanback.widget.ListRow
+import androidx.leanback.widget.ObjectAdapter
+import androidx.leanback.widget.Row
 import com.inverse.unofficial.proxertv.model.ISeriesCover
 import com.inverse.unofficial.proxertv.model.SeriesCover
 import com.inverse.unofficial.proxertv.ui.util.LoadingCover
@@ -20,7 +25,7 @@ import timber.log.Timber
  */
 class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resources: Resources) {
 
-    private val handler = Handler()
+    private val handler = Handler(Looper.getMainLooper())
     private val subscriptions = CompositeSubscription()
 
     // paging state and observable providers
@@ -87,7 +92,7 @@ class RowsHelper(private val rowsAdapter: ArrayObjectAdapter, private val resour
                     pagingEnabled.put(targetPos, pageProviders.contains(targetPos))
 
                     if (existingAdapter != null && existingAdapter is ArrayObjectAdapter) {
-                        if (!seriesList.isEmpty()) {
+                        if (seriesList.isNotEmpty()) {
                             // update existing content
                             existingAdapter.clear()
                             existingAdapter.addAll(0, seriesList)

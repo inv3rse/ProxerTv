@@ -1,0 +1,24 @@
+/**
+ * Entity for an episode of a series.
+ */
+CREATE TABLE episodeEntity (
+    seriesId INTEGER NOT NULL,
+    episodeNum INTEGER AS Int NOT NULL,
+    languageType TEXT NOT NULL,
+    FOREIGN KEY (seriesId) REFERENCES seriesEntity(id) ON DELETE CASCADE,
+    UNIQUE (seriesId, episodeNum, languageType)
+);
+
+CREATE INDEX episodeIndexSeriesId ON episodeEntity(seriesId);
+
+/**
+ * Insert or replace the episode.
+ */
+upsertEpisode:
+INSERT OR REPLACE INTO episodeEntity (seriesId, episodeNum, languageType) VALUES (?, ?, ?);
+
+/**
+ * Query the available episodes for the [seriesId].
+ */
+queryBySeriesId:
+SELECT * FROM episodeEntity WHERE seriesId = :seriesId ORDER BY episodeNum ASC;
